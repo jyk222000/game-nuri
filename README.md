@@ -3,6 +3,8 @@
 
 - 팀 공통 지침(사람·Claude 공통): [`CLAUDE.md`](CLAUDE.md)
 - 구조: [`docs/architecture.md`](docs/architecture.md)
+- 기능 명세 (기준): [`docs/features.md`](docs/features.md) — 서비스 기능 10개 · API 38개
+- 테스트 계획: [`docs/test-plan.md`](docs/test-plan.md)
 - 일정·이슈: Jira `NW2` 프로젝트
 
 ## 시작하기

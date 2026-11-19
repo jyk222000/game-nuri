@@ -1,0 +1,19 @@
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "korean": { "type": "custom", "tokenizer": "nori_tokenizer", "filter": ["lowercase"] }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "game_id": { "type": "long" },
+      "name": { "type": "text", "analyzer": "korean", "fields": { "raw": { "type": "keyword" } } },
+      "name_ko": { "type": "text", "analyzer": "korean" },
+      "genres": { "type": "keyword" },
+      "platforms": { "type": "keyword" },
+      "release_date": { "type": "date" }
+    }
+  }
+}

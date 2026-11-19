@@ -1,0 +1,18 @@
+{
+  "name": "jdbc-sink-requirements",
+  "config": {
+    "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
+    "topics": "refined.requirements",
+    "connection.url": "jdbc:mariadb://mariadb-p:3306/gamenuri",
+    "connection.user": "${MARIADB_USER}",
+    "connection.password": "${MARIADB_PASSWORD}",
+    "table.name.format": "game_requirements",
+    "insert.mode": "upsert",
+    "pk.mode": "record_value",
+    "pk.fields": "game_id",
+    "auto.create": "false",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "true",
+    "tasks.max": "1"
+  }
+}

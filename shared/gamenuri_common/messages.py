@@ -6,11 +6,23 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 Source = Literal["itad", "danawa", "steam", "igdb"]
-Kind = Literal["price", "console_price", "review", "owned_games", "game_info"]
+Kind = Literal[
+    "price",
+    "console_price",
+    "review",
+    "owned_games",
+    "game_info",
+    "app_details",
+    "player_count",
+    "time_to_beat",
+]
 
 TOPIC_RAW = {"itad": "raw.price", "danawa": "raw.console", "steam": "raw.steam", "igdb": "raw.igdb"}
 TOPIC_REFINED_GAMES = "refined.games"
 TOPIC_REFINED_PRICES = "refined.prices"
+TOPIC_REFINED_REQUIREMENTS = "refined.requirements"
+TOPIC_REFINED_REVIEW_SUMMARY = "refined.review_summary"
+TOPIC_REFINED_UNMATCHED = "refined.unmatched"
 TOPIC_CLICKSTREAM = "clickstream"
 
 

@@ -1,0 +1,14 @@
+{
+  "_comment": "JDBC Sink용 JSON+schema. review_summaries 컬럼과 1:1",
+  "schema": { "type": "struct", "name": "refined_review_summary", "fields": [
+    { "field": "game_id", "type": "int64", "optional": false },
+    { "field": "positive_ratio", "type": "double", "optional": true },
+    { "field": "pros_keywords", "type": "string", "optional": true },
+    { "field": "cons_keywords", "type": "string", "optional": true },
+    { "field": "summary", "type": "string", "optional": true },
+    { "field": "generated_by", "type": "string", "optional": false },
+    { "field": "updated_at", "type": "string", "optional": false } ] },
+  "payload": { "game_id": 119133, "positive_ratio": 0.92, "pros_keywords": "보스전,탐험,아트",
+    "cons_keywords": "최적화,난이도", "summary": "AI 요약 한두 줄", "generated_by": "ai",
+    "updated_at": "2026-11-19T18:00:00Z" }
+}

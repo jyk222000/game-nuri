@@ -1,0 +1,10 @@
+{
+  "settings": { "analysis": { "analyzer": {
+    "korean": { "type": "custom", "tokenizer": "nori_tokenizer", "filter": ["lowercase", "nori_part_of_speech"] } } } },
+  "mappings": { "properties": {
+    "game_id": { "type": "long" },
+    "source": { "type": "keyword" },
+    "voted_up": { "type": "boolean" },
+    "review": { "type": "text", "analyzer": "korean", "fielddata": true },
+    "created_at": { "type": "date" } } }
+}

@@ -1,0 +1,15 @@
+# Monstache: MongoDB games 컬렉션 → Elasticsearch games 인덱스
+# ELK VM에서 실행. 비밀번호는 환경 변수 MONSTACHE_MONGO_URL 로 전달 (파일에 쓰지 않음)
+elasticsearch-urls = ["http://elk:9200"]
+direct-read-namespaces = ["gamenuri_raw.games", "gamenuri_raw.reviews"]   # 시작 시 기존 데이터 한 번 복사
+change-stream-namespaces = ["gamenuri_raw.games", "gamenuri_raw.reviews"] # 이후 변경 실시간 반영 (복제 세트 필요)
+resume = true
+verbose = false
+
+[[mapping]]
+namespace = "gamenuri_raw.games"
+index = "games"
+
+[[mapping]]
+namespace = "gamenuri_raw.reviews"
+index = "reviews"

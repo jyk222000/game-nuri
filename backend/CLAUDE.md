@@ -20,6 +20,8 @@ app/
 - 세션·캐시·알림 중복 키는 Valkey에. 키 규칙: `session:{id}`, `cache:prices:{game_id}`(TTL 10분), `alert_sent:{alert_id}:{price}`.
 - 라우터에서 DB를 직접 다루지 말고 services를 거친다.
 - 비밀번호는 bcrypt 해시. 로그에 개인정보·토큰을 남기지 않는다.
+- 사양 판정(⑥): 게임 사양 + `user_specs`를 AI에게 보내 JSON 판정을 받고 Valkey `spec_check:{game_id}:{spec_hash}`에 저장해 재사용. 사양 미입력 사용자는 AI를 부르지 않는다.
+- 리뷰 요약(⑤)은 Backend에서 AI를 부르지 않는다. `review_summaries`를 읽기만 한다.
 
 ## 실행
 ```bash
