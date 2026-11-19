@@ -1,0 +1,22 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install ruff pytest
+      - run: ruff check .
+      - run: ruff format --check .
+      - name: shared 설치 후 테스트
+        run: |
+          pip install -e shared
+          for d in collector pipeline backend; do
+            if [ -f $d/requirements.txt ]; then pip install -r $d/requirements.txt; fi
+          done
+          pytest -q || [ $? -eq 5 ]   # 테스트가 아직 없으면 통과

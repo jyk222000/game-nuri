@@ -1,0 +1,13 @@
+{
+  "name": "mongo-sink-raw",
+  "config": {
+    "connector.class": "com.mongodb.kafka.connect.MongoSinkConnector",
+    "topics": "raw.price,raw.console,raw.steam,raw.igdb",
+    "connection.uri": "${MONGO_URI}",
+    "database": "gamenuri_raw",
+    "collection": "raw",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false",
+    "tasks.max": "3"
+  }
+}

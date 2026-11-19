@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "source": "itad",
+  "kind": "price",
+  "collected_at": "2026-11-19T02:30:00Z",
+  "request": { "url": "https://api.isthereanydeal.com/games/prices/v3", "params": { "country": "KR" } },
+  "payload": {
+    "id": "018d937f-xxxx",
+    "deals": [
+      { "shop": { "id": 61, "name": "Steam" }, "price": { "amount": 47900, "currency": "KRW" },
+        "regular": { "amount": 64800, "currency": "KRW" }, "cut": 26, "url": "https://..." }
+    ]
+  }
+}

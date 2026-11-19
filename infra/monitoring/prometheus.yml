@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 15s
+scrape_configs:
+  - job_name: node
+    static_configs:
+      - targets: [proxy:9100, fe1:9100, fe2:9100, be1:9100, be2:9100, kafka1:9100, kafka2:9100, kafka3:9100,
+                  backup:9100, mariadb-p:9100, mariadb-r:9100, mongo1:9100, mongo2:9100, mongo3:9100,
+                  elk:9100, valkey:9100, monitor:9100]
+  - job_name: kafka
+    static_configs:
+      - targets: [kafka1:9308]   # kafka_exporter
+  - job_name: mariadb
+    static_configs:
+      - targets: [mariadb-p:9104, mariadb-r:9104]
+  - job_name: mongodb
+    static_configs:
+      - targets: [mongo1:9216]

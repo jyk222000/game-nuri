@@ -1,0 +1,5 @@
+-- docs/contracts/erd.sql 을 Primary에서 실행한다. 이 파일은 계정 생성용 템플릿.
+-- CREATE USER 'gamenuri'@'192.168.100.%' IDENTIFIED BY '<비밀번호>';
+-- GRANT SELECT, INSERT, UPDATE ON gamenuri.* TO 'gamenuri'@'192.168.100.%';
+-- CREATE USER 'analyst'@'192.168.100.%' IDENTIFIED BY '<비밀번호>';  -- 읽기 전용
+-- GRANT SELECT ON gamenuri.* TO 'analyst'@'192.168.100.%';

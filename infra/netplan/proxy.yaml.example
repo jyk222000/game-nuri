@@ -1,0 +1,12 @@
+network:
+  version: 2
+  ethernets:
+    enp0s3:              # 외부 (공인망)
+      addresses: [x.x.0.222/24]
+      routes:
+        - to: default
+          via: x.x.0.1
+      nameservers:
+        addresses: [8.8.8.8, 1.1.1.1]
+    enp0s8:              # 내부 (게이트웨이 없음)
+      addresses: [192.168.100.1/24]

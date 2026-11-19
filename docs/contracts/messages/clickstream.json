@@ -1,0 +1,11 @@
+{
+  "event_id": "uuid",
+  "session_id": "uuid",
+  "user_id": null,
+  "event": "search | view_game | click_store | set_alert",
+  "game_id": 119133,
+  "query": "엘든",
+  "store": null,
+  "occurred_at": "2026-11-19T02:30:00Z",
+  "served_by": "be1"
+}

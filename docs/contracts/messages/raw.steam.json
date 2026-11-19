@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "source": "steam",
+  "kind": "review",
+  "collected_at": "2026-11-19T02:30:00Z",
+  "request": { "url": "https://store.steampowered.com/appreviews/1245620", "params": { "language": "koreana" } },
+  "payload": {
+    "steam_appid": 1245620,
+    "query_summary": { "review_score_desc": "매우 긍정적", "total_positive": 0, "total_negative": 0 },
+    "reviews": [{ "recommendationid": "1", "review": "...", "voted_up": true, "timestamp_created": 1700000000 }]
+  }
+}

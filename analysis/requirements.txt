@@ -1,0 +1,5 @@
+jupyterlab>=4.1
+pandas>=2.2
+matplotlib>=3.8
+sqlalchemy>=2.0
+pymysql>=1.1

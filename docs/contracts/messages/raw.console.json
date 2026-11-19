@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "source": "danawa",
+  "kind": "console_price",
+  "collected_at": "2026-11-19T02:30:00Z",
+  "request": { "url": "https://search.danawa.com/dsearch.php", "params": { "query": "엘든링 PS5" } },
+  "payload": {
+    "pcode": "12345678",
+    "product_name": "SONY PS5 엘든 링 한글판 (초회한정)",
+    "platform_hint": "PS5",
+    "edition": "physical",
+    "lowest_price": 52000,
+    "shop_count": 14,
+    "url": "https://prod.danawa.com/info/?pcode=12345678"
+  }
+}

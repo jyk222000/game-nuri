@@ -1,0 +1,10 @@
+# 각자 PC의 ~/.ssh/config 에 붙여 넣기. User는 각자 계정으로.
+Host monitor
+    HostName x.x.0.223        # 같은 내부망이면 192.168.100.90
+    User gc
+    IdentityFile ~/.ssh/gamenuri_ed25519
+
+Host proxy fe1 fe2 be1 be2 kafka1 kafka2 kafka3 backup mariadb-p mariadb-r mongo1 mongo2 mongo3 elk valkey
+    User gc
+    IdentityFile ~/.ssh/gamenuri_ed25519
+    ProxyJump monitor         # 같은 내부망에서 직접 붙으면 이 줄 삭제

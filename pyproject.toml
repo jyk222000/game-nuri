@@ -1,0 +1,17 @@
+# 저장소 전체 공통 도구 설정 (각 서비스 의존성은 서비스별 requirements.txt)
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["analysis/notebooks"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["collector/tests", "pipeline/tests", "backend/tests", "shared/tests"]

@@ -1,0 +1,13 @@
+{
+  "name": "es-sink-clickstream",
+  "config": {
+    "connector.class": "io.confluent.connect.elasticsearch.ElasticsearchSinkConnector",
+    "topics": "clickstream",
+    "connection.url": "http://elk:9200",
+    "key.ignore": "true",
+    "schema.ignore": "true",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false",
+    "tasks.max": "1"
+  }
+}

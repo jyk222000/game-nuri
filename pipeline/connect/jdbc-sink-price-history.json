@@ -1,0 +1,17 @@
+{
+  "name": "jdbc-sink-price-history",
+  "config": {
+    "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
+    "topics": "refined.prices",
+    "connection.url": "jdbc:mariadb://mariadb-p:3306/gamenuri",
+    "connection.user": "${MARIADB_USER}",
+    "connection.password": "${MARIADB_PASSWORD}",
+    "table.name.format": "price_history",
+    "insert.mode": "insert",
+    "fields.whitelist": "game_id,store,edition,price_krw,regular_krw,discount_pct,collected_at",
+    "auto.create": "false",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "true",
+    "tasks.max": "3"
+  }
+}

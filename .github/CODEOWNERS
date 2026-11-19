@@ -1,0 +1,11 @@
+# 담당이 정해지면 @깃허브아이디 를 채운다. PR 리뷰 요청이 자동으로 간다.
+/collector/          @TBD
+/pipeline/           @TBD
+/backend/            @TBD
+/frontend/           @TBD
+/analysis/           @TBD
+/infra/              @TBD
+# 약속 파일은 전원 리뷰
+/docs/contracts/     @TBD @TBD @TBD @TBD
+/shared/             @TBD @TBD @TBD @TBD
+/CLAUDE.md           @TBD @TBD @TBD @TBD
