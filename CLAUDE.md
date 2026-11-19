@@ -84,7 +84,7 @@ Steam 사용자 데이터를 모아 **어디서, 언제 사는 게 가장 싼지
 | 메일 | Gmail SMTP (앱 비밀번호) |
 | AI | Gemini 등 AI API — ⑤ 리뷰 요약(ES 키워드만 전송), ⑥ 사양 비교. 결과는 저장해 재사용 |
 | 실행 방식 | **컨테이너 사용 안 함.** 각 VM에서 venv + systemd 서비스로 실행 |
-| OS | Ubuntu Server 24.04 LTS |
+| OS | Rocky Linux 10 (nmcli, iptables-nft, SELinux enforcing) |
 
 ## 6. 이름 규칙
 - 서비스명 표기: 화면·문서·발표는 **겜누리**, 레포·폴더·서버 경로·도메인은 **`game-nuri`**,
@@ -122,6 +122,7 @@ VM에 붙을 때는 `.env`의 호스트 이름만 VM 쪽으로 바꾼다. 코드
 ## 10. 자주 쓰는 문서
 - 전체 구조: `docs/architecture.md`
 - IP·포트·호스트 이름: `docs/network.md`
+- 서버 구축 순서·명령 (워크북): `docs/infra-workbook.md`
 - 토픽·메시지 형식: `docs/contracts/topics.md`, `docs/contracts/messages/`
 - DB 테이블: `docs/contracts/erd.sql`
 - API 명세: `docs/contracts/api.md`

@@ -1,10 +1,23 @@
-# 각자 PC의 ~/.ssh/config 에 붙여 넣기. User는 각자 계정으로.
-Host monitor
-    HostName x.x.0.223        # 같은 내부망이면 192.168.100.90
-    User gc
+# 각자 PC의 ~/.ssh/config 에 붙여 넣기. User 는 각자 계정 (junyoung, hyunsik, goeun, yechan)
+# PC-1 VM은 proxy를, PC-2 VM은 monitor를 거쳐 들어간다 (내부망은 공유기망에서 직접 안 보임)
+Host proxy
+    HostName 192.168.0.222
+    User <내 계정>
     IdentityFile ~/.ssh/gamenuri_ed25519
 
-Host proxy fe1 fe2 be1 be2 kafka1 kafka2 kafka3 backup mariadb-p mariadb-r mongo1 mongo2 mongo3 elk valkey
-    User gc
+Host monitor
+    HostName 192.168.0.223
+    User <내 계정>
     IdentityFile ~/.ssh/gamenuri_ed25519
-    ProxyJump monitor         # 같은 내부망에서 직접 붙으면 이 줄 삭제
+
+Host fe1 fe2 be1 be2 kafka1 kafka2 kafka3 backup
+    User <내 계정>
+    IdentityFile ~/.ssh/gamenuri_ed25519
+    ProxyJump proxy
+
+Host mariadb-p mariadb-r mongo1 mongo2 mongo3 elk valkey
+    User <내 계정>
+    IdentityFile ~/.ssh/gamenuri_ed25519
+    ProxyJump monitor
+
+# 내 PC의 hosts 파일에는 내부망 이름이 없으므로, 점프 서버가 이름을 풀어 준다 (각 VM의 /etc/hosts)

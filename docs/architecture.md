@@ -1,12 +1,13 @@
 # 아키텍처
 
 ## 구성
-- PC 2대 (각 32GB), VirtualBox VM 17대, 브리지 네트워크, 스위치로 연결
-- 공인 IP 2개: `0.222` → Proxy·수집 서버 (서비스 입구), `0.223` → 모니터링 (관리용 입구)
+- PC 2대 (각 32GB), VirtualBox VM 17대, Rocky Linux 10
+- PC마다 VirtualBox 내부 네트워크(`pc1-net` 10.0.1.0/24, `pc2-net` 10.0.2.0/24), 두 게이트웨이(proxy, monitor)가 NAT와 서로의 내부망 라우팅 담당
+- 공유기망 IP 2개: `192.168.0.222` → Proxy·수집 서버 (서비스 입구, PC-1 게이트웨이), `192.168.0.223` → 모니터링 (관리용 입구, PC-2 게이트웨이)
 
 | PC | VM | 역할 |
 |---|---|---|
-| PC-1 | Proxy·수집 서버 | HAProxy(→Frontend 1·2), 수집기, 내부망 NAT 게이트웨이 |
+| PC-1 | Proxy·수집 서버 | HAProxy(→Frontend 1·2), 수집기, PC-1 게이트웨이(NAT·라우팅) |
 | PC-1 | Frontend 1·2 | 웹 화면, `/api`를 짝 Backend로 전달 |
 | PC-1 | Backend 1·2 | FastAPI, 클릭스트림 발행 |
 | PC-1 | Kafka 1~3 | 브로커 + 정제 프로그램 + Kafka Connect |
@@ -15,7 +16,7 @@
 | PC-2 | MongoDB ×3 (P-S-S) | 원본 JSON, 리뷰 |
 | PC-2 | ELK | 게임 검색, 클릭스트림 로그, Monstache(MongoDB→ES 동기화) |
 | PC-2 | Valkey | 공용 캐시, 세션, 알림 중복 방지 |
-| PC-2 | 모니터링 | Prometheus, Grafana → Slack, 점프 서버 |
+| PC-2 | 모니터링 | Prometheus, Grafana → Slack, 점프 서버, PC-2 게이트웨이(NAT·라우팅) |
 
 ## 데이터 흐름
 1. 수집: 수집기 → `raw.price`, `raw.console`, `raw.steam`, `raw.igdb`
