@@ -1,0 +1,12 @@
+{
+  "_comment": "JDBC Sink용 JSON+schema. game_requirements 컬럼과 1:1 (pc_requirements HTML을 텍스트로 정리)",
+  "schema": { "type": "struct", "name": "refined_requirements", "fields": [
+    { "field": "game_id", "type": "int64", "optional": false },
+    { "field": "minimum_text", "type": "string", "optional": true },
+    { "field": "recommended_text", "type": "string", "optional": true },
+    { "field": "updated_at", "type": "string", "optional": false } ] },
+  "payload": { "game_id": 119133,
+    "minimum_text": "OS: Windows 10 / CPU: Intel Core i5-8400 / RAM: 12 GB / GPU: GTX 1060 3GB",
+    "recommended_text": "OS: Windows 10/11 / CPU: Intel Core i7-8700K / RAM: 16 GB / GPU: GTX 1070 8GB",
+    "updated_at": "2026-11-19T02:30:00Z" }
+}

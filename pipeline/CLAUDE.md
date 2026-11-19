@@ -11,6 +11,15 @@
 - refined.* 출력은 `docs/contracts/messages/refined.prices.json`의 **JSON+schema 형식** 그대로.
 - 정제 로직은 Kafka 없이 테스트할 수 있게 순수 함수(`refiner/rules/`)로 분리하고 `tests/`에 샘플 기반 테스트를 둔다.
 
+## review-summarizer (⑤, 하루 1회 배치)
+- ES `reviews` 인덱스에서 게임별 추천/비추천 리뷰의 핵심 키워드 TOP 10과 긍정 비율을 집계한다.
+- **키워드와 비율만** AI에게 보내고(리뷰 원문 금지), JSON으로 요약을 받는다.
+- 결과를 `refined.review_summary`(JSON+schema)로 발행 → JDBC Sink → `review_summaries`.
+- AI 실패 시 `generated_by: "fallback"`으로 비율·키워드만 발행한다.
+
+## 사양 정제 (⑥)
+- Steam `appdetails`의 `pc_requirements.minimum/recommended` HTML을 텍스트로 정리해 `refined.requirements`로 발행.
+
 ## connect 규칙
 - 설정은 `connect/*.json`로만 관리하고 `connect/apply.sh`로 등록한다. 웹 UI에서 손으로 바꾸지 않는다.
 - 비밀번호는 JSON에 쓰지 않는다 (`${file:...}` 또는 등록 시 환경 변수 치환).

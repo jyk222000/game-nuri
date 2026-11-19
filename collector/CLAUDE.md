@@ -7,8 +7,8 @@
 | 출처 | 모듈 | 토픽 | 주기 | 제한 |
 |---|---|---|---|---|
 | ITAD | `sources/itad.py` | raw.price | 6시간 | 5분당 1000건 |
-| IGDB | `sources/igdb.py` | raw.igdb | 매일 | 초당 4회 |
-| Steam 리뷰·사용자 | `sources/steam.py` | raw.steam | 매일 / 요청 시 | – |
+| IGDB | `sources/igdb.py` | raw.igdb | 매일 | 초당 4회 (게임 정보 + `game_time_to_beats` 클리어 시간) |
+| Steam 리뷰·사양·동접자·사용자 | `sources/steam.py` | raw.steam | 리뷰·사양(`appdetails`) 매일, 동접자 1시간, 보유 게임 요청 시 | 사양·리뷰는 키 불필요 |
 | 다나와 | `sources/danawa.py` | raw.console | 6시간 | 요청 사이 `DANAWA_REQUEST_DELAY_SEC` 이상 |
 
 ## 지킬 것

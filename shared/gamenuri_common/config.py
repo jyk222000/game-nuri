@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     twitch_client_id: str = ""
     twitch_client_secret: str = ""
     steam_key: str = ""
+    gemini_api_key: str = ""
+    ai_model: str = ""
 
 
 @lru_cache

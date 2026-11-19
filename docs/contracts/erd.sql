@@ -29,6 +29,38 @@ CREATE TABLE game_store_ids (
   INDEX idx_external (store, external_id)
 );
 
+CREATE TABLE game_time_to_beat (                 -- IGDB 클리어 시간 (④)
+  game_id          BIGINT PRIMARY KEY,
+  hastily_sec      INT,                           -- 빠르게
+  normally_sec     INT,                           -- 보통
+  completely_sec   INT,                           -- 완벽하게
+  updated_at       DATETIME NOT NULL
+);
+
+CREATE TABLE game_requirements (                 -- Steam 최소·권장 사양 (⑥, Kafka Connect: refined.requirements)
+  game_id          BIGINT PRIMARY KEY,
+  minimum_text     TEXT,                          -- HTML 정리 후 텍스트
+  recommended_text TEXT,
+  updated_at       DATETIME NOT NULL
+);
+
+CREATE TABLE player_counts (                     -- Steam 동접자 추이 (⑦)
+  game_id          BIGINT NOT NULL,
+  player_count     INT NOT NULL,
+  collected_at     DATETIME NOT NULL,
+  PRIMARY KEY (game_id, collected_at)
+);
+
+CREATE TABLE review_summaries (                  -- ES 키워드 + AI 요약 (⑤, Kafka Connect: refined.review_summary)
+  game_id          BIGINT PRIMARY KEY,
+  positive_ratio   DECIMAL(4,3),
+  pros_keywords    VARCHAR(512),                  -- 쉼표 구분
+  cons_keywords    VARCHAR(512),
+  summary          VARCHAR(1000),
+  generated_by     VARCHAR(16) NOT NULL,          -- ai | fallback
+  updated_at       DATETIME NOT NULL
+);
+
 -- ===== 가격 (Kafka Connect: refined.prices) =====
 CREATE TABLE prices_current (                    -- JDBC Sink upsert (PK 기준)
   game_id          BIGINT NOT NULL,
@@ -60,10 +92,33 @@ CREATE TABLE price_history (                     -- JDBC Sink insert
 CREATE TABLE users (
   user_id          BIGINT AUTO_INCREMENT PRIMARY KEY,
   email            VARCHAR(255) NOT NULL UNIQUE,
-  password_hash    VARCHAR(255) NOT NULL,
+  password_hash    VARCHAR(255),                  -- 구글 로그인 사용자는 NULL
+  google_sub       VARCHAR(64) UNIQUE,            -- 구글 계정 고유 ID
   nickname         VARCHAR(64),
   steam_id         VARCHAR(32),
   created_at       DATETIME NOT NULL
+);
+
+CREATE TABLE user_specs (                        -- 사용자 PC 사양 (선택 입력, ⑥)
+  user_id          BIGINT PRIMARY KEY,
+  cpu              VARCHAR(128),
+  gpu              VARCHAR(128),
+  ram_gb           INT,
+  os               VARCHAR(64),
+  updated_at       DATETIME NOT NULL
+);
+
+CREATE TABLE notification_settings (            -- 메일 수신 설정 (③)
+  user_id          BIGINT PRIMARY KEY,
+  email_enabled    BOOLEAN NOT NULL DEFAULT TRUE,
+  updated_at       DATETIME NOT NULL
+);
+
+CREATE TABLE wishlists (
+  user_id          BIGINT NOT NULL,
+  game_id          BIGINT NOT NULL,
+  created_at       DATETIME NOT NULL,
+  PRIMARY KEY (user_id, game_id)
 );
 
 CREATE TABLE alerts (

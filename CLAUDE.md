@@ -5,6 +5,12 @@
 
 ## 1. 프로젝트 한 줄 요약
 서비스명 **겜누리 (game-nuri)**.
+
+> **이 프로젝트의 주된 목적은 데이터 처리 과정(수집 → 전달 → 정제 → 저장 → 활용)을 배우는 것**이다.
+> 서비스 기능은 그 과정을 보여 주는 수단이다. 기능을 만들 때도 "데이터가 어디서 와서 어디로 가는지"가
+> 설명 가능하게 만든다. 필수 요구사항 목록은 `docs/requirements.md` (전부 구현 대상).
+>
+> **확정 범위: 서비스 기능 10개 · API 38개 · 기술·발표 과제 8개** → `docs/features.md`가 기준.
 게임 가격 비교 · 구매 타이밍 추천 서비스. PC 스토어(ITAD)·콘솔(다나와) 가격과 IGDB 게임 정보,
 Steam 사용자 데이터를 모아 **어디서, 언제 사는 게 가장 싼지** 알려준다. 발표 11/30.
 
@@ -13,9 +19,12 @@ Steam 사용자 데이터를 모아 **어디서, 언제 사는 게 가장 싼지
 수집기(collector) ──raw.*──▶ Kafka ──▶ 정제 프로그램(pipeline/refiner) ──refined.*──▶ Kafka
                                                                          │
             Kafka Connect(pipeline/connect) ◀────────────────────────────┘
-              ├─ refined.*   → MariaDB   (정제값: 가격·게임·사용자·알림)
-              ├─ raw.*       → MongoDB   (원본 JSON·리뷰)
-              └─ clickstream → Elasticsearch
+              ├─ refined.*     → MariaDB   (정제값: 가격·게임·사용자·알림)
+              ├─ raw.*         → MongoDB   (원본 JSON·리뷰)
+              ├─ refined.games → MongoDB games ──Monstache──▶ Elasticsearch games (검색)
+              ├─ raw.steam(리뷰) → MongoDB reviews ─Monstache─▶ Elasticsearch reviews (키워드 추출)
+              │      └─ (하루 1회) ES 키워드 → AI 요약 → refined.review_summary → MariaDB
+              └─ clickstream   → Elasticsearch (검색 로그·실시간 검색어·Kibana)
 사용자 → Proxy(HAProxy) → Frontend 1·2 → Backend 1·2 → MariaDB / Elasticsearch / Valkey
                                           └─ clickstream ──▶ Kafka
 ```
@@ -36,7 +45,15 @@ Steam 사용자 데이터를 모아 **어디서, 언제 사는 게 가장 싼지
 | `shared/` | 공통 Python 패키지 (메시지 모델, 설정, 로깅) | 모든 Python 서비스 | **전원 (PR 필수 리뷰)** |
 | `docs/contracts/` | 토픽·메시지 형식, ERD, API 명세 = **팀 간 약속** | – | **전원 (PR 필수 리뷰)** |
 
-담당이 정해지면 위 표와 `.github/CODEOWNERS`를 채운다.
+### 현재 담당 (11/20~ 전체 흐름 테스트 기준, 본 개발 분담 확정 시 갱신)
+| 사람 | 역할 | 주로 만지는 폴더 |
+|---|---|---|
+| 남현식 | Kafka 전담 (클러스터, 연결, Kafka Connect) | `infra/kafka/`, `pipeline/connect/` |
+| 한예찬 | 수집 (원본 수집, 프로파일링, Producer) | `collector/` |
+| 이고은 | DB 설계 · 정제 (정규화·ERD, 정제 로직) | `docs/contracts/erd.sql`, `pipeline/refiner/` |
+| 김준영 (팀장) | 인프라 · 검증 (VM·DB 설치, 직접 적재, 전체 검증) | `infra/`, `scripts/` |
+
+테스트 계획: `docs/test-plan.md`. `.github/CODEOWNERS`의 `@TBD`는 GitHub 아이디로 채운다.
 
 ## 4. Claude가 작업할 때 지킬 규칙
 1. **자기 파트 폴더만 수정한다.** 다른 파트 폴더를 고쳐야 하면 수정하지 말고, 무엇을 왜 바꿔야 하는지 사용자에게 알린다.
@@ -47,6 +64,7 @@ Steam 사용자 데이터를 모아 **어디서, 언제 사는 게 가장 싼지
 6. **VM(서버)에서 명령을 실행하기 전에 사용자에게 확인한다.** 특히 DB 삭제·초기화(`DROP`, `TRUNCATE`, `rm -rf`, `dropDatabase`, 토픽 삭제, `docker volume rm`)는 절대 스스로 실행하지 않는다.
 7. **작은 단위로 커밋한다.** 커밋 메시지는 아래 Git 규칙을 따른다.
 8. 막히거나 계약과 실제가 다르면 추측해서 고치지 말고 사용자에게 보고한다.
+9. **AI API는 사용자 요청마다 부르지 않는다.** 배치로 미리 만들거나(⑤), 처음 한 번 부르고 결과를 저장해 재사용한다(⑥). 리뷰 원문을 AI에게 보내지 않는다(키워드만). 응답은 JSON 형식으로 받고, 실패하면 AI 없이 보여 줄 대체 화면을 둔다.
 
 ## 5. 기술 스택 (고정)
 | 영역 | 선택 |
@@ -59,6 +77,13 @@ Steam 사용자 데이터를 모아 **어디서, 언제 사는 게 가장 싼지
 | Backend | FastAPI + SQLAlchemy 2 + PyMySQL, redis-py(Valkey), elasticsearch-py |
 | Frontend | **팀 확정 필요** (권장: React + Vite → 빌드 결과를 nginx가 서빙) |
 | 테스트 | pytest |
+| 로그인 | 구글 OAuth (Authlib) — 도메인(DDNS) + HTTPS 필요 |
+| 동기화 | Monstache (MongoDB → Elasticsearch) |
+| API 모니터링 | prometheus-fastapi-instrumentator → Prometheus → Grafana |
+| 부하 테스트 | Locust |
+| 메일 | Gmail SMTP (앱 비밀번호) |
+| AI | Gemini 등 AI API — ⑤ 리뷰 요약(ES 키워드만 전송), ⑥ 사양 비교. 결과는 저장해 재사용 |
+| 실행 방식 | **컨테이너 사용 안 함.** 각 VM에서 venv + systemd 서비스로 실행 |
 | OS | Ubuntu Server 24.04 LTS |
 
 ## 6. 이름 규칙
@@ -100,4 +125,7 @@ VM에 붙을 때는 `.env`의 호스트 이름만 VM 쪽으로 바꾼다. 코드
 - 토픽·메시지 형식: `docs/contracts/topics.md`, `docs/contracts/messages/`
 - DB 테이블: `docs/contracts/erd.sql`
 - API 명세: `docs/contracts/api.md`
+- **최종 기능 명세 (기준 문서): `docs/features.md`**
+- 필수 요구사항 체크리스트: `docs/requirements.md`
+- 전체 흐름 테스트 계획: `docs/test-plan.md`
 - 결정 기록: `docs/decisions.md` (중요한 결정은 날짜와 이유를 한 줄로 남긴다)
