@@ -1,6 +1,8 @@
 # 결정 기록
 형식: `YYYY-MM-DD | 결정 | 이유`
 
+- 2026-11-20 | OS는 Rocky Linux 10, 내부망 10.0.1.0/24(PC-1)·10.0.2.0/24(PC-2), 게이트웨이 proxy·monitoring | 실제 구축 환경 반영 (docs/network.md)
+- 2026-11-20 | VM hostname은 17대에 적용된 이름(frontend1, backend1, monitoring, mariadb-pr/re, mongodb-pr, mongo-se1/2)으로 확정 | 이미 17대 hostname·/etc/hosts에 적용됨, VM을 다시 바꾸는 것보다 문서 수정이 적음
 - 2026-11-18 | 콘솔 가격은 다나와 크롤링 | 콘솔 스토어 직접 크롤링은 약관상 어려움
 - 2026-11-18 | 게임 정보는 IGDB, 기준 게임 ID = IGDB ID | 스토어별 외부 ID를 제공해 ID 통합이 쉬움
 - 2026-11-18 | 정제는 Kafka 쪽 refiner, DB 적재는 Kafka Connect | Backend는 API만 담당 (강사 피드백)
