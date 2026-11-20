@@ -42,4 +42,5 @@ Thumbs.db
 CLAUDE.local.md
 
 # Serena (개인 설정)
+.serena/project.yml
 .serena/project.local.yml
