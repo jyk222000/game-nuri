@@ -69,7 +69,7 @@ Steam 사용자 데이터를 모아 **어디서, 언제 사는 게 가장 싼지
 ## 5. 기술 스택 (고정)
 | 영역 | 선택 |
 |---|---|
-| 언어 | Python 3.11 (모든 Python 서비스 공통) |
+| 언어 | Python 3.12 (모든 Python 서비스 공통) |
 | 패키지 | 서비스별 `requirements.txt` + `pip install -e ../shared` |
 | 코드 스타일 | ruff (lint + format), 줄 길이 100, 타입 힌트 필수 |
 | 수집 | requests, BeautifulSoup4 (다나와), confluent-kafka |

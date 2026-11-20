@@ -1,7 +1,7 @@
 # 저장소 전체 공통 도구 설정 (각 서비스 의존성은 서비스별 requirements.txt)
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py312"
 extend-exclude = ["analysis/notebooks"]
 
 [tool.ruff.lint]
