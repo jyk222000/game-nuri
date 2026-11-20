@@ -1,10 +1,25 @@
-# 각자 PC의 ~/.ssh/config 에 붙여 넣기. User는 각자 계정으로.
-Host monitor
-    HostName x.x.0.223        # 같은 내부망이면 192.168.100.90
-    User gc
-    IdentityFile ~/.ssh/gamenuri_ed25519
+# 각자 PC의 ~/.ssh/config 에 붙여 넣기. User는 각자 팀 계정(admina~admind), 키 경로는 각자 것으로.
+# 게이트웨이 2대는 공유기 쪽 IP로 직접, 내부 VM은 자기 PC의 게이트웨이를 거쳐 접속한다.
+Host proxy-vm
+    HostName 192.168.0.222
+    User admina
+    IdentityFile ~/.ssh/id_ed25519
 
-Host proxy fe1 fe2 be1 be2 kafka1 kafka2 kafka3 backup mariadb-p mariadb-r mongo1 mongo2 mongo3 elk valkey
-    User gc
-    IdentityFile ~/.ssh/gamenuri_ed25519
-    ProxyJump monitor         # 같은 내부망에서 직접 붙으면 이 줄 삭제
+Host mon-vm
+    HostName 192.168.0.223
+    User admina
+    IdentityFile ~/.ssh/id_ed25519
+
+# PC-1 내부 VM
+Host frontend1 frontend2 backend1 backend2 kafka1 kafka2 kafka3 backup 10.0.1.*
+    User admina
+    IdentityFile ~/.ssh/id_ed25519
+    ProxyJump proxy-vm
+
+# PC-2 내부 VM
+Host mariadb-pr mariadb-re elk mongodb-pr mongo-se1 mongo-se2 valkey 10.0.2.*
+    User admina
+    IdentityFile ~/.ssh/id_ed25519
+    ProxyJump mon-vm
+
+# 내 PC에 /etc/hosts(Windows: C:\Windows\System32\drivers\etc\hosts)를 안 넣었다면 이름 대신 IP로 접속한다.

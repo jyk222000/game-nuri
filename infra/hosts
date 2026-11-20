@@ -1,18 +1,18 @@
-# /etc/hosts 에 추가 (docs/network.md 와 일치)
-192.168.100.1   proxy
-192.168.100.11  fe1
-192.168.100.12  fe2
-192.168.100.21  be1
-192.168.100.22  be2
-192.168.100.31  kafka1
-192.168.100.32  kafka2
-192.168.100.33  kafka3
-192.168.100.40  backup
-192.168.100.51  mariadb-p
-192.168.100.52  mariadb-r
-192.168.100.61  mongo1
-192.168.100.62  mongo2
-192.168.100.63  mongo3
-192.168.100.71  elk
-192.168.100.81  valkey
-192.168.100.90  monitor
+# /etc/hosts 기준 목록 (docs/network.md 와 일치). 17대에 이미 적용돼 있음 — 덧붙이지 말고 비교용으로만 쓴다.
+10.0.1.1    proxy
+10.0.1.101  frontend1
+10.0.1.102  frontend2
+10.0.1.103  backend1
+10.0.1.104  backend2
+10.0.1.105  kafka1
+10.0.1.106  kafka2
+10.0.1.107  kafka3
+10.0.1.108  backup
+10.0.2.1    monitoring
+10.0.2.101  mariadb-pr
+10.0.2.102  mariadb-re
+10.0.2.103  elk
+10.0.2.104  mongodb-pr
+10.0.2.105  mongo-se1
+10.0.2.106  mongo-se2
+10.0.2.107  valkey
