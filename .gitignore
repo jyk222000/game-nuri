@@ -40,3 +40,6 @@ Thumbs.db
 # Claude 개인 설정
 .claude/settings.local.json
 CLAUDE.local.md
+
+# Serena (개인 설정)
+.serena/project.local.yml
