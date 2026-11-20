@@ -1,0 +1,7 @@
+# /etc/yum.repos.d/mongodb-org-8.0.repo — Rocky Linux 10 (redhat/10 저장소, 11/20 HTTP 200 확인)
+[mongodb-org-8.0]
+name=MongoDB Repository
+baseurl=https://repo.mongodb.org/yum/redhat/10/mongodb-org/8.0/x86_64/
+gpgcheck=1
+enabled=1
+gpgkey=https://pgp.mongodb.com/server-8.0.asc

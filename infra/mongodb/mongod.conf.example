@@ -1,0 +1,20 @@
+# /etc/mongod.conf (mongodb-pr, mongo-se1, mongo-se2 공통)
+storage:
+  dbPath: /DATA/mongodb
+  wiredTiger:
+    engineConfig:
+      cacheSizeGB: 0.25          # VM 메모리 1.7G라 최소값으로 제한
+systemLog:
+  destination: file
+  logAppend: true
+  path: /var/log/mongodb/mongod.log
+processManagement:
+  timeZoneInfo: /usr/share/zoneinfo
+net:
+  port: 27017
+  bindIp: 0.0.0.0                # 방화벽으로 10.0.0.0/16만 허용
+security:
+  keyFile: /etc/mongodb/keyfile  # 키 파일은 커밋하지 않는다
+  authorization: enabled
+replication:
+  replSetName: rs0

@@ -1,0 +1,21 @@
+# /etc/my.cnf.d/zz-gamenuri.cnf (mariadb-pr, mariadb-re 공통)
+[mysqld]
+skip-name-resolve
+datadir=/DATA/mysql
+bind-address=0.0.0.0
+log_bin=mysql-bin
+binlog_format=ROW
+binlog_expire_logs_seconds=259200
+character-set-server=utf8mb4
+collation-server=utf8mb4_unicode_ci
+default_time_zone='+00:00'
+innodb_buffer_pool_size=512M
+
+# Primary (mariadb-pr)
+server-id=1
+
+# Replica (mariadb-re) — 위 server-id=1 대신 아래를 쓴다
+# server-id=2
+# relay_log=relay-bin
+# read_only=ON
+# log_slave_updates=ON
