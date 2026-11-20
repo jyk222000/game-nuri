@@ -1,6 +1,8 @@
 # 결정 기록
 형식: `YYYY-MM-DD | 결정 | 이유`
 
+- 2026-11-20 | MongoDB 8.0.38(공식 저장소 redhat/10), 복제 셋 rs0 3대(mongodb-pr priority 2), keyFile 인증, cacheSizeGB 0.25, mongodb-selinux 미설치 | Monstache change stream에 복제 셋 필요, VM 메모리 1.7G, dbPath를 /DATA로 바꿔 전용 SELinux 정책을 쓸 수 없음
+- 2026-11-20 | MariaDB 10.11.18(Rocky AppStream) Primary→Replica, skip-name-resolve, binlog 3일 보관, 시간대 +00:00 | 접속 허용을 IP 패턴(10.0.%)으로 관리, Primary /DATA가 4G, 시간은 UTC 저장 규칙
 - 2026-11-20 | 도메인은 `gamenuri.store`(가비아, 구입 완료), 공개 DNS A 레코드를 proxy 사설 IP 192.168.0.222로 지정, 인증서는 Let's Encrypt DNS-01 | 포트포워딩 불가·강의실 LAN에서만 접속, 구글 OAuth는 실제 도메인+HTTPS 필요
 - 2026-11-20 | OS는 Rocky Linux 10, 내부망 10.0.1.0/24(PC-1)·10.0.2.0/24(PC-2), 게이트웨이 proxy·monitoring | 실제 구축 환경 반영 (docs/network.md)
 - 2026-11-20 | VM hostname은 17대에 적용된 이름(frontend1, backend1, monitoring, mariadb-pr/re, mongodb-pr, mongo-se1/2)으로 확정 | 이미 17대 hostname·/etc/hosts에 적용됨, VM을 다시 바꾸는 것보다 문서 수정이 적음
