@@ -1,6 +1,7 @@
 # 결정 기록
 형식: `YYYY-MM-DD | 결정 | 이유`
 
+- 2026-11-20 | 도메인은 `gamenuri.store`(가비아, 구입 완료), 공개 DNS A 레코드를 proxy 사설 IP 192.168.0.222로 지정, 인증서는 Let's Encrypt DNS-01 | 포트포워딩 불가·강의실 LAN에서만 접속, 구글 OAuth는 실제 도메인+HTTPS 필요
 - 2026-11-20 | OS는 Rocky Linux 10, 내부망 10.0.1.0/24(PC-1)·10.0.2.0/24(PC-2), 게이트웨이 proxy·monitoring | 실제 구축 환경 반영 (docs/network.md)
 - 2026-11-20 | VM hostname은 17대에 적용된 이름(frontend1, backend1, monitoring, mariadb-pr/re, mongodb-pr, mongo-se1/2)으로 확정 | 이미 17대 hostname·/etc/hosts에 적용됨, VM을 다시 바꾸는 것보다 문서 수정이 적음
 - 2026-11-18 | 콘솔 가격은 다나와 크롤링 | 콘솔 스토어 직접 크롤링은 약관상 어려움
