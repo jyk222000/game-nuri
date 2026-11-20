@@ -29,6 +29,14 @@
 
 게이트웨이·내부 VM 설정 스크립트는 `infra/network/`에 있다.
 
+## 도메인
+- 도메인: **`gamenuri.store`** (가비아에서 구입 완료, 네임서버는 가비아 기본값)
+- 계획: A 레코드 `@ → 192.168.0.222` (proxy). 사설 IP라 강의실 LAN 안에서만 접속된다 (공유기 포트포워딩 없음).
+- HTTPS: Let's Encrypt DNS-01(TXT 레코드 수동 입력)로 발급(2026-11-20, 만료 2027-02-18) → HAProxy 443에 적용 완료. 구글 OAuth redirect URI는 `https://gamenuri.store/...`.
+- 인증서 위치(proxy VM): 원본 `/etc/letsencrypt/live/gamenuri.store/`, HAProxy용 `/etc/haproxy/certs/gamenuri.store.pem`(fullchain+privkey, root:haproxy 640). 키 파일은 repo에 넣지 않는다.
+- 갱신: `--manual` 방식이라 자동 갱신 안 됨. 만료 전에 `sudo certbot certonly --manual --preferred-challenges dns -d gamenuri.store`를 다시 실행하고 TXT 값을 가비아에 넣은 뒤, PEM을 다시 만들고 `systemctl reload haproxy`.
+- 확인: 강의실 PC에서 `nslookup gamenuri.store`가 192.168.0.222를 돌려주는지 (학교·공유기 DNS의 rebinding 차단 여부).
+
 ## 호스트
 
 | 호스트 이름 | IP | PC | 역할 | 주요 포트 |
