@@ -1,0 +1,399 @@
+{
+ "key": "publishers",
+ "title": "제작사·플랫폼 전략",
+ "data_source": "mock",
+ "generated_at": "2026-11-21T09:33:32Z",
+ "takeaways": [
+  "출시 200일 안에 첫 할인을 하는 제작사: Pocketpair, Supergiant. 이 회사 신작은 기다리면 싸져요.",
+  "할인을 거의 하지 않는 제작사: Nintendo.",
+  "콘솔 선출시작은 평균 3.5년(42개월) 뒤 PC로 나와요 (표본 3개)."
+ ],
+ "figures": [
+  {
+   "file": "genre_mix.png",
+   "title": "제작사별 장르 구성",
+   "caption": "제작사가 어떤 장르에 집중하는지 보여요. 팔로우할 제작사를 고르는 기준이 됩니다.",
+   "charts": [
+    {
+     "type": "stacked",
+     "title": "제작사별 장르 구성",
+     "unit": "%",
+     "keys": [
+      {
+       "key": "RPG",
+       "label": "RPG"
+      },
+      {
+       "key": "로그라이크",
+       "label": "로그라이크"
+      },
+      {
+       "key": "슈터",
+       "label": "슈터"
+      },
+      {
+       "key": "시뮬레이션",
+       "label": "시뮬레이션"
+      },
+      {
+       "key": "액션",
+       "label": "액션"
+      },
+      {
+       "key": "어드벤처",
+       "label": "어드벤처"
+      },
+      {
+       "key": "전략",
+       "label": "전략"
+      }
+     ],
+     "rows": [
+      {
+       "label": "Pocketpair",
+       "values": {
+        "RPG": 0.0,
+        "로그라이크": 0.0,
+        "슈터": 33.3,
+        "시뮬레이션": 66.7,
+        "액션": 0.0,
+        "어드벤처": 0.0,
+        "전략": 0.0
+       }
+      },
+      {
+       "label": "Supergiant",
+       "values": {
+        "RPG": 0.0,
+        "로그라이크": 100.0,
+        "슈터": 0.0,
+        "시뮬레이션": 0.0,
+        "액션": 0.0,
+        "어드벤처": 0.0,
+        "전략": 0.0
+       }
+      },
+      {
+       "label": "CD Projekt",
+       "values": {
+        "RPG": 100.0,
+        "로그라이크": 0.0,
+        "슈터": 0.0,
+        "시뮬레이션": 0.0,
+        "액션": 0.0,
+        "어드벤처": 0.0,
+        "전략": 0.0
+       }
+      },
+      {
+       "label": "FromSoftware",
+       "values": {
+        "RPG": 25.0,
+        "로그라이크": 0.0,
+        "슈터": 0.0,
+        "시뮬레이션": 0.0,
+        "액션": 75.0,
+        "어드벤처": 0.0,
+        "전략": 0.0
+       }
+      },
+      {
+       "label": "Larian",
+       "values": {
+        "RPG": 33.3,
+        "로그라이크": 0.0,
+        "슈터": 0.0,
+        "시뮬레이션": 0.0,
+        "액션": 0.0,
+        "어드벤처": 0.0,
+        "전략": 66.7
+       }
+      },
+      {
+       "label": "Rockstar",
+       "values": {
+        "RPG": 0.0,
+        "로그라이크": 0.0,
+        "슈터": 0.0,
+        "시뮬레이션": 0.0,
+        "액션": 66.7,
+        "어드벤처": 33.3,
+        "전략": 0.0
+       }
+      },
+      {
+       "label": "Sony",
+       "values": {
+        "RPG": 0.0,
+        "로그라이크": 0.0,
+        "슈터": 33.3,
+        "시뮬레이션": 0.0,
+        "액션": 33.3,
+        "어드벤처": 33.3,
+        "전략": 0.0
+       }
+      },
+      {
+       "label": "Nintendo",
+       "values": {
+        "RPG": 25.0,
+        "로그라이크": 0.0,
+        "슈터": 0.0,
+        "시뮬레이션": 0.0,
+        "액션": 50.0,
+        "어드벤처": 25.0,
+        "전략": 0.0
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "file": "score_first_sale.png",
+   "title": "평균 평점 · 첫 할인까지 걸린 기간",
+   "caption": "초록색은 출시 후 약 6개월 안에 첫 할인이 오는 제작사예요. 이런 회사 신작은 기다리면 싸집니다.",
+   "charts": [
+    {
+     "type": "bars",
+     "title": "평균 평론 점수",
+     "unit": "",
+     "vmax": 100,
+     "orient": "h",
+     "color": 1,
+     "xlabel": "",
+     "marks": [],
+     "items": [
+      {
+       "label": "Pocketpair",
+       "value": 79.0
+      },
+      {
+       "label": "Supergiant",
+       "value": 80.3
+      },
+      {
+       "label": "CD Projekt",
+       "value": 79.3
+      },
+      {
+       "label": "FromSoftware",
+       "value": 80.5
+      },
+      {
+       "label": "Larian",
+       "value": 89.3
+      },
+      {
+       "label": "Rockstar",
+       "value": 80.0
+      },
+      {
+       "label": "Sony",
+       "value": 89.0
+      },
+      {
+       "label": "Nintendo",
+       "value": 87.2
+      }
+     ]
+    },
+    {
+     "type": "bars",
+     "title": "PC 출시 후 첫 할인까지(중앙값)",
+     "unit": "일",
+     "vmax": null,
+     "orient": "h",
+     "color": 1,
+     "xlabel": "",
+     "marks": [],
+     "items": [
+      {
+       "label": "Pocketpair",
+       "value": 117.0,
+       "note": "거의 할인 안 함",
+       "color": 2
+      },
+      {
+       "label": "Supergiant",
+       "value": 195.0,
+       "note": "거의 할인 안 함",
+       "color": 2
+      },
+      {
+       "label": "CD Projekt",
+       "value": 266.0,
+       "note": "거의 할인 안 함",
+       "color": 6
+      },
+      {
+       "label": "FromSoftware",
+       "value": 482.0,
+       "note": "거의 할인 안 함",
+       "color": 6
+      },
+      {
+       "label": "Larian",
+       "value": 562.0,
+       "note": "거의 할인 안 함",
+       "color": 6
+      },
+      {
+       "label": "Rockstar",
+       "value": 598.0,
+       "note": "거의 할인 안 함",
+       "color": 6
+      },
+      {
+       "label": "Sony",
+       "value": 782.0,
+       "note": "거의 할인 안 함",
+       "color": 6
+      },
+      {
+       "label": "Nintendo",
+       "value": null,
+       "note": "거의 할인 안 함",
+       "color": 6
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "file": "console_delay.png",
+   "title": "콘솔 → PC 출시 지연",
+   "caption": "초록 = 동시 출시, 주황 = 콘솔 선출시 후 PC 이식. PC판을 기다릴지 콘솔을 살지 정하는 근거예요.",
+   "charts": [
+    {
+     "type": "bars",
+     "title": "콘솔 → PC 출시 지연 (독점작 평균 42개월)",
+     "unit": "개월",
+     "vmax": null,
+     "orient": "h",
+     "color": 1,
+     "xlabel": "",
+     "marks": [],
+     "items": [
+      {
+       "label": "갓 오브 워",
+       "value": 45.0,
+       "note": null,
+       "color": 3
+      },
+      {
+       "label": "샘플 게임 23",
+       "value": 45.0,
+       "note": null,
+       "color": 3
+      },
+      {
+       "label": "샘플 게임 05",
+       "value": 37.0,
+       "note": null,
+       "color": 3
+      },
+      {
+       "label": "샘플 게임 25",
+       "value": 0.0,
+       "note": "동시 출시",
+       "color": 2
+      },
+      {
+       "label": "샘플 게임 20",
+       "value": 0.0,
+       "note": "동시 출시",
+       "color": 2
+      },
+      {
+       "label": "발더스 게이트 3",
+       "value": 0.0,
+       "note": "동시 출시",
+       "color": 2
+      },
+      {
+       "label": "레드 데드 리뎀션 2",
+       "value": 0.0,
+       "note": "동시 출시",
+       "color": 2
+      },
+      {
+       "label": "샘플 게임 07",
+       "value": 0.0,
+       "note": "동시 출시",
+       "color": 2
+      },
+      {
+       "label": "사이버펑크 2077",
+       "value": 0.0,
+       "note": "동시 출시",
+       "color": 2
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "tables": [
+  {
+   "title": "제작사 비교",
+   "note": "",
+   "columns": [
+    "제작사",
+    "게임 수",
+    "평균 평점",
+    "첫 할인까지"
+   ],
+   "rows": [
+    [
+     "Pocketpair",
+     3,
+     79.0,
+     "117일"
+    ],
+    [
+     "Supergiant",
+     3,
+     80.0,
+     "195일"
+    ],
+    [
+     "CD Projekt",
+     3,
+     79.0,
+     "266일"
+    ],
+    [
+     "FromSoftware",
+     4,
+     80.0,
+     "482일"
+    ],
+    [
+     "Larian",
+     3,
+     89.0,
+     "562일"
+    ],
+    [
+     "Rockstar",
+     3,
+     80.0,
+     "598일"
+    ],
+    [
+     "Sony",
+     3,
+     89.0,
+     "782일"
+    ],
+    [
+     "Nintendo",
+     4,
+     87.0,
+     "거의 안 함"
+    ]
+   ]
+  }
+ ]
+}

@@ -1,0 +1,34 @@
+[
+ {
+  "key": "discount-pattern",
+  "title": "할인 패턴"
+ },
+ {
+  "key": "discount-effect",
+  "title": "할인 효과"
+ },
+ {
+  "key": "critic-vs-user",
+  "title": "평론 점수 vs 유저 평가"
+ },
+ {
+  "key": "complaints",
+  "title": "불만 유형 분석"
+ },
+ {
+  "key": "spec-trust",
+  "title": "사양표 신뢰도"
+ },
+ {
+  "key": "play-pattern",
+  "title": "실제 플레이 패턴"
+ },
+ {
+  "key": "publishers",
+  "title": "제작사·플랫폼 전략"
+ },
+ {
+  "key": "buzz",
+  "title": "화제성 분석"
+ }
+]
