@@ -119,7 +119,7 @@
   "cover_url": "https://...", "price_krw": 47900, "regular_krw": 64800, "discount_pct": 26,
   "positive_ratio": 0.92, "concurrent_players": 412000, "time_to_beat_hours": 60, "wished": false }
 ```
-(목업의 `hue`는 ERD에 없어 `cover_url`로 대체하는 제안이며 **결정 대기**, 아래 표 4번)
+(목업의 `hue`는 ERD에 없어 `cover_url`로 대체한다, 아래 표 4번)
 `GET /api/games?q=&platform=&genre=&sort=price|discount&page=&size=` → `{ "items": [카드], "total": 1, "page": 1, "size": 20 }` (`platform` 값은 ERD 코드)
 `GET /api/games/autocomplete?q=` → `{ "items": [ { "game_id": 119133, "name": "엘든 링", "name_en": "Elden Ring" } ] }`
 `GET /api/games/popular`, `deals`, `short`, `players/top` → `{ "items": [카드] }`. `players/low` 카드에는 `"warning": "접속자가 적어 매칭이 어려울 수 있어요"` 추가
@@ -141,7 +141,7 @@
 { "game_id": 119133, "verdict": "buy_now", "reason": "역대 최저가에 가까운 가격이에요.", "current_krw": 47900,
   "lowest_krw": 38900, "lowest_date": "2025-12-05", "vs_lowest_pct": 23, "sale_count_2y": 9 }
 ```
-`verdict`: `buy_now` | `neutral` | `wait` | (콘솔·이력 3건 미만) `insufficient_data` ← 마지막 값은 목업에 없는 제안(결정 대기)
+`verdict`: `buy_now` | `neutral` | `wait` | (콘솔·이력 3건 미만) `insufficient_data` ← 마지막 값은 목업에 없는 값(확정)
 `GET /api/games/119133/prediction`
 ```json
 { "game_id": 119133, "avg_sale_interval_days": 62, "next_sale_expected": "2026-12-21",
@@ -183,7 +183,7 @@
 { "game_id": 119133, "minimum_text": "OS: Windows 10 ... 그래픽: GTX 1060 ...", "recommended_text": "OS: Windows 10/11 ...",
   "updated_at": "2026-11-19T02:30:00Z" }
 ```
-`GET·PUT /api/me/specs` → `{ "cpu": "", "gpu": "", "ram_gb": null }` (`os` 추가는 결정 대기, 표 10번)
+`GET·PUT /api/me/specs` → `{ "cpu": "", "gpu": "", "ram_gb": null }` (`os` 추가 확정, 표 10번)
 `GET /api/games/119133/spec-check` → `{ "game_id": 119133, "verdict": "min_ok", "reason": "...", "generated_by": "ai", "cached": true }` (`verdict`: `rec_ok` | `min_ok` | `below_min`)
 
 ### 검색·운영
@@ -196,16 +196,16 @@
 ## 목업과 ERD가 달랐던 곳 (2026-11-23 결정 상태)
 | # | 목업 | ERD | 결정 | 상태 |
 |---|---|---|---|---|
-| 1 | 게임 `name`(한글) + `name_en`(영문) | `games.name`(영문) + `name_ko`(한글) | API `name` = `name_ko` 우선(없으면 `games.name`), `name_en` = `games.name` | **제안(미결정)** |
+| 1 | 게임 `name`(한글) + `name_en`(영문) | `games.name`(영문) + `name_ko`(한글) | API `name` = `name_ko` 우선(없으면 `games.name`), `name_en` = `games.name` | 확정 |
 | 2 | `me.name`, `me.picture` | `users.nickname`만 | `name` = `nickname`, `picture`는 응답에서 뺀다 | 결정 |
 | 3 | `notifications` 3개 | `email_enabled` 하나 | `email_enabled` 하나. `price_alert`·`weekly_deals`는 프런트에서 뺀다 | 결정 |
-| 4 | 카드 `hue` | 없음 (`cover_url`) | `cover_url`로 대체, `hue`는 프런트가 계산 | **제안(미결정)** |
+| 4 | 카드 `hue` | 없음 (`cover_url`) | `cover_url`로 대체, `hue`는 프런트가 계산 | 확정 |
 | 5 | `platforms`: `pc`/`ps`/`xbox`/`switch` | ERD 코드 7개 | ERD 코드를 쓰고 표시 이름은 프런트가 바꾼다 | 결정 |
 | 6 | 가격 `edition: "used"` | `edition` + `item_condition` | `physical` + `used`로 표현 | 결정 |
 | 7 | 이력 `date`, 단일 시리즈 | `collected_at`, 여러 시리즈 | `collected_at`, `store`·`edition` 포함, `platform`·`item_condition`으로 시리즈 선택 | 결정 |
 | 8 | 최저가 단일 값 | 플랫폼·상태별 | `lowest`를 `items[]`로 | 결정 |
 | 9 | `requirements` 구조화 | `minimum_text`, `recommended_text` | 텍스트 컬럼 그대로. 구조화는 ⑥ 방식 확정 후 | 결정 |
-| 10 | `specs` 에 `os` 없음 | `user_specs.os` 있음 | `os`를 요청·응답에 추가 | **제안(미결정)** |
+| 10 | `specs` 에 `os` 없음 | `user_specs.os` 있음 | `os`를 요청·응답에 추가 | 확정 |
 | 11 | 알림 내역 `game_id`, `game_name`, `target_price_krw`, `channel` | `alert_logs`에 없음 | `alerts`·`games` 조인으로 채우고 `channel`은 `"email"` 고정 | 결정 |
 | 12 | 알림 목록 `game_name`, `current_krw` | `alerts`에 없음 | 조인(`games`, `prices_current` 최저가)으로 채움 | 결정(구현 방식) |
 | 13 | 카드 `positive_ratio` 등 | 조인·계산 | 스키마 변경 없음 | 결정(구현 방식) |
