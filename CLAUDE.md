@@ -35,23 +35,26 @@ Steam 사용자 데이터를 모아 **어디서, 언제 사는 게 가장 싼지
 ## 3. 디렉터리와 담당
 | 폴더 | 내용 | 배포 VM | 담당 |
 |---|---|---|---|
-| `collector/` | ITAD·IGDB·Steam API 수집, 다나와 크롤링, Kafka Producer | Proxy·수집 서버 | (미정) |
-| `pipeline/refiner/` | raw → refined 정제 (중복 제거, 원화 환산, 게임 ID 통합) | Kafka 1~3 | (미정) |
-| `pipeline/connect/` | Kafka Connect Sink 설정 JSON | Kafka 1~3 | (미정) |
-| `backend/` | FastAPI API 서버 | Backend 1·2 | (미정) |
-| `frontend/` | 웹 화면 + nginx 설정 | Frontend 1·2 | (미정) |
-| `analysis/` | Jupyter 분석, 구매 타이밍 기준 | 각자 PC | (미정) |
-| `infra/` | VM·네트워크·DB·모니터링·백업 설정과 스크립트 | 각 VM | (미정) |
+| `collector/` | ITAD·IGDB·Steam API 수집, 다나와 크롤링, Kafka Producer | Proxy·수집 서버 | 한예찬 |
+| `pipeline/refiner/` | raw → refined 정제 (중복 제거, 원화 환산, 게임 ID 통합) | Kafka 1~3 | 이고은 |
+| `pipeline/connect/` | Kafka Connect Sink 설정 JSON | Kafka 1~3 | 남현식 |
+| `backend/` | FastAPI API 서버 | Backend 1·2 | 김준영 |
+| `frontend/` | 웹 화면 + nginx 설정 | Frontend 1·2 | 한예찬 |
+| `analysis/` | Jupyter 분석, 구매 타이밍 기준 | 각자 PC | 전원 (분석별) |
+| `infra/` | VM·네트워크·DB·모니터링·백업 설정과 스크립트 | 각 VM | 김준영 (kafka·elk·monitoring은 남현식) |
 | `shared/` | 공통 Python 패키지 (메시지 모델, 설정, 로깅) | 모든 Python 서비스 | **전원 (PR 필수 리뷰)** |
 | `docs/contracts/` | 토픽·메시지 형식, ERD, API 명세 = **팀 간 약속** | – | **전원 (PR 필수 리뷰)** |
 
-### 현재 담당 (11/20~ 전체 흐름 테스트 기준, 본 개발 분담 확정 시 갱신)
+### 현재 담당 (11/22 회의 확정)
 | 사람 | 역할 | 주로 만지는 폴더 |
 |---|---|---|
-| 남현식 | Kafka 전담 (클러스터, 연결, Kafka Connect) | `infra/kafka/`, `pipeline/connect/` |
-| 한예찬 | 수집 (원본 수집, 프로파일링, Producer) | `collector/` |
-| 이고은 | DB 설계 · 정제 (정규화·ERD, 정제 로직) | `docs/contracts/erd.sql`, `pipeline/refiner/` |
-| 김준영 (팀장) | 인프라 · 검증 (VM·DB 설치, 직접 적재, 전체 검증) | `infra/`, `scripts/` |
+| 김준영 (팀장) | 인프라, Backend + Valkey, MongoDB, 백업, 통합 검증 | `infra/`, `backend/`, `scripts/` |
+| 남현식 | Kafka·Kafka Connect, ES·Kibana·Monstache, 모니터링 | `infra/kafka/`, `infra/elk/`, `infra/monitoring/`, `pipeline/connect/` |
+| 이고은 | ERD·MariaDB, 정제 프로그램 | `docs/contracts/erd.sql`, `pipeline/refiner/` |
+| 한예찬 | 수집(Producer), HAProxy·도메인, Frontend, 구글 로그인, AI 기능(⑤⑥) | `collector/`, `frontend/`, `infra/haproxy/`, `backend/app/services/`(auth·ai 모듈) |
+
+분석 담당: A1·A5 한예찬, A2·A8 김준영, A3·A4 이고은, A6·A7 남현식 (`analysis/`).
+구글 로그인·AI 사양 비교는 Backend 안에서 돈다. 한예찬은 서비스 모듈을, 김준영은 라우터 연결을 맡는다.
 
 테스트 계획: `docs/test-plan.md`. `.github/CODEOWNERS`의 `@TBD`는 GitHub 아이디로 채운다.
 
@@ -84,7 +87,7 @@ Steam 사용자 데이터를 모아 **어디서, 언제 사는 게 가장 싼지
 | 메일 | Gmail SMTP (앱 비밀번호) |
 | AI | Gemini 등 AI API — ⑤ 리뷰 요약(ES 키워드만 전송), ⑥ 사양 비교. 결과는 저장해 재사용 |
 | 실행 방식 | **컨테이너 사용 안 함.** 각 VM에서 venv + systemd 서비스로 실행 |
-| OS | Rocky Linux 10 (패키지 `dnf`, 네트워크 `nmcli`, 방화벽 iptables-nft-services) |
+| OS | Rocky Linux 10 (패키지 `dnf`, 네트워크 `nmcli`, 방화벽은 게이트웨이 2대만 iptables-nft-services, 내부 VM은 firewalld 끔) |
 
 ## 6. 이름 규칙
 - 서비스명 표기: 화면·문서·발표는 **겜누리**, 레포·폴더·서버 경로·도메인은 **`game-nuri`**,
