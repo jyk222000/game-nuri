@@ -1,3 +1,24 @@
+from app.db.models.game import (
+    Company,
+    Game,
+    GameAlias,
+    GameCompany,
+    GameGenre,
+    GamePlatform,
+    GameRequirement,
+    GameSeries,
+    GameSeriesMap,
+    GameStoreId,
+    GameTag,
+    GameTimeToBeat,
+    Genre,
+    Platform,
+    PlayerCount,
+    ReviewSummary,
+    Store,
+    Tag,
+)
+from app.db.models.price import ExchangeRate, PriceCurrent, PriceHistory
 from app.db.models.user import (
     Alert,
     AlertLog,
@@ -8,7 +29,7 @@ from app.db.models.user import (
     Wishlist,
 )
 
-# Backend가 쓰는 테이블. 가격·게임 테이블에는 쓰지 않는다 (Kafka Connect 담당).
+# Backend가 쓰는 테이블 (7개). 가격·게임 테이블에는 쓰지 않는다 (Kafka Connect 담당).
 WRITABLE_MODELS = (
     User,
     UserSpec,
@@ -19,11 +40,58 @@ WRITABLE_MODELS = (
     AlertLog,
 )
 
+# Backend가 조회만 하는 테이블 (21개). 코드에서 add·update·delete 하지 않는다.
+READ_ONLY_MODELS = (
+    Game,
+    Platform,
+    Genre,
+    Company,
+    GamePlatform,
+    GameGenre,
+    GameCompany,
+    GameAlias,
+    GameSeries,
+    GameSeriesMap,
+    Tag,
+    GameTag,
+    Store,
+    GameStoreId,
+    GameTimeToBeat,
+    GameRequirement,
+    PlayerCount,
+    ReviewSummary,
+    PriceCurrent,
+    PriceHistory,
+    ExchangeRate,
+)
+
 __all__ = [
+    "READ_ONLY_MODELS",
     "WRITABLE_MODELS",
     "Alert",
     "AlertLog",
+    "Company",
+    "ExchangeRate",
+    "Game",
+    "GameAlias",
+    "GameCompany",
+    "GameGenre",
+    "GamePlatform",
+    "GameRequirement",
+    "GameSeries",
+    "GameSeriesMap",
+    "GameStoreId",
+    "GameTag",
+    "GameTimeToBeat",
+    "Genre",
     "NotificationSetting",
+    "Platform",
+    "PlayerCount",
+    "PriceCurrent",
+    "PriceHistory",
+    "ReviewSummary",
+    "Store",
+    "Tag",
     "User",
     "UserOwnedGame",
     "UserSpec",
