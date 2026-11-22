@@ -1,22 +1,21 @@
 {
  "key": "critic-vs-user",
- "title": "평론 점수 vs 유저 평가",
+ "title": "평론 vs 유저 평가 괴리",
  "data_source": "mock",
- "generated_at": "2026-11-21T09:33:29Z",
+ "generated_at": "2026-11-22T12:33:32Z",
  "takeaways": [
-  "유저가 평론보다 가장 후한 장르는 인디(+7.5점), 가장 박한 장르는 슈터(-5.0점)이에요.",
-  "±10점 이상 차이 나는 게임은 숨은 명작 8개, 과대평가 3개예요.",
-  "출시 초기 → 현재 긍정률: AAA 75→81%, 인디 83→87%."
+  "유저가 평론보다 후한 장르는 인디(+5.9점), 평론이 더 후한 장르는 액션(-5.8점)예요.",
+  "평론과 10점 이상 차이 나는 게임이 11개 있어요 → 숨은 명작·과대평가 꼬리표.",
+  "평론 점수가 없는 게임 4개는 제외했어요."
  ],
  "figures": [
   {
-   "file": "scatter.png",
-   "title": "평론 점수 × Steam 긍정률",
-   "caption": "점 하나가 게임 하나예요. 대각선에서 10점 이상 벗어난 게임은 이름을 달았습니다(초록=유저가 더 후함, 빨강=평론이 더 후함).",
+   "title": "평론 점수 × 유저 긍정률",
+   "caption": "점 하나가 게임 하나예요. 이름이 붙은 점은 차이가 큰 게임입니다.",
    "charts": [
     {
      "type": "scatter",
-     "title": "평론 점수 × 유저 긍정률 (점선 위 = 유저가 더 후함)",
+     "title": "평론 점수 × 유저 긍정률 (대각선 위 = 유저가 더 후함)",
      "groups": [
       {
        "name": "RPG",
@@ -27,39 +26,27 @@
        "color": 2
       },
       {
-       "name": "시뮬레이션",
+       "name": "인디",
        "color": 3
       },
       {
-       "name": "어드벤처",
+       "name": "시뮬레이션",
        "color": 4
       },
       {
-       "name": "로그라이크",
+       "name": "어드벤처",
        "color": 5
-      },
-      {
-       "name": "전략",
-       "color": 6
-      },
-      {
-       "name": "인디",
-       "color": 7
-      },
-      {
-       "name": "슈터",
-       "color": 8
       }
      ],
      "xlabel": "평론 점수",
      "ylabel": "Steam 긍정률",
      "xlim": [
-      58,
+      55,
       100
      ],
      "ylim": [
-      40,
-      101
+      35,
+      100
      ],
      "xunit": "",
      "yunit": "%",
@@ -70,305 +57,201 @@
      "curve_label": "",
      "points": [
       {
-       "x": 96.0,
-       "y": 92.0,
-       "group": "액션",
-       "label": null
+       "x": 74,
+       "y": 63,
+       "group": "RPG"
       },
       {
-       "x": 86.0,
-       "y": 86.0,
-       "group": "RPG",
-       "label": null
+       "x": 87,
+       "y": 98,
+       "group": "RPG"
       },
       {
-       "x": 96.0,
-       "y": 96.0,
-       "group": "RPG",
-       "label": null
+       "x": 89,
+       "y": 85,
+       "group": "RPG"
       },
       {
-       "x": 96.0,
-       "y": 95.0,
-       "group": "어드벤처",
-       "label": null
+       "x": 83,
+       "y": 74,
+       "group": "액션"
       },
       {
-       "x": 93.0,
-       "y": 98.0,
-       "group": "로그라이크",
-       "label": null
+       "x": 85,
+       "y": 89,
+       "group": "액션"
       },
       {
-       "x": 86.0,
-       "y": 98.0,
+       "x": 66,
+       "y": 63,
+       "group": "시뮬레이션"
+      },
+      {
+       "x": 78,
+       "y": 84,
+       "group": "인디"
+      },
+      {
+       "x": 80,
+       "y": 82,
+       "group": "인디"
+      },
+      {
+       "x": 83,
+       "y": 82,
+       "group": "인디"
+      },
+      {
+       "x": 77,
+       "y": 80,
+       "group": "시뮬레이션"
+      },
+      {
+       "x": 93,
+       "y": 85,
+       "group": "RPG"
+      },
+      {
+       "x": 75,
+       "y": 84,
+       "group": "RPG"
+      },
+      {
+       "x": 88,
+       "y": 99,
+       "group": "인디"
+      },
+      {
+       "x": 85,
+       "y": 84,
+       "group": "RPG"
+      },
+      {
+       "x": 87,
+       "y": 76,
+       "group": "액션"
+      },
+      {
+       "x": 73,
+       "y": 81,
+       "group": "액션"
+      },
+      {
+       "x": 69,
+       "y": 57,
+       "group": "RPG"
+      },
+      {
+       "x": 64,
+       "y": 65,
+       "group": "액션"
+      },
+      {
+       "x": 72,
+       "y": 80,
+       "group": "인디"
+      },
+      {
+       "x": 77,
+       "y": 79,
+       "group": "인디"
+      },
+      {
+       "x": 65,
+       "y": 79,
        "group": "시뮬레이션",
-       "label": "스타듀 밸리"
+       "label": "문명 6"
       },
       {
-       "x": 87.0,
-       "y": 97.0,
-       "group": "어드벤처",
-       "label": "할로우 나이트"
+       "x": 82,
+       "y": 82,
+       "group": "시뮬레이션"
       },
       {
-       "x": 90.0,
-       "y": 94.0,
-       "group": "액션",
-       "label": null
+       "x": 73,
+       "y": 66,
+       "group": "액션"
       },
       {
-       "x": 94.0,
-       "y": 96.0,
-       "group": "액션",
-       "label": null
+       "x": 92,
+       "y": 95,
+       "group": "인디"
       },
       {
-       "x": 97.0,
-       "y": 90.0,
-       "group": "액션",
-       "label": null
-      },
-      {
-       "x": 87.0,
-       "y": 97.0,
-       "group": "시뮬레이션",
-       "label": null
-      },
-      {
-       "x": 70.0,
-       "y": 84.0,
-       "group": "시뮬레이션",
-       "label": "팰월드"
-      },
-      {
-       "x": 82.0,
-       "y": 82.0,
-       "group": "슈터",
-       "label": null
-      },
-      {
-       "x": 82.0,
-       "y": 70.0,
-       "group": "RPG",
-       "label": "포켓몬스터 스칼렛"
-      },
-      {
-       "x": 62.0,
-       "y": 49.0,
-       "group": "RPG",
-       "label": "샘플 게임 01"
-      },
-      {
-       "x": 84.0,
-       "y": 81.0,
-       "group": "RPG",
-       "label": null
-      },
-      {
-       "x": 77.0,
-       "y": 82.0,
-       "group": "전략",
-       "label": null
-      },
-      {
-       "x": 77.0,
-       "y": 85.0,
-       "group": "액션",
-       "label": null
-      },
-      {
-       "x": 95.0,
-       "y": 99.0,
-       "group": "어드벤처",
-       "label": null
-      },
-      {
-       "x": 62.0,
-       "y": 70.0,
-       "group": "로그라이크",
-       "label": null
-      },
-      {
-       "x": 67.0,
-       "y": 63.0,
-       "group": "어드벤처",
-       "label": null
-      },
-      {
-       "x": 89.0,
-       "y": 92.0,
-       "group": "시뮬레이션",
-       "label": null
-      },
-      {
-       "x": 70.0,
-       "y": 69.0,
+       "x": 69,
+       "y": 85,
        "group": "인디",
-       "label": null
+       "label": "데이브 더 다이버"
       },
       {
-       "x": 72.0,
-       "y": 87.0,
-       "group": "전략",
-       "label": "샘플 게임 10"
+       "x": 62,
+       "y": 59,
+       "group": "RPG"
       },
       {
-       "x": 74.0,
-       "y": 81.0,
+       "x": 78,
+       "y": 79,
+       "group": "RPG"
+      },
+      {
+       "x": 91,
+       "y": 79,
+       "group": "액션"
+      },
+      {
+       "x": 62,
+       "y": 53,
+       "group": "어드벤처"
+      },
+      {
+       "x": 80,
+       "y": 72,
+       "group": "액션"
+      },
+      {
+       "x": 87,
+       "y": 77,
+       "group": "액션"
+      },
+      {
+       "x": 94,
+       "y": 99,
+       "group": "어드벤처"
+      },
+      {
+       "x": 87,
+       "y": 73,
        "group": "액션",
-       "label": null
+       "label": "트라이얼스 라이징"
       },
       {
-       "x": 70.0,
-       "y": 65.0,
-       "group": "RPG",
-       "label": null
+       "x": 91,
+       "y": 83,
+       "group": "어드벤처"
       },
       {
-       "x": 87.0,
-       "y": 92.0,
-       "group": "로그라이크",
-       "label": null
+       "x": 69,
+       "y": 83,
+       "group": "어드벤처",
+       "label": "오리와 눈먼 숲"
       },
       {
-       "x": 95.0,
-       "y": 99.0,
-       "group": "인디",
-       "label": null
-      },
-      {
-       "x": 76.0,
-       "y": 78.0,
-       "group": "전략",
-       "label": null
-      },
-      {
-       "x": 77.0,
-       "y": 81.0,
-       "group": "액션",
-       "label": null
-      },
-      {
-       "x": 64.0,
-       "y": 68.0,
-       "group": "시뮬레이션",
-       "label": null
-      },
-      {
-       "x": 62.0,
-       "y": 71.0,
-       "group": "RPG",
-       "label": null
-      },
-      {
-       "x": 74.0,
-       "y": 81.0,
-       "group": "액션",
-       "label": null
-      },
-      {
-       "x": 68.0,
-       "y": 66.0,
-       "group": "RPG",
-       "label": null
-      },
-      {
-       "x": 95.0,
-       "y": 99.0,
-       "group": "전략",
-       "label": null
-      },
-      {
-       "x": 94.0,
-       "y": 86.0,
-       "group": "액션",
-       "label": null
-      },
-      {
-       "x": 78.0,
-       "y": 67.0,
-       "group": "슈터",
-       "label": "샘플 게임 23"
-      },
-      {
-       "x": 86.0,
-       "y": 94.0,
-       "group": "로그라이크",
-       "label": null
-      },
-      {
-       "x": 76.0,
-       "y": 75.0,
-       "group": "액션",
-       "label": null
-      },
-      {
-       "x": 78.0,
-       "y": 74.0,
-       "group": "슈터",
-       "label": null
-      },
-      {
-       "x": 70.0,
-       "y": 80.0,
-       "group": "인디",
-       "label": null
-      },
-      {
-       "x": 83.0,
-       "y": 82.0,
-       "group": "RPG",
-       "label": null
-      },
-      {
-       "x": 72.0,
-       "y": 71.0,
-       "group": "RPG",
-       "label": null
-      },
-      {
-       "x": 88.0,
-       "y": 90.0,
-       "group": "시뮬레이션",
-       "label": null
-      },
-      {
-       "x": 66.0,
-       "y": 83.0,
-       "group": "인디",
-       "label": "샘플 게임 31"
-      },
-      {
-       "x": 92.0,
-       "y": 96.0,
-       "group": "RPG",
-       "label": null
-      },
-      {
-       "x": 77.0,
-       "y": 78.0,
-       "group": "RPG",
-       "label": null
-      },
-      {
-       "x": 64.0,
-       "y": 75.0,
-       "group": "액션",
-       "label": "샘플 게임 34"
+       "x": 66,
+       "y": 73,
+       "group": "RPG"
       }
      ]
     }
-   ]
+   ],
+   "file": "fig1.png"
   },
   {
-   "file": "genre_gap.png",
-   "title": "장르별 차이 · 초기 대비 현재",
-   "caption": "장르마다 평론과 유저 중 누가 더 후한지, 출시 초기에서 지금까지 평가가 어떻게 바뀌었는지 봤어요.",
+   "title": "장르별 (유저 - 평론) 평균 차이",
+   "caption": "+면 유저가 더 후하고, -면 평론이 더 후해요.",
    "charts": [
     {
      "type": "bars",
-     "title": "장르별 (유저 - 평론) 평균 차이",
+     "title": "장르별 평균 차이",
      "unit": "점",
      "vmax": null,
      "orient": "h",
@@ -378,77 +261,34 @@
      "items": [
       {
        "label": "인디",
-       "value": 7.5
+       "value": 5.9
       },
       {
        "label": "시뮬레이션",
-       "value": 7.5
-      },
-      {
-       "label": "로그라이크",
-       "value": 6.5
-      },
-      {
-       "label": "전략",
-       "value": 6.5
+       "value": 3.5
       },
       {
        "label": "어드벤처",
-       "value": 2.2
-      },
-      {
-       "label": "액션",
-       "value": 2.1
+       "value": 0.5
       },
       {
        "label": "RPG",
-       "value": -1.9
+       "value": -1.1
       },
       {
-       "label": "슈터",
-       "value": -5.0
-      }
-     ]
-    },
-    {
-     "type": "bars",
-     "title": "출시 초기 vs 현재 긍정률",
-     "unit": "%",
-     "vmax": 100,
-     "orient": "h",
-     "color": 1,
-     "xlabel": "",
-     "marks": [],
-     "items": [
-      {
-       "label": "AAA 초기",
-       "value": 74.6,
-       "color": 6
-      },
-      {
-       "label": "AAA 현재",
-       "value": 81.0,
-       "color": 1
-      },
-      {
-       "label": "인디 초기",
-       "value": 83.0,
-       "color": 6
-      },
-      {
-       "label": "인디 현재",
-       "value": 87.4,
-       "color": 1
+       "label": "액션",
+       "value": -5.8
       }
      ]
     }
-   ]
+   ],
+   "file": "fig2.png"
   }
  ],
  "tables": [
   {
-   "title": "차이가 큰 게임 (±10점 이상)",
-   "note": "",
+   "title": "차이가 큰 게임",
+   "note": "차이 = 유저 긍정률 - 평론 점수 (목 데이터)",
    "columns": [
     "게임",
     "장르",
@@ -459,94 +299,1320 @@
    ],
    "rows": [
     [
-     "샘플 게임 31",
+     "데이브 더 다이버",
      "인디",
-     66,
-     83,
-     17,
+     69,
+     85,
+     16,
      "숨은 명작"
     ],
     [
-     "샘플 게임 10",
-     "전략",
-     72,
-     87,
-     15,
-     "숨은 명작"
-    ],
-    [
-     "팰월드",
+     "문명 6",
      "시뮬레이션",
-     70,
-     84,
+     65,
+     79,
      14,
      "숨은 명작"
     ],
     [
-     "스타듀 밸리",
-     "시뮬레이션",
-     86,
-     98,
-     12,
-     "숨은 명작"
-    ],
-    [
-     "샘플 게임 34",
+     "트라이얼스 라이징",
      "액션",
-     64,
-     75,
-     11,
-     "숨은 명작"
-    ],
-    [
-     "할로우 나이트",
-     "어드벤처",
      87,
-     97,
-     10,
-     "숨은 명작"
-    ],
-    [
-     "샘플 게임 27",
-     "인디",
-     70,
-     80,
-     10,
-     "숨은 명작"
-    ],
-    [
-     "데이브 더 다이버",
-     "시뮬레이션",
-     87,
-     97,
-     10,
-     "숨은 명작"
-    ],
-    [
-     "샘플 게임 23",
-     "슈터",
-     78,
-     67,
-     -11,
+     73,
+     -14,
      "과대평가"
     ],
     [
-     "포켓몬스터 스칼렛",
+     "오리와 눈먼 숲",
+     "어드벤처",
+     69,
+     83,
+     14,
+     "숨은 명작"
+    ],
+    [
+     "디아블로 4",
      "RPG",
-     82,
-     70,
+     69,
+     57,
      -12,
      "과대평가"
     ],
     [
-     "샘플 게임 01",
+     "니어 오토마타",
+     "액션",
+     91,
+     79,
+     -12,
+     "과대평가"
+    ],
+    [
+     "엘든링",
      "RPG",
-     62,
-     49,
-     -13,
+     74,
+     63,
+     -11,
+     "과대평가"
+    ],
+    [
+     "사이버펑크 2077",
+     "RPG",
+     87,
+     98,
+     11,
+     "숨은 명작"
+    ],
+    [
+     "슬레이 더 스파이어",
+     "인디",
+     88,
+     99,
+     11,
+     "숨은 명작"
+    ],
+    [
+     "세키로",
+     "액션",
+     87,
+     76,
+     -11,
      "과대평가"
     ]
    ]
   }
- ]
+ ],
+ "picker": {
+  "title": "게임 골라 보기",
+  "hint": "게임을 고르면 평론과 유저 점수를 나란히 볼 수 있어요.",
+  "items": [
+   {
+    "id": "g1",
+    "name": "엘든링",
+    "sub": "RPG",
+    "summary": [
+     "평론 74점 · 유저 긍정률 63% → 차이 -11 (과대평가)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "엘든링: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 74
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 63
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g1_1.png"
+    ]
+   },
+   {
+    "id": "g2",
+    "name": "사이버펑크 2077",
+    "sub": "RPG",
+    "summary": [
+     "평론 87점 · 유저 긍정률 98% → 차이 +11 (숨은 명작)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "사이버펑크 2077: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 87
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 98
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g2_1.png"
+    ]
+   },
+   {
+    "id": "g3",
+    "name": "위쳐 3",
+    "sub": "RPG",
+    "summary": [
+     "평론 89점 · 유저 긍정률 85% → 차이 -4 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "위쳐 3: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 89
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 85
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g3_1.png"
+    ]
+   },
+   {
+    "id": "g4",
+    "name": "레드 데드 리뎀션 2",
+    "sub": "액션",
+    "summary": [
+     "평론 83점 · 유저 긍정률 74% → 차이 -9 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "레드 데드 리뎀션 2: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 83
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 74
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g4_1.png"
+    ]
+   },
+   {
+    "id": "g5",
+    "name": "호라이즌 제로 던",
+    "sub": "액션",
+    "summary": [
+     "평론 85점 · 유저 긍정률 89% → 차이 +4 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "호라이즌 제로 던: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 85
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 89
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g5_1.png"
+    ]
+   },
+   {
+    "id": "g6",
+    "name": "스타듀 밸리",
+    "sub": "시뮬레이션",
+    "summary": [
+     "평론 66점 · 유저 긍정률 63% → 차이 -3 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "스타듀 밸리: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 66
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 63
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g6_1.png"
+    ]
+   },
+   {
+    "id": "g7",
+    "name": "할로우 나이트",
+    "sub": "인디",
+    "summary": [
+     "평론 78점 · 유저 긍정률 84% → 차이 +6 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "할로우 나이트: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 78
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 84
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g7_1.png"
+    ]
+   },
+   {
+    "id": "g8",
+    "name": "하데스",
+    "sub": "인디",
+    "summary": [
+     "평론 80점 · 유저 긍정률 82% → 차이 +2 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "하데스: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 80
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 82
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g8_1.png"
+    ]
+   },
+   {
+    "id": "g9",
+    "name": "데드 셀",
+    "sub": "인디",
+    "summary": [
+     "평론 점수가 없어 이 분석에서는 제외돼요."
+    ],
+    "charts": [],
+    "files": []
+   },
+   {
+    "id": "g10",
+    "name": "테라리아",
+    "sub": "인디",
+    "summary": [
+     "평론 83점 · 유저 긍정률 82% → 차이 -1 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "테라리아: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 83
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 82
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g10_1.png"
+    ]
+   },
+   {
+    "id": "g11",
+    "name": "팰월드",
+    "sub": "시뮬레이션",
+    "summary": [
+     "평론 77점 · 유저 긍정률 80% → 차이 +3 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "팰월드: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 77
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 80
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g11_1.png"
+    ]
+   },
+   {
+    "id": "g12",
+    "name": "발더스 게이트 3",
+    "sub": "RPG",
+    "summary": [
+     "평론 93점 · 유저 긍정률 85% → 차이 -8 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "발더스 게이트 3: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 93
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 85
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g12_1.png"
+    ]
+   },
+   {
+    "id": "g13",
+    "name": "디스코 엘리시움",
+    "sub": "RPG",
+    "summary": [
+     "평론 75점 · 유저 긍정률 84% → 차이 +9 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "디스코 엘리시움: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 75
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 84
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g13_1.png"
+    ]
+   },
+   {
+    "id": "g14",
+    "name": "슬레이 더 스파이어",
+    "sub": "인디",
+    "summary": [
+     "평론 88점 · 유저 긍정률 99% → 차이 +11 (숨은 명작)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "슬레이 더 스파이어: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 88
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 99
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g14_1.png"
+    ]
+   },
+   {
+    "id": "g15",
+    "name": "다크 소울 3",
+    "sub": "RPG",
+    "summary": [
+     "평론 85점 · 유저 긍정률 84% → 차이 -1 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "다크 소울 3: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 85
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 84
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g15_1.png"
+    ]
+   },
+   {
+    "id": "g16",
+    "name": "세키로",
+    "sub": "액션",
+    "summary": [
+     "평론 87점 · 유저 긍정률 76% → 차이 -11 (과대평가)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "세키로: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 87
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 76
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g16_1.png"
+    ]
+   },
+   {
+    "id": "g17",
+    "name": "몬스터 헌터 월드",
+    "sub": "액션",
+    "summary": [
+     "평론 73점 · 유저 긍정률 81% → 차이 +8 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "몬스터 헌터 월드: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 73
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 81
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g17_1.png"
+    ]
+   },
+   {
+    "id": "g18",
+    "name": "레지던트 이블 4",
+    "sub": "액션",
+    "summary": [
+     "평론 점수가 없어 이 분석에서는 제외돼요."
+    ],
+    "charts": [],
+    "files": []
+   },
+   {
+    "id": "g19",
+    "name": "디아블로 4",
+    "sub": "RPG",
+    "summary": [
+     "평론 69점 · 유저 긍정률 57% → 차이 -12 (과대평가)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "디아블로 4: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 69
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 57
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g19_1.png"
+    ]
+   },
+   {
+    "id": "g20",
+    "name": "스텔라 블레이드",
+    "sub": "액션",
+    "summary": [
+     "평론 64점 · 유저 긍정률 65% → 차이 +1 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "스텔라 블레이드: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 64
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 65
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g20_1.png"
+    ]
+   },
+   {
+    "id": "g21",
+    "name": "셀레스트",
+    "sub": "인디",
+    "summary": [
+     "평론 72점 · 유저 긍정률 80% → 차이 +8 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "셀레스트: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 72
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 80
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g21_1.png"
+    ]
+   },
+   {
+    "id": "g22",
+    "name": "언더테일",
+    "sub": "인디",
+    "summary": [
+     "평론 77점 · 유저 긍정률 79% → 차이 +2 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "언더테일: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 77
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 79
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g22_1.png"
+    ]
+   },
+   {
+    "id": "g23",
+    "name": "문명 6",
+    "sub": "시뮬레이션",
+    "summary": [
+     "평론 65점 · 유저 긍정률 79% → 차이 +14 (숨은 명작)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "문명 6: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 65
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 79
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g23_1.png"
+    ]
+   },
+   {
+    "id": "g24",
+    "name": "토탈 워: 워해머 3",
+    "sub": "시뮬레이션",
+    "summary": [
+     "평론 82점 · 유저 긍정률 82% → 차이 +0 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "토탈 워: 워해머 3: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 82
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 82
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g24_1.png"
+    ]
+   },
+   {
+    "id": "g25",
+    "name": "헬다이버즈 2",
+    "sub": "액션",
+    "summary": [
+     "평론 73점 · 유저 긍정률 66% → 차이 -7 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "헬다이버즈 2: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 73
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 66
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g25_1.png"
+    ]
+   },
+   {
+    "id": "g26",
+    "name": "리썰 컴퍼니",
+    "sub": "인디",
+    "summary": [
+     "평론 92점 · 유저 긍정률 95% → 차이 +3 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "리썰 컴퍼니: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 92
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 95
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g26_1.png"
+    ]
+   },
+   {
+    "id": "g27",
+    "name": "바이오하자드 빌리지",
+    "sub": "액션",
+    "summary": [
+     "평론 점수가 없어 이 분석에서는 제외돼요."
+    ],
+    "charts": [],
+    "files": []
+   },
+   {
+    "id": "g28",
+    "name": "데이브 더 다이버",
+    "sub": "인디",
+    "summary": [
+     "평론 69점 · 유저 긍정률 85% → 차이 +16 (숨은 명작)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "데이브 더 다이버: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 69
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 85
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g28_1.png"
+    ]
+   },
+   {
+    "id": "g29",
+    "name": "제노블레이드 3",
+    "sub": "RPG",
+    "summary": [
+     "평론 62점 · 유저 긍정률 59% → 차이 -3 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "제노블레이드 3: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 62
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 59
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g29_1.png"
+    ]
+   },
+   {
+    "id": "g30",
+    "name": "페르소나 5 로열",
+    "sub": "RPG",
+    "summary": [
+     "평론 78점 · 유저 긍정률 79% → 차이 +1 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "페르소나 5 로열: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 78
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 79
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g30_1.png"
+    ]
+   },
+   {
+    "id": "g31",
+    "name": "니어 오토마타",
+    "sub": "액션",
+    "summary": [
+     "평론 91점 · 유저 긍정률 79% → 차이 -12 (과대평가)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "니어 오토마타: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 91
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 79
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g31_1.png"
+    ]
+   },
+   {
+    "id": "g32",
+    "name": "서브노티카",
+    "sub": "어드벤처",
+    "summary": [
+     "평론 62점 · 유저 긍정률 53% → 차이 -9 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "서브노티카: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 62
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 53
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g32_1.png"
+    ]
+   },
+   {
+    "id": "g33",
+    "name": "고스트 오브 쓰시마",
+    "sub": "액션",
+    "summary": [
+     "평론 80점 · 유저 긍정률 72% → 차이 -8 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "고스트 오브 쓰시마: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 80
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 72
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g33_1.png"
+    ]
+   },
+   {
+    "id": "g34",
+    "name": "스페이스 마린 2",
+    "sub": "액션",
+    "summary": [
+     "평론 87점 · 유저 긍정률 77% → 차이 -10 (과대평가)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "스페이스 마린 2: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 87
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 77
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g34_1.png"
+    ]
+   },
+   {
+    "id": "g35",
+    "name": "디스 워 오브 마인",
+    "sub": "어드벤처",
+    "summary": [
+     "평론 94점 · 유저 긍정률 99% → 차이 +5 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "디스 워 오브 마인: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 94
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 99
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g35_1.png"
+    ]
+   },
+   {
+    "id": "g36",
+    "name": "그릭",
+    "sub": "어드벤처",
+    "summary": [
+     "평론 점수가 없어 이 분석에서는 제외돼요."
+    ],
+    "charts": [],
+    "files": []
+   },
+   {
+    "id": "g37",
+    "name": "트라이얼스 라이징",
+    "sub": "액션",
+    "summary": [
+     "평론 87점 · 유저 긍정률 73% → 차이 -14 (과대평가)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "트라이얼스 라이징: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 87
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 73
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g37_1.png"
+    ]
+   },
+   {
+    "id": "g38",
+    "name": "문 스튜디오 해리",
+    "sub": "어드벤처",
+    "summary": [
+     "평론 91점 · 유저 긍정률 83% → 차이 -8 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "문 스튜디오 해리: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 91
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 83
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g38_1.png"
+    ]
+   },
+   {
+    "id": "g39",
+    "name": "오리와 눈먼 숲",
+    "sub": "어드벤처",
+    "summary": [
+     "평론 69점 · 유저 긍정률 83% → 차이 +14 (숨은 명작)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "오리와 눈먼 숲: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 69
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 83
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g39_1.png"
+    ]
+   },
+   {
+    "id": "g40",
+    "name": "코드 베인",
+    "sub": "RPG",
+    "summary": [
+     "평론 66점 · 유저 긍정률 73% → 차이 +7 (평론과 유저가 비슷)"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "코드 베인: 평론 vs 유저",
+      "unit": "",
+      "vmax": 100,
+      "orient": "h",
+      "color": 1,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "평론 점수",
+        "value": 66
+       },
+       {
+        "label": "유저 긍정률",
+        "value": 73
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/g40_1.png"
+    ]
+   }
+  ]
+ }
 }

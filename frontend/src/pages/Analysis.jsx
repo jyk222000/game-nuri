@@ -12,13 +12,16 @@ const BASE = '/analysis-data';
 
 async function loadSummary(key) {
   const res = await fetch(`${BASE}/${key}/summary.json`);
-  if (!res.ok) throw new Error('분석 결과가 아직 없어요. analysis/ 에서 run_all --publish 를 실행해 주세요.');
+  // 파일이 없으면 Vite/nginx가 index.html(200)을 돌려주므로 JSON이 아닐 때도 '결과 없음'으로 본다.
+  const isJson = (res.headers.get('content-type') || '').includes('json');
+  if (!res.ok || !isJson) throw new Error('PENDING');
   return res.json();
 }
 
 // 그래프: 파이썬이 계산한 숫자를 웹이 직접 그림(마우스 올리면 값) / 이미지: 파이썬(matplotlib)이 만든 PNG
 function Figure({ f, base }) {
   const hasCharts = f.charts?.length > 0;
+  const hasImage = !!f.file; // PNG 없이 그래프만 있는 결과도 있다
   const [mode, setMode] = useState(hasCharts ? 'chart' : 'image');
   const src = `${base}/${f.file}`;
   return (
@@ -35,8 +38,50 @@ function Figure({ f, base }) {
       {mode === 'chart'
         ? <div className={`panels n${f.charts.length}`}>{f.charts.map((c, i) => <Chart key={i} spec={c} />)}</div>
         : <img src={src} alt={f.title} loading="lazy" />}
-      <figcaption>{f.caption}{mode === 'image' && <> · <a href={src} download>PNG 저장</a></>}</figcaption>
+      <figcaption>{f.caption}{mode === 'image' && hasImage && <> · <a href={src} download>PNG 저장</a></>}</figcaption>
     </figure>
+  );
+}
+
+function Detail({ d }) {
+  return (
+    <Section title={d.title} sub={d.lead}>
+      <ul className="take-list">{d.steps.map(([h, t]) => <li key={h} className="take"><b>{h}</b><br />{t}</li>)}</ul>
+      <div className="tbl-wrap">
+        <table className="tbl">
+          <thead><tr><th>그대로 하면 생기는 문제</th><th>해결</th></tr></thead>
+          <tbody>{d.problems.map(([p, a]) => <tr key={p}><td>{p}</td><td>{a}</td></tr>)}</tbody>
+        </table>
+      </div>
+    </Section>
+  );
+}
+
+// 게임을 골라 그 게임의 결과만 보는 영역 (summary.json 의 picker). 장르·등급 구분 없이 게임 단위로 본다.
+function Picker({ p, base }) {
+  const [id, setId] = useState(p.items[0].id);
+  const it = p.items.find((x) => x.id === id) || p.items[0];
+  const random = () => setId(p.items[Math.floor(Math.random() * p.items.length)].id);
+  return (
+    <Section title={p.title} sub={p.hint}>
+      <div className="picker">
+        <select value={it.id} onChange={(e) => setId(e.target.value)} aria-label="게임 선택">
+          {p.items.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+        </select>
+        <button className="btn" onClick={random}>🎲 아무 게임</button>
+        <small className="muted">{it.sub}</small>
+      </div>
+      <ul className="take-list">{it.summary.map((t) => <li key={t} className="take">{t}</li>)}</ul>
+      {it.charts.map((c, i) => <Figure key={`${it.id}${i}`} f={{ title: c.title, charts: [c], file: it.files?.[i], caption: '' }} base={base} />)}
+      {it.table && (
+        <div className="tbl-wrap">
+          <table className="tbl">
+            <thead><tr>{it.table.columns.map((c) => <th key={c}>{c}</th>)}</tr></thead>
+            <tbody>{it.table.rows.map((r, i) => <tr key={i}>{r.map((v, j) => <td key={j}>{v ?? '-'}</td>)}</tr>)}</tbody>
+          </table>
+        </div>
+      )}
+    </Section>
   );
 }
 
@@ -45,15 +90,16 @@ export function AnalysisIndex() {
     <>
       <section className="hero small">
         <h1>데이터로 보는 게임 시장</h1>
-        <p>할인·리뷰·플레이 데이터를 분석해 “언제, 무엇을 살지”의 근거를 만들어요.</p>
+        <p>할인·검색·리뷰·가격 데이터 8가지를 분석해 “언제, 어디서, 무엇을 살지”의 근거를 만들어요. (대상 게임 1,000개)</p>
       </section>
       <div className="agrid">
         {ANALYSES.map((a) => (
           <Link key={a.key} to={`/analysis/${a.key}`} className="acard">
             <span className="ico">{a.icon}</span>
-            <small className="muted">분석 {a.no}</small>
+            <small className="muted">A{a.no}</small>
             <strong>{a.title}</strong>
             <span className="muted">{a.question}</span>
+            <small className="muted">난이도 {a.level} · 담당 {a.owner}</small>
           </Link>
         ))}
       </div>
@@ -70,22 +116,28 @@ export function AnalysisPage() {
 
   return (
     <>
-      <p className="crumb"><Link to="/analysis">분석</Link> › {meta.no}. {meta.title}</p>
-      <h1 className="h1">{meta.icon} {meta.title}: <span className="muted">{meta.question}</span></h1>
+      <p className="crumb"><Link to="/analysis">분석</Link> › A{meta.no}. {meta.title}</p>
+      <h1 className="h1">A{meta.no}. {meta.icon} {meta.title}: <span className="muted">{meta.question}</span></h1>
       <div className="brief">
         <div>
-          <b>찾을 현상</b>
-          <ul>{meta.find.map((f) => <li key={f}>{f}</li>)}</ul>
+          <b>분석 방법</b>
+          <p>{meta.method}</p>
+          <b>차트</b>
+          <ul>{meta.charts.map((c) => <li key={c}>{c}</li>)}</ul>
         </div>
         <div>
-          <b>인사이트</b>
+          <b>인사이트 예</b>
           <p>{meta.insight}</p>
           <small className="muted">데이터: {meta.data}</small>
-          {meta.caution && <small className="warn-t">⚠ {meta.caution}</small>}
-          {meta.strength && <small className="ok">✔ {meta.strength}</small>}
+          <small className="muted">선행 조건: {meta.prereq} · 난이도 {meta.level} · 담당 {meta.owner}</small>
+          {meta.caution?.map((c) => <small key={c} className="warn-t">⚠ {c}</small>)}
         </div>
       </div>
+      {meta.detail && <Detail d={meta.detail} />}
 
+      {s.error?.message === 'PENDING' ? (
+        <p className="mockbar">분석 결과 대기 중이에요. 11/26 오전 분석용 CSV 전달 후 11/26~27에 채워져요. (선행 조건: {meta.prereq})</p>
+      ) : (
       <State s={s}>
         {(d) => (
           <>
@@ -95,9 +147,10 @@ export function AnalysisPage() {
             <Section title="핵심 요약">
               <ul className="take-list">{d.takeaways.map((t) => <li key={t} className="take">{t}</li>)}</ul>
             </Section>
+            {d.picker && <Picker p={d.picker} base={`${BASE}/${key}`} />}
             <Section title="그래프">
               <div className="figs">
-                {d.figures.map((f) => <Figure key={f.file} f={f} base={`${BASE}/${key}`} />)}
+                {d.figures.map((f) => <Figure key={f.title} f={f} base={`${BASE}/${key}`} />)}
               </div>
             </Section>
             {d.tables.map((t) => (
@@ -113,6 +166,7 @@ export function AnalysisPage() {
           </>
         )}
       </State>
+      )}
 
       <nav className="pager">
         {prev ? <Link to={`/analysis/${prev.key}`}>← {prev.title}</Link> : <span />}

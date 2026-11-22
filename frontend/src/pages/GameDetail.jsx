@@ -4,6 +4,7 @@ import { api } from '../api/client.js';
 import { useAuth } from '../auth.jsx';
 import { useAsync } from '../lib/useAsync.js';
 import { State, Section, cover } from '../components/ui.jsx';
+import { byKey } from './analysis/meta.js';
 import PriceChart from '../components/PriceChart.jsx';
 import { won, dateKST, dateTimeKST, PLATFORM, STORE_NAME, EDITION } from '../lib/format.js';
 
@@ -76,7 +77,9 @@ function Head({ g, user }) {
           <ul className="insights" aria-label="분석 태그">
             {g.insights.map((t) => (
               <li key={t.code}>
-                <Link to={`/analysis/${t.analysis}`} className={`pill tone-${t.tone}`}>{t.label}</Link>
+                {byKey(t.analysis)
+                  ? <Link to={`/analysis/${t.analysis}`} className={`pill tone-${t.tone}`}>{t.label}</Link>
+                  : <span className={`pill tone-${t.tone}`}>{t.label}</span>}
                 <small className="muted">{t.detail}</small>
               </li>
             ))}
@@ -231,7 +234,7 @@ function TrustBadge({ t }) {
       {t.keywords?.length > 0 && (
         <div className="kw"><span className="muted">많이 나온 말</span>{t.keywords.map((k) => <i key={k.keyword} className="con">{k.keyword} {k.share}%</i>)}</div>
       )}
-      <small className="muted">리뷰 키워드로 본 참고 지표예요. 내 PC가 사양을 충족하는지는 반영하지 않아요. <Link to="/analysis/spec-trust">분석 보기</Link></small>
+      <small className="muted">리뷰 키워드로 본 참고 지표예요. 내 PC가 사양을 충족하는지는 반영하지 않아요.</small>
     </div>
   );
 }
