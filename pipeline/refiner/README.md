@@ -34,6 +34,7 @@ cd .. && python -m pytest pipeline/tests
    ```
    KAFKA_BOOTSTRAP=kafka1:9092,kafka2:9092,kafka3:9092
    ID_MAP_PATH=/opt/game-nuri/repo/pipeline/refiner/id_map.json
+   ID_MAP_STATE_PATH=/var/lib/game-nuri/refiner_id_map.json
    ```
 3. `sudo systemctl start refiner` 후 `journalctl -u refiner -f`로 로그를 본다.
 4. 같은 consumer group(`refiner`)이라 세 대가 파티션을 나눠 맡는다.
@@ -44,8 +45,16 @@ cd .. && python -m pytest pipeline/tests
 
 ## 아직 안 된 것 / 팀 결정이 필요한 것
 - **Kafka 모드는 실제 Kafka에서 실행해 보지 못했다** (파일 시험만 통과). 처음 켤 때 로그를 같이 봐 주세요.
-- `id_map.json`은 샘플 15개 게임용 임시 대응표 (`itad`: ITAD id, `steam`: Steam appid, `alias`: 정규화한 상품명).
-  운영에서는 `game_store_ids`(또는 `refined.games`)로 대체해야 한다.
+- **게임 ID 대응표** (`itad`: ITAD id, `steam`: Steam appid, `alias`: 정규화한 상품명 → IGDB ID)
+  1. 시작 대응표 `ID_MAP_PATH`: 게임 목록 CSV로 만든다.
+     `python -m refiner.build_id_map --csv games.csv --out refiner/id_map.json --base refiner/id_map.json`
+     (열: `igdb_id, steam_appid, itad_id, name, name_ko, aliases`)
+  2. 스스로 배우기: `raw.igdb`를 받으면 Steam appid·게임 이름을 배우고, `raw.price`에 Steam appid 힌트
+     (`payload.steam_appid` 또는 `request.params.appid`)가 있으면 ITAD id도 배운다.
+     배운 것은 `ID_MAP_STATE_PATH`에 저장해 재시작해도 남는다.
+  3. **주의:** 배우기는 서버마다 따로다. refiner 3대가 파티션을 나눠 받으면, 게임 정보를 받은 서버와
+     가격을 받은 서버가 다를 수 있다. 그래서 **1번 시작 대응표를 주로 쓰고**, 테스트는 kafka1 한 대로
+     켜거나 수집 순서를 IGDB → Steam → ITAD → 다나와로 한다. 운영에서는 `game_store_ids`로 대체한다.
 - **`refined.games`는 IGDB 한 메시지가 만드는 17개 컬럼 중 Steam 파생 3개(`age_rating`, `korean_supported`,
   `is_online`)가 비어 있다.** Steam 쪽 메시지와 합치는 방법(JDBC upsert는 안 쓴 컬럼을 덮어쓰지 않지만,
   `name`이 NOT NULL이라 Steam만 먼저 오면 실패한다)은 팀 결정이 필요하다.

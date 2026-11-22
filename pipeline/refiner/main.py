@@ -9,7 +9,10 @@
   2) Kafka 모드 (kafka1~3에서 서비스 refiner 로 실행. 설정은 환경변수)
      python -m refiner.main
        KAFKA_BOOTSTRAP            kafka1:9092,kafka2:9092,kafka3:9092   (필수)
-       ID_MAP_PATH                매칭 대응표 JSON 경로 (임시 방식, README 참고)
+       ID_MAP_PATH                시작 대응표 JSON 경로 (읽기만 한다)
+       ID_MAP_STATE_PATH          배운 대응표를 저장할 경로
+                                  (예: /var/lib/game-nuri/refiner_id_map.json)
+                                  비우면 저장하지 않는다 (재시작하면 다시 배워야 함)
        REFINER_TOPICS_IN          기본 raw.price,raw.console,raw.igdb,raw.steam
        REFINER_TOPIC_PRICES       기본 refined.prices
        REFINER_TOPIC_GAMES        기본 refined.games
@@ -58,11 +61,25 @@ def topics() -> dict[str, Any]:
     }
 
 
-def load_maps(path: str | None) -> Maps:
-    """매칭 대응표. 운영 방식(game_store_ids 등)이 정해질 때까지의 임시 JSON 파일."""
-    if not path:
-        return Maps()
-    return Maps(json.loads(Path(path).read_text(encoding="utf-8")))
+def load_maps(path: str | None, state_path: str | None = None) -> Maps:
+    """시작 대응표(path) + 지난번에 배운 대응표(state_path). 시작 대응표가 우선이다."""
+    maps = Maps(json.loads(Path(path).read_text(encoding="utf-8"))) if path else Maps()
+    if state_path and Path(state_path).exists():
+        maps.merge(Maps(json.loads(Path(state_path).read_text(encoding="utf-8"))))
+    maps.changed = False
+    return maps
+
+
+def save_maps(maps: Maps, state_path: str | None) -> None:
+    """배운 것이 있으면 상태 파일에 저장한다 (임시 파일에 쓰고 바꿔 끼워 반쯤 쓴 파일을 막는다)."""
+    if not state_path or not maps.changed:
+        return
+    p = Path(state_path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tmp = p.with_suffix(p.suffix + ".tmp")
+    tmp.write_text(json.dumps(maps.to_dict(), ensure_ascii=False, indent=1), encoding="utf-8")
+    tmp.replace(p)
+    maps.changed = False
 
 
 def dry_run(input_path: str, maps_path: str | None, out_dir: str) -> None:
@@ -100,6 +117,10 @@ def dry_run(input_path: str, maps_path: str | None, out_dir: str) -> None:
                     write("extras", res["extras"])
     summary = ", ".join(f"{k} {v}" for k, v in sorted(counts.items())) or "없음"
     log.info("dry-run 완료: 입력 %d (정제 규칙 없음 %d), 출력 %s", n_in, n_ignored, summary)
+    (out / "id_map.learned.json").write_text(
+        json.dumps(maps.to_dict(), ensure_ascii=False, indent=1), encoding="utf-8"
+    )
+    log.info("대응표 %s → %s", maps.size(), out / "id_map.learned.json")
 
 
 def run_kafka() -> None:  # pragma: no cover - 서버(kafka1~3)에서만 실행
@@ -107,9 +128,10 @@ def run_kafka() -> None:  # pragma: no cover - 서버(kafka1~3)에서만 실행
 
     t = topics()
     bootstrap = os.environ["KAFKA_BOOTSTRAP"]
-    maps = load_maps(os.environ.get("ID_MAP_PATH"))
+    state_path = os.environ.get("ID_MAP_STATE_PATH")
+    maps = load_maps(os.environ.get("ID_MAP_PATH"), state_path)
     if not (maps.itad or maps.steam or maps.alias):
-        log.warning("ID_MAP_PATH 대응표가 비어 있다: 매칭이 필요한 메시지는 모두 unmatched 로 간다")
+        log.warning("대응표가 비어 있다: raw.igdb 를 먼저 받아야 가격·사양이 게임에 연결된다")
 
     consumer = Consumer(
         {
@@ -167,6 +189,7 @@ def run_kafka() -> None:  # pragma: no cover - 서버(kafka1~3)에서만 실행
                 )
                 counts["unmatched"] = counts.get("unmatched", 0) + 1
             producer.flush()
+            save_maps(maps, state_path)  # commit 전에 저장: 재시작해도 배운 대응표가 남는다
             consumer.commit(msg)
             if res["out"] or res["unmatched"]:
                 log.info("누계 %s", ", ".join(f"{k} {v}" for k, v in sorted(counts.items())))
