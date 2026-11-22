@@ -5,7 +5,7 @@
 
 `erd.sql`(28개 테이블)은 **지금 메시지 계약을 그대로 지킨 버전**이다. 아래 항목은 메시지·Connector를 먼저 바꿔야 ERD에 넣을 수 있어서 따로 정리했다.
 
-## 1. 다나와 콘솔 가격: 플랫폼·신품/중고 구분 (중요, 기능 ①)
+## 1. 다나와 콘솔 가격: 플랫폼·신품/중고 구분 (중요, 기능 ①) — ✅ 11/22 반영 (erd.sql, refined.prices.json, erd_alter_1122.sql)
 - **문제**: `refined.prices`의 키는 `game_id, store, edition`(edition = digital | physical | code)뿐이다. 다나와는 같은 게임이 PS5·PS4·Switch × 신품·중고로 나뉘는데(danawa-notes 6~8절), 지금 키로는 서로 덮어쓴다.
 - **근거**: column-mapping 3절 공통 컬럼은 `platform`, `medium`, `condition`을 포함한다. 기능 명세 ①은 "다나와 콘솔(DL·PKG·중고 PKG)" 비교다.
 - **제안**:

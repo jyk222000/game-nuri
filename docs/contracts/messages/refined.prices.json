@@ -1,5 +1,5 @@
 {
-  "_comment": "JDBC Sink용 JSON+schema 형식. payload 필드가 prices_current / price_history 컬럼과 1:1 대응",
+  "_comment": "JDBC Sink용 JSON+schema 형식. payload 필드가 prices_current / price_history 컬럼과 1:1 대응. 키 = game_id:store:edition:platform:item_condition. platform은 platforms.platform 값, item_condition은 new|used (ITAD는 PC·new)",
   "schema": {
     "type": "struct",
     "name": "refined_price",
@@ -7,6 +7,8 @@
       { "field": "game_id", "type": "int64", "optional": false },
       { "field": "store", "type": "string", "optional": false },
       { "field": "edition", "type": "string", "optional": false },
+      { "field": "platform", "type": "string", "optional": false },
+      { "field": "item_condition", "type": "string", "optional": false },
       { "field": "price_krw", "type": "int32", "optional": false },
       { "field": "regular_krw", "type": "int32", "optional": true },
       { "field": "discount_pct", "type": "int32", "optional": true },
@@ -20,6 +22,8 @@
     "game_id": 119133,
     "store": "steam",
     "edition": "digital",
+    "platform": "PC",
+    "item_condition": "new",
     "price_krw": 47900,
     "regular_krw": 64800,
     "discount_pct": 26,
