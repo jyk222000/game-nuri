@@ -34,14 +34,19 @@ def test_valkey_down_is_degraded(client: TestClient, monkeypatch: pytest.MonkeyP
     assert client.get("/api/health").json()["status"] == "degraded"
 
 
-@pytest.mark.parametrize("failed", ["db_write", "db_read"])
-def test_db_down_is_503(client: TestClient, monkeypatch: pytest.MonkeyPatch, failed: str) -> None:
-    results = {"db_write": "ok", "db_read": "ok", "valkey": "ok", "es": "ok"}
-    results[failed] = "down"
-    _set(monkeypatch, **results)
+def test_primary_down_is_503(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    _set(monkeypatch, db_write="down", db_read="ok", valkey="ok", es="ok")
     r = client.get("/api/health")
     assert r.status_code == 503
     assert r.json()["status"] == "down"
+
+
+def test_replica_down_is_degraded(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    _set(monkeypatch, db_write="ok", db_read="down", valkey="ok", es="ok")
+    r = client.get("/api/health")
+    assert r.status_code == 200
+    assert r.json()["status"] == "degraded"
+    assert r.json()["db_read"] == "down"
 
 
 def test_metrics_exposed(client: TestClient) -> None:

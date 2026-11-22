@@ -5,12 +5,16 @@
 - 계정명·비밀번호는 환경 변수(MARIADB_USER, MARIADB_PASSWORD)에서만 읽는다.
 """
 
+import logging
 from collections.abc import Iterator
 from functools import lru_cache
 
 from gamenuri_common.config import get_settings
 from sqlalchemy import URL, Engine, create_engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
+
+log = logging.getLogger(__name__)
 
 
 def _build_url(host: str) -> URL:
@@ -32,7 +36,7 @@ def _make_engine(host: str) -> Engine:
         _build_url(host),
         pool_pre_ping=True,
         pool_recycle=1800,
-        connect_args={"connect_timeout": 3},
+        connect_args={"connect_timeout": 2},
     )
 
 
@@ -47,8 +51,18 @@ def get_read_engine() -> Engine:
 
 
 def get_read_db() -> Iterator[Session]:
-    with sessionmaker(bind=get_read_engine(), expire_on_commit=False)() as session:
+    """일반 조회용. Replica 연결이 실패하면 Primary로 읽는다(사이트 전체가 멈추지 않게)."""
+    session = sessionmaker(bind=get_read_engine(), expire_on_commit=False)()
+    try:
+        session.connection()  # 여기서 실제 연결을 맺어 본다 (timeout 2초)
+    except SQLAlchemyError as exc:
+        log.warning("replica 연결 실패, primary로 읽음: %s", type(exc).__name__)
+        session.close()
+        session = sessionmaker(bind=get_write_engine(), expire_on_commit=False)()
+    try:
         yield session
+    finally:
+        session.close()
 
 
 def get_write_db() -> Iterator[Session]:

@@ -1,4 +1,7 @@
-"""GET /api/health — DB(읽기·쓰기)가 안 되면 503, Valkey·ES만 안 되면 200 + degraded."""
+"""GET /api/health — Primary(쓰기)가 안 되면 503.
+
+Replica(읽기)·Valkey·ES만 안 되면 200 + degraded (Replica는 Primary로 대신 읽는다).
+"""
 
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
@@ -16,9 +19,9 @@ def health() -> JSONResponse:
     valkey = checks.check_valkey()
     es = checks.check_es()
 
-    if db_write != "ok" or db_read != "ok":
+    if db_write != "ok":
         status, code = "down", 503
-    elif valkey != "ok" or es != "ok":
+    elif db_read != "ok" or valkey != "ok" or es != "ok":
         status, code = "degraded", 200
     else:
         status, code = "ok", 200
