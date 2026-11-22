@@ -15,7 +15,6 @@
       "Bash(git push*)",
       "Bash(ssh *)",
       "Bash(scp *)",
-      "Bash(docker compose down*)",
       "Bash(sudo *)"
     ]
   }
