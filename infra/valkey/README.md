@@ -21,15 +21,13 @@ Backend의 캐시·세션·실시간 검색어·알림 중복 방지용 Valkey. 
   - 유실돼도 되는 것만 둔다: 가격 캐시(10분), 세션, 실시간 검색어, 알림 중복 방지 키.
 - 비밀번호: 서버의 `valkey.conf`에만 있다. Backend는 `/etc/game-nuri/backend.env`의 `VALKEY_URL`로 받는다.
 
-## 방화벽 (firewalld, public zone)
-6379는 아래 두 대역에서만 허용한다.
-```bash
-sudo firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source address="10.0.1.0/24" port port="6379" protocol="tcp" accept'
-sudo firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source address="10.0.2.0/24" port port="6379" protocol="tcp" accept'
-sudo firewall-cmd --reload
-```
-- 10.0.1.0/24: Backend 1·2.
-- 10.0.2.0/24: Prometheus 수집용(PC-2). 필요한 출발지가 `10.0.2.1`뿐이면 `/32`로 좁힐 수 있다.
+## 방화벽
+**내부망 신뢰, 게이트웨이에서 제어, 보호는 `requirepass`.** (2026-11-22 결정: 내부 VM은 firewalld를 끈다.)
+- valkey VM의 firewalld는 2026-11-22 `systemctl disable --now firewalld`로 껐다 (`disabled`/`inactive` 확인).
+- 처음에는 firewalld로 6379를 `10.0.1.0/24`·`10.0.2.0/24`에만 열었으나(rich rule), 위 결정에 맞춰 껐다.
+  끄기 전 규칙은 이 문서에 남기지 않는다. 필요하면 `systemctl enable --now firewalld` 후 다시 설정한다.
+- 접속은 비밀번호가 없으면 `NOAUTH`로 거부된다. 비밀번호는 서버의 `valkey.conf`에만 둔다.
+- 끈 뒤 backend1·2에서의 PING은 **다시 확인하지 않았다(미확인)**. 아래 "접속 확인"을 다시 실행한다.
 
 ## 설치 중 확인된 것
 - 설치 전 `/` 8GB 중 91% 사용. 원인은 `/var/cache/PackageKit` 1.7GB.
