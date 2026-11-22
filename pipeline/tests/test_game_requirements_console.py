@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 from refiner.router import Maps, route
-from refiner.rules.console import infer_edition, refine_console_price
+from refiner.rules.console import infer_edition, infer_platform, refine_console_price
 from refiner.rules.game import REFINED_GAME_FIELDS, refine_game, to_connect_message, unix_to_date
 from refiner.rules.requirements import html_to_text, refine_requirements
 
@@ -144,7 +144,9 @@ def test_console_price_new_only_and_filters():
         refine_console_price(con(product_name="[호환] 닌텐도 엘든 링"), {}.get)[1][0]["reason"]
         == "해외판·호환판 표기"
     )
-    assert "중고" in refine_console_price(con(condition="used"), {"엘든 링": 1}.get)[1][0]["reason"]
+    assert rows[0]["platform"] == "PS5" and rows[0]["item_condition"] == "new"
+    used, _ = refine_console_price(con(condition="used"), {"엘든 링": 1}.get)
+    assert used[0]["item_condition"] == "used"
     assert refine_console_price(con(lowest_price=None), {}.get)[1][0]["reason"] == "가격 없음"
     assert "매칭 실패" in refine_console_price(con(), {}.get)[1][0]["reason"]
 
@@ -204,3 +206,29 @@ def test_example_file_matches_code_schema():
     ex = json.loads(path.read_text(encoding="utf-8"))
     assert [f["field"] for f in ex["schema"]["fields"]] == [f for f, _, _ in REFINED_GAME_FIELDS]
     assert set(ex["payload"]) == {f for f, _, _ in REFINED_GAME_FIELDS}
+
+
+def test_console_platform_from_title_and_unknown():
+    assert infer_platform({"product_name": "닌텐도 스위치2 엘든 링"}) == "Switch2"
+    assert infer_platform({"product_name": "닌텐도 스위치 엘든 링"}) == "Switch"
+    assert infer_platform({"platform_hint": "PS4", "product_name": "PS5 엘든 링"}) == "PS4"
+    _, un = refine_console_price(con(platform_hint=None, product_name="엘든 링"), {}.get)
+    assert un[0]["reason"] == "플랫폼을 알 수 없음"
+
+
+def test_game_aggregated_rating_and_platform_release_dates():
+    p = {
+        "id": 1,
+        "name": "G",
+        "aggregated_rating": 94.567,
+        "aggregated_rating_count": 80,
+        "release_dates": [
+            {"platform": {"name": "PlayStation 5"}, "date": 1645747200},
+            {"platform": {"name": "PC (Microsoft Windows)"}, "date": 1677283200},
+            {"platform": {"name": "PC (Microsoft Windows)"}, "date": 1645747200},
+            {"platform": {"name": "Mac"}, "date": 1645747200},
+        ],
+    }
+    rows, extras, _ = refine_game(env("game_info", p))
+    assert rows[0]["aggregated_rating"] == 94.57 and rows[0]["aggregated_rating_count"] == 80
+    assert extras["platform_release_dates"] == {"PS5": "2022-02-25", "PC": "2022-02-25"}

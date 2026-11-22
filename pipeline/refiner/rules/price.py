@@ -4,7 +4,7 @@
   - 기준 게임 ID는 IGDB ID. ITAD id(uuid)를 resolver로 IGDB ID로 바꾼다. 못 바꾸면 unmatched.
   - KRW면 그대로, 아니면 환율 적용. price_original, currency_original은 항상 채운다.
   - 빈 값은 NULL(None). 0으로 채우지 않는다.
-  - edition은 ITAD가 디지털 스토어만 다루므로 "digital".
+  - edition은 ITAD가 디지털 스토어만 다루므로 "digital", platform은 "PC", item_condition은 "new".
   - 같은 메시지를 두 번 처리해도 결과가 같다 (입력만으로 결정, 시각·난수 사용 안 함).
 """
 
@@ -27,6 +27,8 @@ REFINED_PRICE_SCHEMA: dict[str, Any] = {
         {"field": "game_id", "type": "int64", "optional": False},
         {"field": "store", "type": "string", "optional": False},
         {"field": "edition", "type": "string", "optional": False},
+        {"field": "platform", "type": "string", "optional": False},
+        {"field": "item_condition", "type": "string", "optional": False},
         {"field": "price_krw", "type": "int32", "optional": False},
         {"field": "regular_krw", "type": "int32", "optional": True},
         {"field": "discount_pct", "type": "int32", "optional": True},
@@ -100,6 +102,8 @@ def refine_price(
                 "game_id": int(game_id),
                 "store": store_code(deal.get("shop") or {}),
                 "edition": "digital",
+                "platform": "PC",
+                "item_condition": "new",
                 "price_krw": price_krw,
                 "regular_krw": to_krw(regular.get("amount"), regular.get("currency"), rates),
                 "discount_pct": deal.get("cut"),
@@ -112,19 +116,24 @@ def refine_price(
     return dedupe_by_key(out), unmatched
 
 
+def price_key(row: dict[str, Any]) -> tuple[int, str, str, str, str]:
+    """prices_current PK = (game_id, store, edition, platform, item_condition)."""
+    return (row["game_id"], row["store"], row["edition"], row["platform"], row["item_condition"])
+
+
 def dedupe_by_key(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
-    """같은 (game_id, store, edition)이 여럿이면 낮은 가격 한 줄만 (순서 유지)."""
-    best: dict[tuple[int, str, str], dict[str, Any]] = {}
+    """같은 키가 여럿이면 낮은 가격 한 줄만 (순서 유지)."""
+    best: dict[tuple[int, str, str, str, str], dict[str, Any]] = {}
     for r in rows:
-        k = (r["game_id"], r["store"], r["edition"])
+        k = price_key(r)
         if k not in best or r["price_krw"] < best[k]["price_krw"]:
             best[k] = r
     return list(best.values())
 
 
 def message_key(row: dict[str, Any]) -> str:
-    """Kafka 메시지 키 = game_id:store:edition (topics.md)."""
-    return f"{row['game_id']}:{row['store']}:{row['edition']}"
+    """Kafka 메시지 키 = game_id:store:edition:platform:item_condition (topics.md)."""
+    return ":".join(str(v) for v in price_key(row))
 
 
 def to_connect_message(row: dict[str, Any]) -> dict[str, Any]:

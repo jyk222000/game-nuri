@@ -1,8 +1,8 @@
 """raw.igdb(game_info) → refined.games. Kafka 없이 테스트할 수 있는 순수 함수.
 
 입력 payload = IGDB /games 응답 한 건 (id, name, first_release_date, slug, summary, game_type,
-parent_game, version_parent, cover, total_rating, total_rating_count, platforms, external_games,
-localizations).
+parent_game, version_parent, cover, total_rating, total_rating_count, aggregated_rating,
+aggregated_rating_count, platforms, release_dates, external_games, localizations).
 games 테이블 컬럼 중 Steam 에서 오는 age_rating·korean_supported·is_online 은 이 메시지에 없으므로
 None 이다 (Steam 쪽 메시지와 합치는 방법은 팀 결정 필요: README 참고).
 """
@@ -38,6 +38,8 @@ REFINED_GAME_FIELDS = [
     ("cover_url", "string", True),
     ("rating", "double", True),
     ("rating_count", "int32", True),
+    ("aggregated_rating", "double", True),
+    ("aggregated_rating_count", "int32", True),
     ("age_rating", "int16", True),
     ("korean_supported", "boolean", True),
     ("is_online", "boolean", True),
@@ -105,6 +107,7 @@ def refine_game(
     cover = p.get("cover") or {}
     image_id = _blank(cover.get("image_id"))
     rating = p.get("total_rating")
+    agg = p.get("aggregated_rating")
     row = {
         "game_id": int(p["id"]),
         "name": p["name"],
@@ -119,6 +122,8 @@ def refine_game(
         "cover_url": (COVER_URL % image_id) if image_id else None,
         "rating": round(rating, 2) if rating is not None else None,
         "rating_count": p.get("total_rating_count"),
+        "aggregated_rating": round(agg, 2) if agg is not None else None,
+        "aggregated_rating_count": p.get("aggregated_rating_count"),
         "age_rating": None,
         "korean_supported": None,
         "is_online": None,
@@ -136,7 +141,25 @@ def refine_game(
         for e in p.get("external_games") or []
         if e.get("external_game_source") == STEAM_SOURCE and e.get("uid")
     ]
-    return [row], {"platforms": platforms, "skipped_platforms": skipped, "store_ids": store_ids}, []
+    extras = {
+        "platforms": platforms,
+        "skipped_platforms": skipped,
+        "store_ids": store_ids,
+        "platform_release_dates": platform_release_dates(p),
+    }
+    return [row], extras, []
+
+
+def platform_release_dates(p: dict[str, Any]) -> dict[str, str]:
+    """IGDB release_dates → {플랫폼 키: 가장 빠른 출시일} (game_platforms.release_date)."""
+    out: dict[str, str] = {}
+    for rd in p.get("release_dates") or []:
+        pl = rd.get("platform")
+        key = IGDB_PLATFORM.get(pl.get("name") if isinstance(pl, dict) else None)
+        day = unix_to_date(rd.get("date"))
+        if key and day and (key not in out or day < out[key]):
+            out[key] = day
+    return out
 
 
 def message_key(row: dict[str, Any]) -> str:
