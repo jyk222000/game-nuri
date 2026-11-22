@@ -116,3 +116,22 @@ def test_utc_datetime_serializes_with_z() -> None:
 
     out = Out(created_at=datetime(2026, 11, 19, 2, 30, tzinfo=UTC))
     assert out.model_dump(mode="json") == {"created_at": "2026-11-19T02:30:00Z"}
+
+
+def test_validation_error_uses_api_error_format() -> None:
+    app = FastAPI()
+    register_error_handlers(app)
+
+    class Body(BaseModel):
+        game_id: int
+
+    @app.post("/x")
+    def x(body: Body) -> dict:
+        return {}
+
+    r = TestClient(app).post("/x", json={"game_id": "secret-value"})
+    assert r.status_code == 422
+    assert r.json() == {
+        "error": {"code": "INVALID_REQUEST", "message": "요청 값이 올바르지 않습니다: game_id"}
+    }
+    assert "secret-value" not in r.text

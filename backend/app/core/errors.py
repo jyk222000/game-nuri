@@ -4,6 +4,7 @@ code 이름은 api.md에 NOT_FOUND 예시만 있다. 나머지(UNAUTHORIZED 등)
 """
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 
@@ -28,4 +29,14 @@ def register_error_handlers(app: FastAPI) -> None:
     async def _handle(_: Request, exc: ApiError) -> JSONResponse:
         return JSONResponse(
             {"error": {"code": exc.code, "message": exc.message}}, status_code=exc.status_code
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def _handle_validation(_: Request, exc: RequestValidationError) -> JSONResponse:
+        # FastAPI 기본 422 본문 대신 api.md 오류 형식으로 보낸다.
+        # 입력 값은 되돌려 주지 않고 필드 이름만 쓴다.
+        fields = sorted({str(e["loc"][-1]) for e in exc.errors() if e.get("loc")})
+        message = "요청 값이 올바르지 않습니다" + (f": {', '.join(fields)}" if fields else "")
+        return JSONResponse(
+            {"error": {"code": "INVALID_REQUEST", "message": message}}, status_code=422
         )
