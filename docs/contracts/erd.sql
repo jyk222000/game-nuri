@@ -13,8 +13,13 @@
 --   5) column-mapping 1·9절 반영: games 상세 컬럼, game_time_to_beat.ttb_count, game_series·game_series_map(series_ids),
 --      tags·game_tags(/api/tags), game_aliases 검수 여부(LLM 표기는 검수 후 사용, danawa-notes 14절),
 --      stores.itad_shop_id(ITAD shops/v1), user_owned_games(④ 보유 게임·플레이타임, API 23·24)
---   ※ 메시지 계약을 바꿔야 하는 항목(다나와 플랫폼·신품/중고, 가격 flags, 리뷰 수)은 이 파일에 넣지 않았다.
---     contracts PR로 메시지·Connector를 먼저 바꾼 뒤 반영한다 (contracts_change_proposal.md)
+--   ※ 가격 flags, 한국어 리뷰 수는 아직 넣지 않았다 (contracts_change_proposal.md 2·3번)
+-- 11/22 추가 (팀장 검토 1·2·3번)
+--   6) prices_current·price_history: platform, item_condition(new|used) 추가, prices_current PK에 포함
+--      (같은 게임의 PS4·PS5, 신품·중고가 서로 덮어쓰지 않게. condition은 MariaDB 예약어라 item_condition)
+--   7) games: aggregated_rating, aggregated_rating_count (IGDB 평론 점수, A3 평론 vs 유저)
+--   8) game_platforms: release_date (플랫폼별 출시일, A6 콘솔→PC 지연, A8 경과 기간)
+--   이미 적용된 서버는 erd_alter_1122.sql로 바꾼다
 --
 -- 규칙 (구축 문서 4장)
 --   - 모든 테이블에 PRIMARY KEY
@@ -42,6 +47,8 @@ CREATE TABLE games (
   cover_url        VARCHAR(512),
   rating           DECIMAL(5,2),                  -- IGDB total_rating
   rating_count     INT,
+  aggregated_rating DECIMAL(5,2),                 -- IGDB aggregated_rating (평론 점수)
+  aggregated_rating_count INT,                    -- IGDB aggregated_rating_count
   age_rating       SMALLINT,                      -- Steam required_age (문자·숫자 섞여 옴 → 정제에서 정수)
   korean_supported BOOLEAN,                       -- Steam supported_languages 파싱
   is_online        BOOLEAN,                       -- Steam categories(멀티플레이어 등)에서 파생 (⑦ 경고)
@@ -68,6 +75,7 @@ CREATE TABLE companies (                         -- 개발사·배급사
 CREATE TABLE game_platforms (                    -- 게임 N:M 플랫폼
   game_id          BIGINT NOT NULL,
   platform         VARCHAR(16) NOT NULL,
+  release_date     DATE,                          -- 플랫폼별 출시일 (IGDB release_dates)
   PRIMARY KEY (game_id, platform)
 );
 
@@ -175,10 +183,12 @@ CREATE TABLE review_summaries (                  -- ES 키워드 + AI 요약 (�
 --    컬럼 = refined.prices 필드: game_id, store, edition, price_krw, regular_krw, discount_pct,
 --                               price_original, currency_original, url, collected_at
 -- =====================================================================
-CREATE TABLE prices_current (                    -- JDBC Sink upsert (pk.fields = game_id,store,edition)
+CREATE TABLE prices_current (                    -- JDBC Sink upsert (pk.fields = game_id,store,edition,platform,item_condition)
   game_id          BIGINT NOT NULL,
   store            VARCHAR(32) NOT NULL,
   edition          VARCHAR(16) NOT NULL,          -- digital | physical | code
+  platform         VARCHAR(16) NOT NULL,          -- platforms.platform (PC, PS4, PS5, Switch ...)
+  item_condition   VARCHAR(8) NOT NULL,           -- new | used
   price_krw        INT NOT NULL,                  -- 원화 환산 금액
   regular_krw      INT,
   discount_pct     INT,
@@ -186,7 +196,7 @@ CREATE TABLE prices_current (                    -- JDBC Sink upsert (pk.fields 
   currency_original VARCHAR(8),                   -- KRW | USD | EUR | GBP
   url              VARCHAR(512),
   collected_at     DATETIME NOT NULL,
-  PRIMARY KEY (game_id, store, edition)
+  PRIMARY KEY (game_id, store, edition, platform, item_condition)
 );
 
 CREATE TABLE price_history (                     -- JDBC Sink insert
@@ -194,6 +204,8 @@ CREATE TABLE price_history (                     -- JDBC Sink insert
   game_id          BIGINT NOT NULL,
   store            VARCHAR(32) NOT NULL,
   edition          VARCHAR(16) NOT NULL,
+  platform         VARCHAR(16) NOT NULL,
+  item_condition   VARCHAR(8) NOT NULL,           -- new | used
   price_krw        INT NOT NULL,
   regular_krw      INT,
   discount_pct     INT,
@@ -201,7 +213,8 @@ CREATE TABLE price_history (                     -- JDBC Sink insert
   currency_original VARCHAR(8),
   url              VARCHAR(512),
   collected_at     DATETIME NOT NULL,
-  INDEX idx_game_time (game_id, collected_at)
+  INDEX idx_game_time (game_id, collected_at),
+  INDEX idx_game_platform_time (game_id, platform, item_condition, collected_at)
 );
 
 CREATE TABLE exchange_rates (                    -- 원화 환산 기준 (정제 단계에서 사용)

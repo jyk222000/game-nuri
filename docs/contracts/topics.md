@@ -7,7 +7,7 @@
 | `raw.steam` | collector (Steam 리뷰·사양(appdetails)·동접자·보유 게임) | refiner, Mongo Sink | `steam_appid` | 3 | 3 | 7일 |
 | `raw.igdb` | collector (IGDB 게임 정보·클리어 시간) | refiner, Mongo Sink | `igdb_id` | 3 | 3 | 7일 |
 | `refined.games` | refiner | JDBC Sink → `games`, `game_store_ids` / Mongo Sink → `games` 컬렉션(→ Monstache → ES) | `game_id` | 3 | 3 | 3일 |
-| `refined.prices` | refiner | JDBC Sink → `prices_current`(upsert), `price_history`(insert) | `game_id:store:edition` | 3 | 3 | 3일 |
+| `refined.prices` | refiner | JDBC Sink → `prices_current`(upsert), `price_history`(insert) | `game_id:store:edition:platform:item_condition` | 3 | 3 | 3일 |
 | `refined.requirements` | refiner | JDBC Sink → `game_requirements` | `game_id` | 3 | 3 | 3일 |
 | `refined.review_summary` | review-summarizer (하루 1회) | JDBC Sink → `review_summaries` | `game_id` | 3 | 3 | 3일 |
 | `refined.unmatched` | refiner | (로그용, 매칭 실패 목록) | 원본 키 | 3 | 3 | 7일 |
