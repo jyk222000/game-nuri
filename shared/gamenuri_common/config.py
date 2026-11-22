@@ -10,6 +10,7 @@ class Settings(BaseSettings):
 
     env: str = "local"
     log_level: str = "INFO"
+    server_name: str = ""
 
     kafka_bootstrap: str = "localhost:9092"
     kafka_connect_url: str = "http://localhost:8083"
@@ -18,7 +19,7 @@ class Settings(BaseSettings):
     mariadb_read_host: str = "localhost"
     mariadb_port: int = 3306
     mariadb_db: str = "gamenuri"
-    mariadb_user: str = "gamenuri"
+    mariadb_user: str = ""
     mariadb_password: str = ""
 
     mongo_uri: str = "mongodb://localhost:27017"
