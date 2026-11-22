@@ -73,8 +73,43 @@ rs.status().members.map(m => `${m.name} ${m.stateStr} health=${m.health}`)
 | 키 파일 레이블 `user_tmp_t` | `/tmp`에서 `mv`해 옴 | `restorecon`으로 `etc_t` |
 | mongo-se1·se2 SSH 지문 동일 | 같은 이미지를 복제해 만든 VM | 3대 호스트 키 재생성 (`ssh-keygen -A`). 접속 쪽은 `ssh-keygen -R <이름>` |
 
+## 컬렉션·인덱스 (DB `gamenuri_raw`, 기준: `pipeline/connect/mongo-sink-*.json`)
+| 컬렉션 | 들어오는 토픽 | 성격 | 인덱스 | TTL | 백업 |
+|---|---|---|---|---|---|
+| `raw` | `raw.price`, `raw.console`, `raw.steam`, `raw.igdb` | API 원본(공통 봉투) | `collected_at` TTL | **14일** | 안 함(재수집 가능) |
+| `reviews` | `raw.steam` | 리뷰 (분석에 사용) | `recommendationid` 고유 | 없음 | **함** |
+| `games` | `refined.games` | 게임 정보 (Monstache → ES) | `game_id` 고유 | 없음 | 함 |
+
+- TTL은 `raw`에만 건다. `reviews`·`games`는 분석과 백업 대상이라 지우지 않는다.
+- TTL 기준 필드는 **BSON Date 타입의 수집 시각(`collected_at`)**만 쓴다. 문자열이면 TTL이 동작하지 않는다.
+- `contracts/topics.md`는 `games` 컬렉션만 적고 `raw`·`reviews`는 Sink 설정에만 있다. contracts에 컬렉션 이름을 추가하는 것이 좋다(제안만, 수정하지 않음).
+
+### 인덱스 생성: `init-collections.js` (멱등)
+```bash
+hostname   # 정상: mongodb-pr 또는 backend1
+mongosh "mongodb://mongodb-pr:27017,mongo-se1:27017,mongo-se2:27017/gamenuri_raw?replicaSet=rs0&authSource=admin" \
+  --username gamenuri --file init-collections.js      # 비밀번호는 프롬프트로 입력
+```
+- 조건이 맞을 때만 만들고, 아니면 `건너뜀 …` 이유를 출력한다. 여러 번 실행해도 같은 결과다.
+- **현재 건너뛰는 항목 (2026-11-22 기준 추정, 실행 결과로 확인 필요)**
+  - `raw` TTL: Sink가 `JsonConverter`(스키마 없음)로 저장하면 `collected_at`은 ISO 문자열(`"2026-11-19T02:30:00Z"`)이라 TTL이 동작하지 않는다.
+    Connect에서 `TimestampConverter` 같은 변환으로 Date로 저장되는지 테스트가 필요하다(pipeline 담당, 미확인).
+  - `reviews` 고유 인덱스: Sink가 `raw.steam` 봉투 전체를 저장하고 리뷰는 `payload.reviews[]` 배열 안에 있다. 최상위 `recommendationid`가 없는 문서가 있으면 고유 인덱스가 `null` 중복으로 쓰기를 막는다.
+    refiner가 리뷰를 한 건씩 펼치기로 확정되면 그때 만든다.
+  - `raw.steam`은 `raw`와 `reviews` 두 컬렉션에 중복 저장된다(Sink 2개). 용량 면에서 확정 필요(pipeline 담당).
+
+## 계정 권한 (최소 권한 정리, 비밀번호 없음)
+| 계정 | 필요한 권한 | 이유 |
+|---|---|---|
+| `gamenuri` (Connect Sink) | `gamenuri_raw` readWrite (현재) | 문서 쓰기, 컬렉션·인덱스 생성. 줄이려면 세 컬렉션에 `insert`·`update`·`find`·`createIndex`만 |
+| `monstache` (읽기, change stream) | `gamenuri_raw` read + clusterMonitor (현재) | `read`에 `find`·`changeStream`·`listCollections`가 들어 있다. 쓰기 권한은 필요 없다 |
+| `monstache` 재개 정보 | `monstache` DB readWrite | 재시작 시 이어 읽을 위치(resume token) 저장. 기본 DB 이름은 설정에 따라 다름(미확인, 남현식 확인) |
+| `backup` (5단계) | `gamenuri_raw` read | `mongodump`에 필요한 `find`·`listCollections`·`listIndexes`. 계정은 팀장이 만든다 |
+- Monstache가 실제로 필요한 권한의 정확한 목록은 **미확인**이다(남현식과 확인).
+- `admin`(root)은 앱·백업에 쓰지 않는다.
+
 ## 남은 일
-- [ ] 컬렉션·인덱스·TTL(원본 14일)을 `docs/contracts/`에 확정 후 생성. TTL 필드는 BSON Date 타입이어야 동작
+- [x] 컬렉션 이름·TTL 정책 정리 (위 표). 인덱스 생성은 `init-collections.js` 실행 결과를 확인한 뒤 판단
 - [ ] Monstache 연결 시 resume 정보 저장용 `monstache` DB readWrite 권한 보강 검토
 - [ ] 모니터링용 계정(clusterMonitor) (11/25)
 - [ ] `/var/log/mongodb/mongod.log` 로테이션, THP 경고 처리
