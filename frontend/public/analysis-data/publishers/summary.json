@@ -1,0 +1,1203 @@
+{
+ "key": "publishers",
+ "title": "제작사·플랫폼 전략",
+ "data_source": "mock",
+ "generated_at": "2026-11-22T12:33:32Z",
+ "takeaways": [
+  "첫 할인이 가장 빠른 제작사는 FromSoftware(2개월), 가장 늦은 곳은 CD Projekt(18개월)이에요.",
+  "콘솔 출시 후 PC로 나오기까지 평균 1.6년이 걸렸어요 (게임 12개).",
+  "“이 회사 신작은 기다리면 싸진다”, “콘솔 독점작은 PC판을 기다릴지” 판단하는 근거로 써요."
+ ],
+ "figures": [
+  {
+   "title": "제작사별 첫 할인까지",
+   "caption": "출시일부터 처음 20% 이상 할인이 나올 때까지 개월 수(게임 2개 이상인 제작사).",
+   "charts": [
+    {
+     "type": "bars",
+     "title": "첫 할인까지 개월",
+     "unit": "개월",
+     "vmax": null,
+     "orient": "h",
+     "color": 1,
+     "xlabel": "",
+     "marks": [],
+     "items": [
+      {
+       "label": "FromSoftware",
+       "value": 2
+      },
+      {
+       "label": "Sony",
+       "value": 10
+      },
+      {
+       "label": "Capcom",
+       "value": 10
+      },
+      {
+       "label": "CD Projekt",
+       "value": 18
+      }
+     ]
+    }
+   ],
+   "file": "fig1.png"
+  },
+  {
+   "title": "콘솔 → PC 출시 지연",
+   "caption": "플랫폼별 출시일에서 콘솔 출시 후 PC 출시까지 걸린 기간(년).",
+   "charts": [
+    {
+     "type": "bars",
+     "title": "콘솔 → PC 지연",
+     "unit": "년",
+     "vmax": null,
+     "orient": "h",
+     "color": 3,
+     "xlabel": "",
+     "marks": [],
+     "items": [
+      {
+       "label": "헬다이버즈 2",
+       "value": 3.7
+      },
+      {
+       "label": "위쳐 3",
+       "value": 3.7
+      },
+      {
+       "label": "호라이즌 제로 던",
+       "value": 2.2
+      },
+      {
+       "label": "셀레스트",
+       "value": 1.9
+      },
+      {
+       "label": "바이오하자드 빌리지",
+       "value": 1.7
+      },
+      {
+       "label": "언더테일",
+       "value": 1.4
+      },
+      {
+       "label": "디스코 엘리시움",
+       "value": 1.0
+      },
+      {
+       "label": "디아블로 4",
+       "value": 0.9
+      },
+      {
+       "label": "다크 소울 3",
+       "value": 0.9
+      },
+      {
+       "label": "그릭",
+       "value": 0.8
+      },
+      {
+       "label": "하데스",
+       "value": 0.5
+      },
+      {
+       "label": "레드 데드 리뎀션 2",
+       "value": 0.5
+      }
+     ]
+    }
+   ],
+   "file": "fig2.png"
+  }
+ ],
+ "tables": [
+  {
+   "title": "제작사 표",
+   "note": "목 데이터",
+   "columns": [
+    "제작사",
+    "게임 수",
+    "평균 평점",
+    "첫 할인까지(개월)"
+   ],
+   "rows": [
+    [
+     "FromSoftware",
+     3,
+     81,
+     2
+    ],
+    [
+     "Sony",
+     2,
+     86,
+     10
+    ],
+    [
+     "Capcom",
+     3,
+     76,
+     10
+    ],
+    [
+     "CD Projekt",
+     2,
+     91,
+     18
+    ]
+   ]
+  }
+ ],
+ "picker": {
+  "title": "제작사 골라 보기",
+  "hint": "제작사를 고르면 그 회사 게임들의 할인 속도를 볼 수 있어요.",
+  "items": [
+   {
+    "id": "m1",
+    "name": "11 bit studios",
+    "sub": "게임 1개 · 평균 평점 75",
+    "summary": [
+     "첫 할인까지 평균 3개월 · 평균 평점 75점",
+     "주 장르: 어드벤처"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "11 bit studios: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "디스 워 오브 마인",
+        "value": 3
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m1_1.png"
+    ]
+   },
+   {
+    "id": "m2",
+    "name": "Arrowhead",
+    "sub": "게임 1개 · 평균 평점 91",
+    "summary": [
+     "첫 할인까지 평균 24개월 · 평균 평점 91점",
+     "주 장르: 액션"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Arrowhead: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "헬다이버즈 2",
+        "value": 28
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m2_1.png"
+    ]
+   },
+   {
+    "id": "m3",
+    "name": "Atlus",
+    "sub": "게임 1개 · 평균 평점 85",
+    "summary": [
+     "첫 할인까지 평균 14개월 · 평균 평점 85점",
+     "주 장르: RPG"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Atlus: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "페르소나 5 로열",
+        "value": 16
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m3_1.png"
+    ]
+   },
+   {
+    "id": "m4",
+    "name": "Bandai Namco",
+    "sub": "게임 1개 · 평균 평점 72",
+    "summary": [
+     "첫 할인까지 평균 18개월 · 평균 평점 72점",
+     "주 장르: RPG"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Bandai Namco: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "코드 베인",
+        "value": 20
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m4_1.png"
+    ]
+   },
+   {
+    "id": "m5",
+    "name": "Blizzard",
+    "sub": "게임 1개 · 평균 평점 88",
+    "summary": [
+     "첫 할인까지 평균 4개월 · 평균 평점 88점",
+     "주 장르: RPG"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Blizzard: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "디아블로 4",
+        "value": 3
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m5_1.png"
+    ]
+   },
+   {
+    "id": "m6",
+    "name": "CD Projekt",
+    "sub": "게임 2개 · 평균 평점 91",
+    "summary": [
+     "첫 할인까지 평균 18개월 · 평균 평점 91점",
+     "주 장르: RPG"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "CD Projekt: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "사이버펑크 2077",
+        "value": 18
+       },
+       {
+        "label": "위쳐 3",
+        "value": 15
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m6_1.png"
+    ]
+   },
+   {
+    "id": "m7",
+    "name": "Capcom",
+    "sub": "게임 3개 · 평균 평점 76",
+    "summary": [
+     "첫 할인까지 평균 10개월 · 평균 평점 76점",
+     "주 장르: 액션"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Capcom: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "몬스터 헌터 월드",
+        "value": 7
+       },
+       {
+        "label": "레지던트 이블 4",
+        "value": 7
+       },
+       {
+        "label": "바이오하자드 빌리지",
+        "value": 12
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m7_1.png"
+    ]
+   },
+   {
+    "id": "m8",
+    "name": "ConcernedApe",
+    "sub": "게임 1개 · 평균 평점 75",
+    "summary": [
+     "첫 할인까지 평균 18개월 · 평균 평점 75점",
+     "주 장르: 시뮬레이션"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "ConcernedApe: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "스타듀 밸리",
+        "value": 18
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m8_1.png"
+    ]
+   },
+   {
+    "id": "m9",
+    "name": "Creative Assembly",
+    "sub": "게임 1개 · 평균 평점 87",
+    "summary": [
+     "첫 할인까지 평균 14개월 · 평균 평점 87점",
+     "주 장르: 시뮬레이션"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Creative Assembly: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "토탈 워: 워해머 3",
+        "value": 16
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m9_1.png"
+    ]
+   },
+   {
+    "id": "m10",
+    "name": "Firaxis",
+    "sub": "게임 1개 · 평균 평점 90",
+    "summary": [
+     "첫 할인까지 평균 4개월 · 평균 평점 90점",
+     "주 장르: 시뮬레이션"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Firaxis: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "문명 6",
+        "value": 2
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m10_1.png"
+    ]
+   },
+   {
+    "id": "m11",
+    "name": "FromSoftware",
+    "sub": "게임 3개 · 평균 평점 81",
+    "summary": [
+     "첫 할인까지 평균 2개월 · 평균 평점 81점",
+     "주 장르: RPG, 액션"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "FromSoftware: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "엘든링",
+        "value": 3
+       },
+       {
+        "label": "다크 소울 3",
+        "value": 7
+       },
+       {
+        "label": "세키로",
+        "value": 5
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m11_1.png"
+    ]
+   },
+   {
+    "id": "m12",
+    "name": "Larian",
+    "sub": "게임 1개 · 평균 평점 71",
+    "summary": [
+     "첫 할인까지 평균 4개월 · 평균 평점 71점",
+     "주 장르: RPG"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Larian: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "발더스 게이트 3",
+        "value": 6
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m12_1.png"
+    ]
+   },
+   {
+    "id": "m13",
+    "name": "Maddy Makes Games",
+    "sub": "게임 1개 · 평균 평점 86",
+    "summary": [
+     "첫 할인까지 평균 2개월 · 평균 평점 86점",
+     "주 장르: 인디"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Maddy Makes Games: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "셀레스트",
+        "value": 1
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m13_1.png"
+    ]
+   },
+   {
+    "id": "m14",
+    "name": "Mega Crit",
+    "sub": "게임 1개 · 평균 평점 73",
+    "summary": [
+     "첫 할인까지 평균 2개월 · 평균 평점 73점",
+     "주 장르: 인디"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Mega Crit: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "슬레이 더 스파이어",
+        "value": 6
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m14_1.png"
+    ]
+   },
+   {
+    "id": "m15",
+    "name": "Mintrocket",
+    "sub": "게임 1개 · 평균 평점 77",
+    "summary": [
+     "첫 할인까지 평균 10개월 · 평균 평점 77점",
+     "주 장르: 인디"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Mintrocket: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "데이브 더 다이버",
+        "value": 11
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m15_1.png"
+    ]
+   },
+   {
+    "id": "m16",
+    "name": "Monolith Soft",
+    "sub": "게임 1개 · 평균 평점 76",
+    "summary": [
+     "첫 할인까지 평균 6개월 · 평균 평점 76점",
+     "주 장르: RPG"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Monolith Soft: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "제노블레이드 3",
+        "value": 8
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m16_1.png"
+    ]
+   },
+   {
+    "id": "m17",
+    "name": "Moon",
+    "sub": "게임 1개 · 평균 평점 91",
+    "summary": [
+     "첫 할인까지 평균 14개월 · 평균 평점 91점",
+     "주 장르: 어드벤처"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Moon: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "문 스튜디오 해리",
+        "value": 12
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m17_1.png"
+    ]
+   },
+   {
+    "id": "m18",
+    "name": "Moon Studios",
+    "sub": "게임 1개 · 평균 평점 79",
+    "summary": [
+     "첫 할인까지 평균 18개월 · 평균 평점 79점",
+     "주 장르: 어드벤처"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Moon Studios: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "오리와 눈먼 숲",
+        "value": 17
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m18_1.png"
+    ]
+   },
+   {
+    "id": "m19",
+    "name": "Motion Twin",
+    "sub": "게임 1개 · 평균 평점 82",
+    "summary": [
+     "첫 할인까지 평균 4개월 · 평균 평점 82점",
+     "주 장르: 인디"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Motion Twin: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "데드 셀",
+        "value": 2
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m19_1.png"
+    ]
+   },
+   {
+    "id": "m20",
+    "name": "PlatinumGames",
+    "sub": "게임 1개 · 평균 평점 83",
+    "summary": [
+     "첫 할인까지 평균 3개월 · 평균 평점 83점",
+     "주 장르: 액션"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "PlatinumGames: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "니어 오토마타",
+        "value": 3
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m20_1.png"
+    ]
+   },
+   {
+    "id": "m21",
+    "name": "Pocketpair",
+    "sub": "게임 1개 · 평균 평점 76",
+    "summary": [
+     "첫 할인까지 평균 8개월 · 평균 평점 76점",
+     "주 장르: 시뮬레이션"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Pocketpair: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "팰월드",
+        "value": 5
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m21_1.png"
+    ]
+   },
+   {
+    "id": "m22",
+    "name": "Re-Logic",
+    "sub": "게임 1개 · 평균 평점 78",
+    "summary": [
+     "첫 할인까지 평균 2개월 · 평균 평점 78점",
+     "주 장르: 인디"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Re-Logic: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "테라리아",
+        "value": 4
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m22_1.png"
+    ]
+   },
+   {
+    "id": "m23",
+    "name": "Rockstar",
+    "sub": "게임 1개 · 평균 평점 77",
+    "summary": [
+     "첫 할인까지 평균 6개월 · 평균 평점 77점",
+     "주 장르: 액션"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Rockstar: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "레드 데드 리뎀션 2",
+        "value": 10
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m23_1.png"
+    ]
+   },
+   {
+    "id": "m24",
+    "name": "Saber",
+    "sub": "게임 1개 · 평균 평점 91",
+    "summary": [
+     "첫 할인까지 평균 18개월 · 평균 평점 91점",
+     "주 장르: 액션"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Saber: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "스페이스 마린 2",
+        "value": 19
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m24_1.png"
+    ]
+   },
+   {
+    "id": "m25",
+    "name": "Sad Owl",
+    "sub": "게임 1개 · 평균 평점 91",
+    "summary": [
+     "첫 할인까지 평균 10개월 · 평균 평점 91점",
+     "주 장르: 어드벤처"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Sad Owl: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "그릭",
+        "value": 8
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m25_1.png"
+    ]
+   },
+   {
+    "id": "m26",
+    "name": "Shift Up",
+    "sub": "게임 1개 · 평균 평점 78",
+    "summary": [
+     "첫 할인까지 평균 14개월 · 평균 평점 78점",
+     "주 장르: 액션"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Shift Up: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "스텔라 블레이드",
+        "value": 19
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m26_1.png"
+    ]
+   },
+   {
+    "id": "m27",
+    "name": "Sony",
+    "sub": "게임 2개 · 평균 평점 86",
+    "summary": [
+     "첫 할인까지 평균 10개월 · 평균 평점 86점",
+     "주 장르: 액션"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Sony: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "호라이즌 제로 던",
+        "value": 15
+       },
+       {
+        "label": "고스트 오브 쓰시마",
+        "value": 7
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m27_1.png"
+    ]
+   },
+   {
+    "id": "m28",
+    "name": "Supergiant",
+    "sub": "게임 1개 · 평균 평점 70",
+    "summary": [
+     "첫 할인까지 평균 8개월 · 평균 평점 70점",
+     "주 장르: 인디"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Supergiant: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "하데스",
+        "value": 8
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m28_1.png"
+    ]
+   },
+   {
+    "id": "m29",
+    "name": "Team Cherry",
+    "sub": "게임 1개 · 평균 평점 78",
+    "summary": [
+     "첫 할인까지 평균 8개월 · 평균 평점 78점",
+     "주 장르: 인디"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Team Cherry: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "할로우 나이트",
+        "value": 9
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m29_1.png"
+    ]
+   },
+   {
+    "id": "m30",
+    "name": "Ubisoft",
+    "sub": "게임 1개 · 평균 평점 79",
+    "summary": [
+     "첫 할인까지 평균 18개월 · 평균 평점 79점",
+     "주 장르: 액션"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Ubisoft: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "트라이얼스 라이징",
+        "value": 15
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m30_1.png"
+    ]
+   },
+   {
+    "id": "m31",
+    "name": "Unknown Worlds",
+    "sub": "게임 1개 · 평균 평점 86",
+    "summary": [
+     "첫 할인까지 평균 3개월 · 평균 평점 86점",
+     "주 장르: 어드벤처"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Unknown Worlds: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "서브노티카",
+        "value": 5
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m31_1.png"
+    ]
+   },
+   {
+    "id": "m32",
+    "name": "ZA/UM",
+    "sub": "게임 1개 · 평균 평점 78",
+    "summary": [
+     "첫 할인까지 평균 4개월 · 평균 평점 78점",
+     "주 장르: RPG"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "ZA/UM: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "디스코 엘리시움",
+        "value": 2
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m32_1.png"
+    ]
+   },
+   {
+    "id": "m33",
+    "name": "Zeekerss",
+    "sub": "게임 1개 · 평균 평점 79",
+    "summary": [
+     "첫 할인까지 평균 14개월 · 평균 평점 79점",
+     "주 장르: 인디"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "Zeekerss: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "리썰 컴퍼니",
+        "value": 13
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m33_1.png"
+    ]
+   },
+   {
+    "id": "m34",
+    "name": "tobyfox",
+    "sub": "게임 1개 · 평균 평점 85",
+    "summary": [
+     "첫 할인까지 평균 6개월 · 평균 평점 85점",
+     "주 장르: 인디"
+    ],
+    "charts": [
+     {
+      "type": "bars",
+      "title": "tobyfox: 게임별 첫 할인까지(개월)",
+      "unit": "개월",
+      "vmax": null,
+      "orient": "h",
+      "color": 2,
+      "xlabel": "",
+      "marks": [],
+      "items": [
+       {
+        "label": "언더테일",
+        "value": 6
+       }
+      ]
+     }
+    ],
+    "files": [
+     "picker/m34_1.png"
+    ]
+   }
+  ]
+ }
+}

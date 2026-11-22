@@ -1,0 +1,34 @@
+[
+ {
+  "key": "discount-pattern",
+  "title": "할인 패턴과 다음 할인 예측"
+ },
+ {
+  "key": "search-trend",
+  "title": "국내 검색 관심 트렌드"
+ },
+ {
+  "key": "critic-vs-user",
+  "title": "평론 vs 유저 평가 괴리"
+ },
+ {
+  "key": "complaints",
+  "title": "긍정·불만 유형"
+ },
+ {
+  "key": "series",
+  "title": "신작이 나오면 전작이 싸지나"
+ },
+ {
+  "key": "publishers",
+  "title": "제작사·플랫폼 전략"
+ },
+ {
+  "key": "value-per-hour",
+  "title": "장르·회사별 가성비"
+ },
+ {
+  "key": "pc-vs-console",
+  "title": "PC vs 콘솔 가격 차이"
+ }
+]

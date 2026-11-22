@@ -1,0 +1,276 @@
+{
+ "key": "value-per-hour",
+ "title": "장르·회사별 가성비",
+ "data_source": "mock",
+ "generated_at": "2026-11-22T12:17:15Z",
+ "takeaways": [
+  "할인가 기준 시간당 가격이 가장 싼 장르는 RPG(500원)과 전략(650원)이에요.",
+  "RPG는 정가 기준으로도 시간당 1,100원 수준으로 가장 낮은 편이에요.",
+  "Larian·CD Projekt는 정가에도 가성비가 좋고, Nintendo는 거의 할인하지 않아 정가·할인가 차이가 없어요."
+ ],
+ "figures": [
+  {
+   "title": "장르별 시간당 가격 (할인가)",
+   "caption": "원화 가격 ÷ IGDB 클리어 시간. 장르별 중앙값입니다.",
+   "charts": [
+    {
+     "type": "bars",
+     "title": "시간당 가격(할인가)",
+     "unit": "원",
+     "vmax": null,
+     "orient": "h",
+     "color": 1,
+     "xlabel": "",
+     "marks": [],
+     "items": [
+      {
+       "label": "RPG",
+       "value": 500
+      },
+      {
+       "label": "전략",
+       "value": 650
+      },
+      {
+       "label": "시뮬레이션",
+       "value": 700
+      },
+      {
+       "label": "퍼즐",
+       "value": 800
+      },
+      {
+       "label": "인디",
+       "value": 1000
+      },
+      {
+       "label": "어드벤처",
+       "value": 1200
+      },
+      {
+       "label": "액션",
+       "value": 1300
+      },
+      {
+       "label": "FPS",
+       "value": 1800
+      }
+     ]
+    }
+   ],
+   "file": "fig1.png"
+  },
+  {
+   "title": "장르별 시간당 가격 (정가)",
+   "caption": "같은 계산을 정가 기준으로.",
+   "charts": [
+    {
+     "type": "bars",
+     "title": "시간당 가격(정가)",
+     "unit": "원",
+     "vmax": null,
+     "orient": "h",
+     "color": 2,
+     "xlabel": "",
+     "marks": [],
+     "items": [
+      {
+       "label": "RPG",
+       "value": 1100
+      },
+      {
+       "label": "전략",
+       "value": 1400
+      },
+      {
+       "label": "시뮬레이션",
+       "value": 1500
+      },
+      {
+       "label": "퍼즐",
+       "value": 1900
+      },
+      {
+       "label": "인디",
+       "value": 2200
+      },
+      {
+       "label": "어드벤처",
+       "value": 2400
+      },
+      {
+       "label": "액션",
+       "value": 2600
+      },
+      {
+       "label": "FPS",
+       "value": 3800
+      }
+     ]
+    }
+   ],
+   "file": "fig2.png"
+  },
+  {
+   "title": "제작사 순위 (할인가)",
+   "caption": "게임 5개 이상인 제작사만. 낮을수록 가성비가 좋아요.",
+   "charts": [
+    {
+     "type": "bars",
+     "title": "시간당 가격(할인가)",
+     "unit": "원",
+     "vmax": null,
+     "orient": "h",
+     "color": 3,
+     "xlabel": "",
+     "marks": [],
+     "items": [
+      {
+       "label": "Larian",
+       "value": 250
+      },
+      {
+       "label": "CD Projekt",
+       "value": 300
+      },
+      {
+       "label": "Paradox",
+       "value": 330
+      },
+      {
+       "label": "Supergiant",
+       "value": 400
+      },
+      {
+       "label": "FromSoftware",
+       "value": 520
+      },
+      {
+       "label": "Rockstar",
+       "value": 600
+      },
+      {
+       "label": "Ubisoft",
+       "value": 650
+      },
+      {
+       "label": "Nintendo",
+       "value": 1500
+      }
+     ]
+    }
+   ],
+   "file": "fig3.png"
+  }
+ ],
+ "tables": [
+  {
+   "title": "장르·제작사 시간당 가격",
+   "note": "클리어 시간이 없는 게임은 제외 (목 데이터)",
+   "columns": [
+    "구분",
+    "이름",
+    "정가 기준(원/시간)",
+    "할인가 기준(원/시간)"
+   ],
+   "rows": [
+    [
+     "장르",
+     "RPG",
+     1100,
+     500
+    ],
+    [
+     "장르",
+     "전략",
+     1400,
+     650
+    ],
+    [
+     "장르",
+     "시뮬레이션",
+     1500,
+     700
+    ],
+    [
+     "장르",
+     "퍼즐",
+     1900,
+     800
+    ],
+    [
+     "장르",
+     "인디",
+     2200,
+     1000
+    ],
+    [
+     "장르",
+     "어드벤처",
+     2400,
+     1200
+    ],
+    [
+     "장르",
+     "액션",
+     2600,
+     1300
+    ],
+    [
+     "장르",
+     "FPS",
+     3800,
+     1800
+    ],
+    [
+     "제작사",
+     "Larian",
+     560,
+     250
+    ],
+    [
+     "제작사",
+     "CD Projekt",
+     640,
+     300
+    ],
+    [
+     "제작사",
+     "Paradox",
+     700,
+     330
+    ],
+    [
+     "제작사",
+     "Supergiant",
+     900,
+     400
+    ],
+    [
+     "제작사",
+     "FromSoftware",
+     1050,
+     520
+    ],
+    [
+     "제작사",
+     "Rockstar",
+     1300,
+     600
+    ],
+    [
+     "제작사",
+     "Ubisoft",
+     1700,
+     650
+    ],
+    [
+     "제작사",
+     "Nintendo",
+     1500,
+     1500
+    ]
+   ]
+  }
+ ]
+}

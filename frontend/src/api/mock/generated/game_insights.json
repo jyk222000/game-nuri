@@ -1,0 +1,823 @@
+{
+ "generated_at": "2026-11-21T09:33:33Z",
+ "data_source": "mock",
+ "items": {
+  "1877": [
+   {
+    "code": "early_quit",
+    "label": "중도 이탈 많음",
+    "tone": "warn",
+    "detail": "구매자의 46%가 5시간 안에 그만둬요",
+    "analysis": "play-pattern"
+   },
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "value_game",
+    "label": "가성비형",
+    "tone": "info",
+    "detail": "할인 때 긍정률이 +9%p — 할인가로 사면 만족도가 높아요",
+    "analysis": "discount-effect"
+   }
+  ],
+  "3277": [
+   {
+    "code": "hidden_gem",
+    "label": "숨은 명작",
+    "tone": "good",
+    "detail": "평론 87점보다 유저 긍정률 97%가 높아요",
+    "analysis": "critic-vs-user"
+   }
+  ],
+  "7346": [
+   {
+    "code": "publisher_no_sale",
+    "label": "제작사: 정가 유지형",
+    "tone": "warn",
+    "detail": "Nintendo 게임은 거의 할인하지 않아요",
+    "analysis": "publishers"
+   }
+  ],
+  "9630": [
+   {
+    "code": "overrated",
+    "label": "과대평가 주의",
+    "tone": "warn",
+    "detail": "평론 82점에 비해 유저 긍정률은 70%예요",
+    "analysis": "critic-vs-user"
+   },
+   {
+    "code": "publisher_no_sale",
+    "label": "제작사: 정가 유지형",
+    "tone": "warn",
+    "detail": "Nintendo 게임은 거의 할인하지 않아요",
+    "analysis": "publishers"
+   }
+  ],
+  "11426": [
+   {
+    "code": "translation_complaint",
+    "label": "번역 주의",
+    "tone": "warn",
+    "detail": "번역 43% — 한국어 번역 불만이 많아요",
+    "analysis": "complaints"
+   }
+  ],
+  "14593": [
+   {
+    "code": "hidden_gem",
+    "label": "숨은 명작",
+    "tone": "good",
+    "detail": "평론 87점보다 유저 긍정률 97%가 높아요",
+    "analysis": "critic-vs-user"
+   },
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "cheap_per_hour",
+    "label": "가성비",
+    "tone": "good",
+    "detail": "리뷰어 중앙 25시간 플레이 · 시간당 약 717원",
+    "analysis": "play-pattern"
+   },
+   {
+    "code": "price_complaint",
+    "label": "가격 불만형",
+    "tone": "info",
+    "detail": "가격 34% — 할인 때 사면 만족할 게임이에요",
+    "analysis": "complaints"
+   }
+  ],
+  "17000": [
+   {
+    "code": "server_complaint",
+    "label": "서버 불만",
+    "tone": "warn",
+    "detail": "서버 36% — 서버·접속 문제가 많아요. 안정화 뒤 구매를 권해요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "hidden_gem",
+    "label": "숨은 명작",
+    "tone": "good",
+    "detail": "평론 86점보다 유저 긍정률 98%가 높아요",
+    "analysis": "critic-vs-user"
+   },
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "cheap_per_hour",
+    "label": "가성비",
+    "tone": "good",
+    "detail": "리뷰어 중앙 52시간 플레이 · 시간당 약 305원",
+    "analysis": "play-pattern"
+   }
+  ],
+  "25076": [
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "price_complaint",
+    "label": "가격 불만형",
+    "tone": "info",
+    "detail": "가격 43% — 할인 때 사면 만족할 게임이에요",
+    "analysis": "complaints"
+   }
+  ],
+  "26192": [
+   {
+    "code": "server_complaint",
+    "label": "서버 불만",
+    "tone": "warn",
+    "detail": "서버 36% — 서버·접속 문제가 많아요. 안정화 뒤 구매를 권해요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   }
+  ],
+  "113112": [
+   {
+    "code": "server_complaint",
+    "label": "서버 불만",
+    "tone": "warn",
+    "detail": "서버 47% — 서버·접속 문제가 많아요. 안정화 뒤 구매를 권해요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "publisher_fast_sale",
+    "label": "제작사: 기다리면 싸짐",
+    "tone": "info",
+    "detail": "Supergiant 게임은 출시 약 195일 만에 첫 할인이 와요",
+    "analysis": "publishers"
+   }
+  ],
+  "119133": [
+   {
+    "code": "opt_complaint",
+    "label": "최적화 불만",
+    "tone": "warn",
+    "detail": "최적화 48% — 최적화 불만이 가장 많아요. 사양 여유를 두세요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "spec_untrustworthy",
+    "label": "사양표 주의",
+    "tone": "warn",
+    "detail": "최근 부정 리뷰의 39%가 성능 문제예요",
+    "analysis": "spec-trust"
+   }
+  ],
+  "119171": [
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   }
+  ],
+  "135400": [
+   {
+    "code": "early_quit",
+    "label": "중도 이탈 많음",
+    "tone": "warn",
+    "detail": "구매자의 46%가 5시간 안에 그만둬요",
+    "analysis": "play-pattern"
+   },
+   {
+    "code": "hidden_gem",
+    "label": "숨은 명작",
+    "tone": "good",
+    "detail": "평론 70점보다 유저 긍정률 84%가 높아요",
+    "analysis": "critic-vs-user"
+   },
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "value_game",
+    "label": "가성비형",
+    "tone": "info",
+    "detail": "할인 때 긍정률이 +9%p — 할인가로 사면 만족도가 높아요",
+    "analysis": "discount-effect"
+   },
+   {
+    "code": "publisher_fast_sale",
+    "label": "제작사: 기다리면 싸짐",
+    "tone": "info",
+    "detail": "Pocketpair 게임은 출시 약 117일 만에 첫 할인이 와요",
+    "analysis": "publishers"
+   }
+  ],
+  "150080": [
+   {
+    "code": "server_complaint",
+    "label": "서버 불만",
+    "tone": "warn",
+    "detail": "서버 52% — 서버·접속 문제가 많아요. 안정화 뒤 구매를 권해요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "early_quit",
+    "label": "중도 이탈 많음",
+    "tone": "warn",
+    "detail": "구매자의 45%가 5시간 안에 그만둬요",
+    "analysis": "play-pattern"
+   },
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   }
+  ],
+  "900001": [
+   {
+    "code": "overrated",
+    "label": "과대평가 주의",
+    "tone": "warn",
+    "detail": "평론 62점에 비해 유저 긍정률은 49%예요",
+    "analysis": "critic-vs-user"
+   },
+   {
+    "code": "translation_complaint",
+    "label": "번역 주의",
+    "tone": "warn",
+    "detail": "번역 33% — 한국어 번역 불만이 많아요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   }
+  ],
+  "900002": [
+   {
+    "code": "content_complaint",
+    "label": "콘텐츠 부족형",
+    "tone": "info",
+    "detail": "콘텐츠 부족 37% — 콘텐츠가 쌓인 뒤 구매를 권해요",
+    "analysis": "complaints"
+   }
+  ],
+  "900003": [
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "value_game",
+    "label": "가성비형",
+    "tone": "info",
+    "detail": "할인 때 긍정률이 +10%p — 할인가로 사면 만족도가 높아요",
+    "analysis": "discount-effect"
+   },
+   {
+    "code": "price_complaint",
+    "label": "가격 불만형",
+    "tone": "info",
+    "detail": "가격 42% — 할인 때 사면 만족할 게임이에요",
+    "analysis": "complaints"
+   }
+  ],
+  "900004": [
+   {
+    "code": "publisher_no_sale",
+    "label": "제작사: 정가 유지형",
+    "tone": "warn",
+    "detail": "Nintendo 게임은 거의 할인하지 않아요",
+    "analysis": "publishers"
+   }
+  ],
+  "900005": [
+   {
+    "code": "server_complaint",
+    "label": "서버 불만",
+    "tone": "warn",
+    "detail": "서버 37% — 서버·접속 문제가 많아요. 안정화 뒤 구매를 권해요",
+    "analysis": "complaints"
+   }
+  ],
+  "900006": [
+   {
+    "code": "translation_complaint",
+    "label": "번역 주의",
+    "tone": "warn",
+    "detail": "번역 54% — 한국어 번역 불만이 많아요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "publisher_fast_sale",
+    "label": "제작사: 기다리면 싸짐",
+    "tone": "info",
+    "detail": "Supergiant 게임은 출시 약 195일 만에 첫 할인이 와요",
+    "analysis": "publishers"
+   }
+  ],
+  "900007": [
+   {
+    "code": "cheap_per_hour",
+    "label": "가성비",
+    "tone": "good",
+    "detail": "리뷰어 중앙 80시간 플레이 · 시간당 약 820원",
+    "analysis": "play-pattern"
+   },
+   {
+    "code": "content_complaint",
+    "label": "콘텐츠 부족형",
+    "tone": "info",
+    "detail": "콘텐츠 부족 41% — 콘텐츠가 쌓인 뒤 구매를 권해요",
+    "analysis": "complaints"
+   }
+  ],
+  "900008": [
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "price_complaint",
+    "label": "가격 불만형",
+    "tone": "info",
+    "detail": "가격 30% — 할인 때 사면 만족할 게임이에요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "publisher_fast_sale",
+    "label": "제작사: 기다리면 싸짐",
+    "tone": "info",
+    "detail": "Pocketpair 게임은 출시 약 117일 만에 첫 할인이 와요",
+    "analysis": "publishers"
+   }
+  ],
+  "900009": [
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "cheap_per_hour",
+    "label": "가성비",
+    "tone": "good",
+    "detail": "리뷰어 중앙 43시간 플레이 · 시간당 약 420원",
+    "analysis": "play-pattern"
+   }
+  ],
+  "900010": [
+   {
+    "code": "bug_complaint",
+    "label": "버그 불만",
+    "tone": "warn",
+    "detail": "버그 32% — 버그 불만이 많아요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "hidden_gem",
+    "label": "숨은 명작",
+    "tone": "good",
+    "detail": "평론 72점보다 유저 긍정률 87%가 높아요",
+    "analysis": "critic-vs-user"
+   }
+  ],
+  "900011": [
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   }
+  ],
+  "900012": [
+   {
+    "code": "early_quit",
+    "label": "중도 이탈 많음",
+    "tone": "warn",
+    "detail": "구매자의 46%가 5시간 안에 그만둬요",
+    "analysis": "play-pattern"
+   },
+   {
+    "code": "multi_game",
+    "label": "할인 직후 구매 추천",
+    "tone": "info",
+    "detail": "온라인 게임이라 할인 직후에 사야 같이 할 사람이 많아요",
+    "analysis": "discount-effect"
+   }
+  ],
+  "900013": [
+   {
+    "code": "translation_complaint",
+    "label": "번역 주의",
+    "tone": "warn",
+    "detail": "번역 35% — 한국어 번역 불만이 많아요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   }
+  ],
+  "900014": [
+   {
+    "code": "early_quit",
+    "label": "중도 이탈 많음",
+    "tone": "warn",
+    "detail": "구매자의 41%가 5시간 안에 그만둬요",
+    "analysis": "play-pattern"
+   },
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "content_complaint",
+    "label": "콘텐츠 부족형",
+    "tone": "info",
+    "detail": "콘텐츠 부족 35% — 콘텐츠가 쌓인 뒤 구매를 권해요",
+    "analysis": "complaints"
+   }
+  ],
+  "900015": [
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   }
+  ],
+  "900016": [
+   {
+    "code": "translation_complaint",
+    "label": "번역 주의",
+    "tone": "warn",
+    "detail": "번역 35% — 한국어 번역 불만이 많아요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   }
+  ],
+  "900017": [
+   {
+    "code": "opt_complaint",
+    "label": "최적화 불만",
+    "tone": "warn",
+    "detail": "최적화 30% — 최적화 불만이 가장 많아요. 사양 여유를 두세요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "spec_untrustworthy",
+    "label": "사양표 주의",
+    "tone": "warn",
+    "detail": "최근 부정 리뷰의 30%가 성능 문제예요",
+    "analysis": "spec-trust"
+   },
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   }
+  ],
+  "900018": [
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   }
+  ],
+  "900019": [
+   {
+    "code": "server_complaint",
+    "label": "서버 불만",
+    "tone": "warn",
+    "detail": "서버 58% — 서버·접속 문제가 많아요. 안정화 뒤 구매를 권해요",
+    "analysis": "complaints"
+   }
+  ],
+  "900020": [
+   {
+    "code": "early_quit",
+    "label": "중도 이탈 많음",
+    "tone": "warn",
+    "detail": "구매자의 49%가 5시간 안에 그만둬요",
+    "analysis": "play-pattern"
+   },
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "value_game",
+    "label": "가성비형",
+    "tone": "info",
+    "detail": "할인 때 긍정률이 +7%p — 할인가로 사면 만족도가 높아요",
+    "analysis": "discount-effect"
+   },
+   {
+    "code": "price_complaint",
+    "label": "가격 불만형",
+    "tone": "info",
+    "detail": "가격 32% — 할인 때 사면 만족할 게임이에요",
+    "analysis": "complaints"
+   }
+  ],
+  "900021": [
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "content_complaint",
+    "label": "콘텐츠 부족형",
+    "tone": "info",
+    "detail": "콘텐츠 부족 34% — 콘텐츠가 쌓인 뒤 구매를 권해요",
+    "analysis": "complaints"
+   }
+  ],
+  "900022": [
+   {
+    "code": "publisher_no_sale",
+    "label": "제작사: 정가 유지형",
+    "tone": "warn",
+    "detail": "Nintendo 게임은 거의 할인하지 않아요",
+    "analysis": "publishers"
+   }
+  ],
+  "900023": [
+   {
+    "code": "overrated",
+    "label": "과대평가 주의",
+    "tone": "warn",
+    "detail": "평론 78점에 비해 유저 긍정률은 67%예요",
+    "analysis": "critic-vs-user"
+   },
+   {
+    "code": "server_complaint",
+    "label": "서버 불만",
+    "tone": "warn",
+    "detail": "서버 42% — 서버·접속 문제가 많아요. 안정화 뒤 구매를 권해요",
+    "analysis": "complaints"
+   }
+  ],
+  "900024": [
+   {
+    "code": "translation_complaint",
+    "label": "번역 주의",
+    "tone": "warn",
+    "detail": "번역 32% — 한국어 번역 불만이 많아요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "publisher_fast_sale",
+    "label": "제작사: 기다리면 싸짐",
+    "tone": "info",
+    "detail": "Supergiant 게임은 출시 약 195일 만에 첫 할인이 와요",
+    "analysis": "publishers"
+   }
+  ],
+  "900025": [
+   {
+    "code": "multi_game",
+    "label": "할인 직후 구매 추천",
+    "tone": "info",
+    "detail": "온라인 게임이라 할인 직후에 사야 같이 할 사람이 많아요",
+    "analysis": "discount-effect"
+   },
+   {
+    "code": "price_complaint",
+    "label": "가격 불만형",
+    "tone": "info",
+    "detail": "가격 40% — 할인 때 사면 만족할 게임이에요",
+    "analysis": "complaints"
+   }
+  ],
+  "900026": [
+   {
+    "code": "publisher_fast_sale",
+    "label": "제작사: 기다리면 싸짐",
+    "tone": "info",
+    "detail": "Pocketpair 게임은 출시 약 117일 만에 첫 할인이 와요",
+    "analysis": "publishers"
+   }
+  ],
+  "900027": [
+   {
+    "code": "hidden_gem",
+    "label": "숨은 명작",
+    "tone": "good",
+    "detail": "평론 70점보다 유저 긍정률 80%가 높아요",
+    "analysis": "critic-vs-user"
+   },
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "multi_game",
+    "label": "할인 직후 구매 추천",
+    "tone": "info",
+    "detail": "온라인 게임이라 할인 직후에 사야 같이 할 사람이 많아요",
+    "analysis": "discount-effect"
+   },
+   {
+    "code": "price_complaint",
+    "label": "가격 불만형",
+    "tone": "info",
+    "detail": "가격 49% — 할인 때 사면 만족할 게임이에요",
+    "analysis": "complaints"
+   }
+  ],
+  "900028": [
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "price_complaint",
+    "label": "가격 불만형",
+    "tone": "info",
+    "detail": "가격 33% — 할인 때 사면 만족할 게임이에요",
+    "analysis": "complaints"
+   }
+  ],
+  "900029": [
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "price_complaint",
+    "label": "가격 불만형",
+    "tone": "info",
+    "detail": "가격 64% — 할인 때 사면 만족할 게임이에요",
+    "analysis": "complaints"
+   }
+  ],
+  "900030": [
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "value_game",
+    "label": "가성비형",
+    "tone": "info",
+    "detail": "할인 때 긍정률이 +8%p — 할인가로 사면 만족도가 높아요",
+    "analysis": "discount-effect"
+   },
+   {
+    "code": "content_complaint",
+    "label": "콘텐츠 부족형",
+    "tone": "info",
+    "detail": "콘텐츠 부족 35% — 콘텐츠가 쌓인 뒤 구매를 권해요",
+    "analysis": "complaints"
+   }
+  ],
+  "900031": [
+   {
+    "code": "hidden_gem",
+    "label": "숨은 명작",
+    "tone": "good",
+    "detail": "평론 66점보다 유저 긍정률 83%가 높아요",
+    "analysis": "critic-vs-user"
+   },
+   {
+    "code": "cheap_per_hour",
+    "label": "가성비",
+    "tone": "good",
+    "detail": "리뷰어 중앙 60시간 플레이 · 시간당 약 299원",
+    "analysis": "play-pattern"
+   }
+  ],
+  "900032": [
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "content_complaint",
+    "label": "콘텐츠 부족형",
+    "tone": "info",
+    "detail": "콘텐츠 부족 31% — 콘텐츠가 쌓인 뒤 구매를 권해요",
+    "analysis": "complaints"
+   }
+  ],
+  "900033": [
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   }
+  ],
+  "900034": [
+   {
+    "code": "hidden_gem",
+    "label": "숨은 명작",
+    "tone": "good",
+    "detail": "평론 64점보다 유저 긍정률 75%가 높아요",
+    "analysis": "critic-vs-user"
+   },
+   {
+    "code": "bug_improving",
+    "label": "버그 줄어드는 중",
+    "tone": "good",
+    "detail": "출시 초기보다 버그 불만이 절반 이하로 줄었어요. 지금은 사도 돼요",
+    "analysis": "complaints"
+   },
+   {
+    "code": "price_complaint",
+    "label": "가격 불만형",
+    "tone": "info",
+    "detail": "가격 38% — 할인 때 사면 만족할 게임이에요",
+    "analysis": "complaints"
+   }
+  ]
+ }
+}
