@@ -7,5 +7,5 @@
   "query": "엘든",
   "store": null,
   "occurred_at": "2026-11-19T02:30:00Z",
-  "served_by": "be1"
+  "served_by": "backend1"
 }
