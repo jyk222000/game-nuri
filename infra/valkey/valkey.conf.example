@@ -1,0 +1,17 @@
+# /etc/valkey/valkey.conf 에서 기본값에서 바꾼 항목만 적은 예시 (비밀번호 없음)
+# 실제 파일은 서버에만 있다. 권한 640, 소유자 valkey:root.
+
+bind 0.0.0.0
+protected-mode yes
+port 6379
+
+# 비밀번호는 서버에서 직접 입력한다. 이 파일·Git·채팅에 쓰지 않는다.
+# requirepass <서버에서 직접 입력>
+
+# 캐시 용도: 메모리 256MB, 가득 차면 오래 안 쓴 키부터 삭제
+maxmemory 256mb
+maxmemory-policy allkeys-lru
+
+# 영속성 최소화: 재시작하면 캐시가 비어도 괜찮은 용도
+save ""
+appendonly no
