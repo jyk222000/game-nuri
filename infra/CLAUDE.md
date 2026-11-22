@@ -21,4 +21,3 @@
 | `mariadb/`, `mongodb/`, `elk/`, `valkey/` | 설치·복제 설정 |
 | `monitoring/` | Prometheus·Grafana·알림 규칙 |
 | `backup/` | 백업 스크립트, crontab |
-| `local/` | 각자 PC 개발용 docker-compose |

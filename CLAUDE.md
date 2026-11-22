@@ -61,7 +61,7 @@ Steam 사용자 데이터를 모아 **어디서, 언제 사는 게 가장 싼지
 3. **메시지·테이블·API를 새로 만들 때는 먼저 `docs/contracts/`를 읽고 그 형식을 따른다.** 형식이 없으면 contracts에 먼저 추가한 뒤 코드를 쓴다.
 4. **IP·포트·비밀번호·API 키를 코드에 직접 쓰지 않는다.** 모두 환경 변수(`.env`)에서 읽는다. 호스트는 IP 대신 호스트 이름(`kafka1`, `mariadb-pr` 등, `docs/network.md`)을 쓴다.
 5. **`.env`, 키 파일은 읽거나 출력하거나 커밋하지 않는다.** 새 설정값이 필요하면 `.env.example`에 이름과 설명만 추가한다.
-6. **VM(서버)에서 명령을 실행하기 전에 사용자에게 확인한다.** 특히 DB 삭제·초기화(`DROP`, `TRUNCATE`, `rm -rf`, `dropDatabase`, 토픽 삭제, `docker volume rm`)는 절대 스스로 실행하지 않는다.
+6. **VM(서버)에서 명령을 실행하기 전에 사용자에게 확인한다.** 특히 DB 삭제·초기화(`DROP`, `TRUNCATE`, `rm -rf`, `dropDatabase`, 토픽 삭제)는 절대 스스로 실행하지 않는다.
 7. **작은 단위로 커밋한다.** 커밋 메시지는 아래 Git 규칙을 따른다.
 8. 막히거나 계약과 실제가 다르면 추측해서 고치지 말고 사용자에게 보고한다.
 9. **AI API는 사용자 요청마다 부르지 않는다.** 배치로 미리 만들거나(⑤), 처음 한 번 부르고 결과를 저장해 재사용한다(⑥). 리뷰 원문을 AI에게 보내지 않는다(키워드만). 응답은 JSON 형식으로 받고, 실패하면 AI 없이 보여 줄 대체 화면을 둔다.
@@ -111,13 +111,13 @@ Steam 사용자 데이터를 모아 **어디서, 언제 사는 게 가장 싼지
 서비스는 `shared/gamenuri_common/config.py`의 `Settings`로만 환경 변수를 읽는다.
 
 ## 9. 로컬 개발
-VM 없이 각자 PC에서 개발할 때는 `infra/local/docker-compose.yml`로 Kafka·MariaDB·Valkey를 띄운다.
+**컨테이너(Docker)는 쓰지 않는다.** 각자 PC에서는 venv로 코드만 실행하고, Kafka·DB는 VM에 붙는다.
 ```bash
-docker compose -f infra/local/docker-compose.yml up -d
 python -m venv .venv && source .venv/bin/activate
 pip install -e shared -r <내 파트>/requirements.txt
 ```
 VM에 붙을 때는 `.env`의 호스트 이름만 VM 쪽으로 바꾼다. 코드는 바꾸지 않는다.
+VM 없이 확인할 때는 mock 데이터와 pytest를 쓴다.
 
 ## 10. 자주 쓰는 문서
 - 전체 구조: `docs/architecture.md`
