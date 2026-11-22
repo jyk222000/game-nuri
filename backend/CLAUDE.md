@@ -1,7 +1,7 @@
 # backend — FastAPI
 
 **하는 일:** `docs/contracts/api.md`의 API 제공, 클릭스트림을 Kafka로 발행.
-**배포:** Backend 1·2 VM (같은 코드, `.env`의 `SERVER_NAME`만 be1/be2)
+**배포:** Backend 1·2 VM (같은 코드, `.env`의 `SERVER_NAME`만 backend1/backend2)
 
 ## 구조
 ```
