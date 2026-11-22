@@ -1,2 +1,2 @@
-# crontab -e 에 추가 (UTC 18:00 = KST 03:00)
-0 18 * * * /opt/game-nuri/infra/backup/backup.sh >> /var/log/game-nuri-backup.log 2>&1
+# crontab -e 에 추가 (OS 시간대 Asia/Seoul 기준 KST 03:00)
+0 3 * * * /opt/game-nuri/infra/backup/backup.sh >> /var/log/game-nuri-backup.log 2>&1
