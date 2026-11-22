@@ -5,7 +5,9 @@
 > mongo1~3)은 쓰지 않는다. 이전 이름 블록을 `/etc/hosts`에 덧붙이지 않는다 (같은 IP에 이름이 두 개 생김).
 
 ## 구성
-- OS: **Rocky Linux 10** (네트워크 nmcli, 방화벽 iptables-nft-services, firewalld 사용 안 함)
+- OS: **Rocky Linux 10** (네트워크 nmcli)
+- 방화벽 (11/22 결정): 게이트웨이 2대(proxy, monitoring)만 iptables(`iptables` 서비스 enabled, `service iptables save`로 저장).
+  내부 VM 15대는 firewalld를 끄고 iptables도 켜지 않는다. 내부망은 게이트웨이 뒤에 있어 밖에서 바로 들어올 수 없다.
 - VirtualBox. 구축용 PC 2대에 내부 네트워크를 하나씩 두고, PC마다 게이트웨이 VM 1대가 내부망과 공유기를 잇는다.
 - 공유기 `192.168.0.1` (192.168.0.0/24). 게이트웨이 VM만 브리지 어댑터로 공유기에 붙는다.
 - 내부 VM은 어댑터 1개(내부 네트워크)뿐이고, 기본 경로는 자기 PC의 게이트웨이다.
