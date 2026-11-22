@@ -6,6 +6,7 @@ from typing import Any
 
 from refiner.rules import console, game, requirements
 from refiner.rules import price as price_rules
+from refiner.rules.normalize_title import normalize_title
 
 # 출력 이름 → (환경변수로 바꿀 수 있는) 기본 토픽
 OUT_TOPICS = {
@@ -17,11 +18,16 @@ OUT_TOPICS = {
 
 
 class Maps:
-    """매칭용 대응표. 운영 방식(game_store_ids 등)이 정해질 때까지의 임시 JSON 파일.
+    """매칭용 대응표 (game_id = IGDB ID).
 
     {"itad": {itad_id: game_id}, "steam": {steam_appid: game_id},
     "alias": {정규화한 상품명: game_id}}
     (예전 모양인 {itad_id: game_id} 하나짜리도 읽는다)
+
+    시작할 때 JSON 파일로 채우고, 처리하면서 스스로 배운다 (learn_*):
+      - raw.igdb 게임 정보 → steam appid, 게임 이름·한글 이름(별칭)
+      - raw.price 에 steam appid 힌트가 있으면 → itad_id
+    배운 내용은 changed 가 True 가 되고, main 이 상태 파일에 저장한다.
     """
 
     def __init__(self, data: dict[str, Any] | None = None):
@@ -31,9 +37,64 @@ class Maps:
         self.itad = {k: int(v) for k, v in (data.get("itad") or {}).items()}
         self.steam = {int(k): int(v) for k, v in (data.get("steam") or {}).items()}
         self.alias = {k: int(v) for k, v in (data.get("alias") or {}).items()}
+        self.changed = False
 
     def size(self) -> str:
         return f"itad {len(self.itad)}, steam {len(self.steam)}, alias {len(self.alias)}"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "itad": dict(sorted(self.itad.items())),
+            "steam": {str(k): v for k, v in sorted(self.steam.items())},
+            "alias": dict(sorted(self.alias.items())),
+        }
+
+    def merge(self, other: Maps) -> None:
+        """다른 대응표를 덧붙인다. 이미 있는 값은 바꾸지 않는다 (먼저 읽은 파일이 우선)."""
+        for mine, theirs in ((self.itad, other.itad), (self.steam, other.steam)):
+            for k, v in theirs.items():
+                mine.setdefault(k, v)
+        for k, v in other.alias.items():
+            self.alias.setdefault(k, v)
+
+    def _put(self, table: dict[Any, int], key: Any, game_id: int) -> None:
+        if key in (None, "") or key in table:  # 이미 있는 값은 덮어쓰지 않는다 (충돌 방지)
+            return
+        table[key] = game_id
+        self.changed = True
+
+    def learn_from_game(self, row: dict[str, Any], extras: dict[str, Any]) -> None:
+        """refined.games 한 행 + extras → steam appid, 이름 별칭을 배운다."""
+        gid = int(row["game_id"])
+        for store, ext_id in extras.get("store_ids") or []:
+            if store == "steam" and str(ext_id).isdigit():
+                self._put(self.steam, int(ext_id), gid)
+        for name in (row.get("name"), row.get("name_ko")):
+            if name:
+                self._put(self.alias, normalize_title(name), gid)
+
+    def resolve_itad(self, itad_id: str | None, steam_hint: int | None) -> int | None:
+        """itad_id → game_id. 모르면 steam appid 힌트로 찾고, 찾으면 itad_id 를 배운다."""
+        if itad_id and itad_id in self.itad:
+            return self.itad[itad_id]
+        gid = self.steam.get(steam_hint) if steam_hint is not None else None
+        if gid is not None and itad_id:
+            self._put(self.itad, itad_id, gid)
+        return gid
+
+
+def steam_hint(envelope: dict[str, Any]) -> int | None:
+    """raw.price 봉투에서 Steam appid 힌트를 찾는다 (수집기가 lookup 에 쓴 appid).
+
+    찾는 곳: payload.steam_appid, request.params.steam_appid / appid
+    """
+    payload = envelope.get("payload") or {}
+    params = (envelope.get("request") or {}).get("params") or {}
+    for v in (payload.get("steam_appid"), params.get("steam_appid"), params.get("appid")):
+        s = str(v).removeprefix("app/") if v is not None else ""
+        if s.isdigit():
+            return int(s)
+    return None
 
 
 def route(envelope: dict[str, Any], maps: Maps) -> dict[str, Any]:
@@ -46,7 +107,10 @@ def route(envelope: dict[str, Any], maps: Maps) -> dict[str, Any]:
 
     if kind in ("price", "console_price"):
         if kind == "price":
-            rows, unmatched = price_rules.refine_price(envelope, maps.itad.get)
+            hint = steam_hint(envelope)
+            rows, unmatched = price_rules.refine_price(
+                envelope, lambda itad_id: maps.resolve_itad(itad_id, hint)
+            )
         else:
             rows, unmatched = console.refine_console_price(envelope, maps.alias.get)
         out = [
@@ -54,6 +118,8 @@ def route(envelope: dict[str, Any], maps: Maps) -> dict[str, Any]:
         ]
     elif kind == "game_info":
         rows, extras, unmatched = game.refine_game(envelope)
+        for r in rows:
+            maps.learn_from_game(r, extras)
         out = [("games", game.message_key(r), game.to_connect_message(r)) for r in rows]
     elif kind == "app_details":
         rows, unmatched = requirements.refine_requirements(envelope, maps.steam.get)
