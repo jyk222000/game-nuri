@@ -46,6 +46,8 @@ def test_krw_kept_and_fields_filled():
             "game_id": 119133,
             "store": "steam",
             "edition": "digital",
+            "platform": "PC",
+            "item_condition": "new",
             "price_krw": 47900,
             "regular_krw": 64800,
             "discount_pct": 26,
@@ -103,13 +105,25 @@ def test_store_code_and_key_and_message_shape():
     assert store_code({"id": 61, "name": "Steam"}) == "steam"
     assert store_code({"id": 20, "name": "Game Billet!"}) == "gamebillet"
     rows, _ = refine_price(envelope([deal(61, "Steam", 1000)]), resolver({ITAD_ID: 7}))
-    assert message_key(rows[0]) == "7:steam:digital"
+    assert message_key(rows[0]) == "7:steam:digital:PC:new"
+    assert rows[0]["platform"] == "PC" and rows[0]["item_condition"] == "new"
     msg = to_connect_message(rows[0])
     assert set(msg) == {"schema", "payload"}
     assert {f["field"] for f in msg["schema"]["fields"]} == set(rows[0])
 
 
 def test_dedupe_by_key_order_kept():
-    a = {"game_id": 1, "store": "a", "edition": "digital", "price_krw": 5}
-    b = {"game_id": 1, "store": "b", "edition": "digital", "price_krw": 5}
+    base = {"edition": "digital", "platform": "PC", "item_condition": "new", "price_krw": 5}
+    a = {"game_id": 1, "store": "a", **base}
+    b = {"game_id": 1, "store": "b", **base}
     assert dedupe_by_key([a, b]) == [a, b]
+
+
+def test_dedupe_keeps_platforms_and_conditions_apart():
+    base = {"game_id": 1, "store": "danawa", "edition": "physical", "price_krw": 5}
+    rows = [
+        {**base, "platform": "PS5", "item_condition": "new"},
+        {**base, "platform": "PS4", "item_condition": "new"},
+        {**base, "platform": "PS5", "item_condition": "used"},
+    ]
+    assert dedupe_by_key(rows) == rows

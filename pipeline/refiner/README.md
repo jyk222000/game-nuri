@@ -7,7 +7,7 @@
 | `raw.price` / `price` (ITAD 가격) | `rules/price.py` | `refined.prices` | 완료 |
 | `raw.igdb` / `game_info` | `rules/game.py` | `refined.games` | 완료 (Steam 파생 컬럼은 비어 있음) |
 | `raw.steam` / `app_details` | `rules/requirements.py` | `refined.requirements` | 완료 |
-| `raw.console` / `console_price` (다나와) | `rules/console.py` | `refined.prices` | 신품만, 상품명 매칭은 정확 일치만 |
+| `raw.console` / `console_price` (다나와) | `rules/console.py` | `refined.prices` | 플랫폼·신품/중고 구분, 상품명 매칭은 정확 일치만 |
 | 그 밖의 kind (review, player_count, time_to_beat 등) | 없음 | — | 건너뜀 |
 | 매칭 실패·깨진 메시지 | — | `refined.unmatched` | 버리지 않고 기록 |
 
@@ -15,11 +15,11 @@
 - 빈 값은 NULL. 날짜는 `YYYY-MM-DD`, 시각은 수집 시각 UTC 문자열 그대로(DATETIME 변환은 Connect).
 - 가격: KRW는 그대로, USD·EUR·GBP는 환율을 곱한다. `price_original`, `currency_original`은 항상 채운다.
   환율은 임시 고정값(USD 1400, EUR 1500, GBP 1800). 팀에서 정하면 바꾼다.
-- 같은 (game_id, store, edition)은 낮은 가격 한 줄.
+- 같은 (game_id, store, edition, platform, item_condition)은 낮은 가격 한 줄. ITAD는 `PC`·`new`.
 - 게임: 서비스 대상 플랫폼(PC, PS4, PS5, Switch, Switch2, XboxOne, XboxSeries)만 남기고 Mac 등은 뺀다.
 - 사양: Steam HTML을 `OS: … / CPU: … / RAM: … / GPU: …` 텍스트로. 콘솔 전용 게임처럼 사양이 없으면 행을 만들지 않는다.
 - 같은 메시지를 두 번 처리해도 결과가 같다 (입력만으로 결정).
-- 출력은 `docs/contracts/messages/refined.*.json`과 같은 JSON+schema. 키는 `game_id:store:edition`(가격), `game_id`(게임·사양).
+- 출력은 `docs/contracts/messages/refined.*.json`과 같은 JSON+schema. 키는 `game_id:store:edition:platform:item_condition`(가격), `game_id`(게임·사양).
 
 ## 내 PC에서 시험 (Kafka 필요 없음)
 ```
@@ -51,7 +51,8 @@ cd .. && python -m pytest pipeline/tests
   `name`이 NOT NULL이라 Steam만 먼저 오면 실패한다)은 팀 결정이 필요하다.
 - 한 메시지가 여러 행이 되는 것(장르·플랫폼·`game_store_ids`)은 `refined.games.extras`로만 만들고
   발행하지 않는다 (토픽 분리 결정 후).
-- **다나와 가격**: 상품명을 정확히 맞출 때만 매칭한다(샘플에서는 대부분 unmatched). 같은 게임의 PS4·PS5가
-  같은 키(`game_id, danawa, edition`)라 나중에 온 메시지가 덮어쓴다. `platform`·`item_condition`을 키에
-  넣는 contracts 변경이 필요하고, 상품→게임 배정을 수집과 정제 중 어디서 할지도 정해야 한다.
+- **다나와 가격**: 상품명을 정확히 맞출 때만 매칭한다(샘플에서는 대부분 unmatched). 플랫폼은
+  `platform_hint`, 없으면 상품명에서 찾고 못 찾으면 unmatched. 상품→게임 배정 방법은 정해야 한다.
+- `games.aggregated_rating`·`aggregated_rating_count`는 IGDB 응답에 있으면 채운다(수집 필드 추가 필요).
+  플랫폼별 출시일(`game_platforms.release_date`)은 `extras.platform_release_dates`로만 만든다.
 - `price_history`는 재시작하면 같은 메시지가 두 번 들어갈 수 있다 (at-least-once). 중복 방지는 아직 없다.

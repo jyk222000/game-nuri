@@ -64,7 +64,7 @@ def test_dry_run_end_to_end(tmp_path):
         .read_text(encoding="utf-8")
         .splitlines()
     ]
-    assert [p["key"] for p in prices] == ["7:steam:digital"]
+    assert [p["key"] for p in prices] == ["7:steam:digital:PC:new"]
     assert prices[0]["value"]["payload"]["price_krw"] == 1000
     assert (
         len((tmp_path / "out" / "refined.unmatched.jsonl").read_text(encoding="utf-8").splitlines())
