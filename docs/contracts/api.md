@@ -30,7 +30,7 @@
 | 19 | 찜·알림 | 목표가 설정·수정·삭제 | `POST·PATCH·DELETE /api/me/alerts` | ③ | ✓ |
 | 20 | 찜·알림 | 목표가 목록 | `GET /api/me/alerts` | ③ | ✓ |
 | 21 | 찜·알림 | 알림 내역 | `GET /api/me/alerts/logs` | ③ | ✓ |
-| 22 | 찜·알림 | 메일 수신 설정 | `PUT /api/me/notifications` | ③ | ✓ |
+| 22 | 찜·알림 | 메일 수신 설정 | `GET·PUT /api/me/notifications` | ③ | ✓ |
 | 23 | 추천 | 플레이타임 기반 추천 | `GET /api/me/recommendations` | ④ | ✓ |
 | 24 | 추천 | 내 취향 프로필 | `GET /api/me/taste` | ④ | ✓ |
 | 25 | 추천 | 짧게 끝낼 게임 추천 | `GET /api/games/short` | ④ |  |
@@ -50,29 +50,166 @@
 
 분류별: 인증 4 · 게임 5 · 가격 5 · 구매 타이밍 2 · 찜·알림 6 · 추천 3 · 리뷰 3 · 사양 3 · 동접자 2 · 검색 2 · 운영 3 = **38**
 
+## 공통 규칙 (응답 형식은 프론트 목업 `frontend/src/api/mock/router.js`·`data.js` 기준, 2026-11-23 결정 반영)
+- 시각: UTC ISO 8601 `Z` (`2026-11-19T02:30:00Z`). 날짜만 쓰는 필드는 `YYYY-MM-DD`(UTC).
+- 목록: `{"items": [...], "total": 123, "page": 1, "size": 20}`. 페이지가 없는 목록(`genres`, `popular` 등)은 `{"items": [...]}`.
+- 오류: `{"error": {"code": "...", "message": "한국어 문장"}}`
+  - **형식 검증 실패**(필드 누락·타입 오류 등)는 **422 + `INVALID_REQUEST`**, **업무 규칙 오류**(`INVALID_PRICE` 등)는 **400**.
+  - **프런트는 HTTP status가 아니라 `error.code`로 처리한다.** `message`는 한국어 문장이다.
+
+| code | HTTP | 언제 |
+|---|---|---|
+| `UNAUTHORIZED` | 401 | 로그인 필요 (✓ API에 세션이 없거나 만료) |
+| `NOT_FOUND` | 404 | 게임·알림이 없음 |
+| `INVALID_REQUEST` | 422 | 요청 형식 오류 (필드 누락·타입 오류) |
+| `INVALID_PRICE` | 400 | 목표가가 0 이하 |
+| `INVALID_STEAM_ID` | 400 | Steam ID가 17자리 숫자가 아님 |
+| `SPEC_REQUIRED` | 400 | PC 사양 미입력 상태에서 spec-check |
+| `STEAM_REQUIRED` | 400 | Steam ID 미연동 상태에서 recommendations·taste |
+| `UNAVAILABLE` | 503 | Valkey(세션) 등 의존 서비스 장애 |
+| `INTERNAL` | 500 | 서버 오류 |
+
 ## 응답 예시
+### 가격 키: `platform`, `item_condition` 추가 (목업 대비 변경)
+가격 테이블 키가 `(game_id, store, edition, platform, item_condition)`이므로 가격 비교·이력·최저가 응답에 `platform`(`PC`, `PS5`, `PS4`, `Switch`, `Switch2`, `XboxSeries`, `XboxOne`)과 `item_condition`(`new` | `used`)을 넣는다. 목업의 `edition: "used"`는 `edition: "physical"` + `item_condition: "used"`로 바꾼다.
+
 `GET /api/games/119133/prices`
 ```json
 { "game_id": 119133,
-  "items": [ { "store": "steam", "edition": "digital", "price_krw": 47900, "regular_krw": 64800,
-               "discount_pct": 26, "url": "https://...", "collected_at": "2026-11-19T02:30:00Z" } ],
-  "lowest": { "store": "steam", "price_krw": 47900 } }
+  "items": [
+    { "store": "steam", "edition": "digital", "platform": "PC", "item_condition": "new",
+      "price_krw": 47900, "regular_krw": 64800, "discount_pct": 26, "url": "https://...", "collected_at": "2026-11-19T02:30:00Z" },
+    { "store": "danawa", "edition": "physical", "platform": "PS5", "item_condition": "used",
+      "price_krw": 38000, "regular_krw": null, "discount_pct": null, "url": "https://...", "collected_at": "2026-11-19T02:30:00Z" } ],
+  "lowest": { "store": "steam", "edition": "digital", "platform": "PC", "item_condition": "new", "price_krw": 47900 } }
 ```
+`GET /api/games/119133/history?days=180&platform=PC&item_condition=new`
+```json
+{ "game_id": 119133, "days": 180, "platform": "PC", "item_condition": "new",
+  "items": [ { "store": "steam", "edition": "digital", "collected_at": "2026-11-19T02:30:00Z",
+               "price_krw": 47900, "regular_krw": 64800, "discount_pct": 26 } ] }
+```
+**가격 이력 중복 제거 (결정)**
+- 중복 판단 키: **`(game_id, store, edition, platform, item_condition, collected_at)`**. 같은 시각에 `edition`만 다른 행(digital·physical)은 서로 다른 행이다.
+- **`price_history`에는 UNIQUE 키를 넣지 않는다.** insert 모드 JDBC Sink가 중복 행에서 멈추기 때문이다.
+- 중복은 **refiner(적재 전)와 Backend 조회(응답 전)** 에서 막는다. 같은 키가 둘 이상이면 응답에는 한 건만 낸다(가장 나중에 들어온 행).
+
+`GET /api/games/119133/lowest` — **platform·item_condition별** 역대 최저가 (콘솔은 "수집 이후 최저가")
+```json
+{ "game_id": 119133,
+  "items": [ { "platform": "PC", "item_condition": "new", "store": "steam", "edition": "digital",
+               "price_krw": 38900, "regular_krw": 64800, "discount_pct": 40, "date": "2025-12-05" },
+             { "platform": "PS5", "item_condition": "used", "store": "danawa", "edition": "physical",
+               "price_krw": 31000, "regular_krw": null, "discount_pct": null, "date": "2026-10-02" } ] }
+```
+
+### 인증·내 정보
+`GET /api/auth/google/login`, `/callback` → 구글로 리다이렉트, 콜백 후 세션 쿠키 발급 후 `/`로 이동 (본문 없음).
+`POST /api/auth/refresh`, `POST /api/auth/logout` → `{ "ok": true }`
+`GET /api/me` / `PATCH /api/me` — `name`은 `users.nickname`, **`picture`는 응답에서 뺀다**
+```json
+{ "user_id": 1, "email": "gamer@example.com", "name": "겜누리 사용자", "steam_id": "76561198000000000" }
+```
+`PUT /api/me/steam` 본문 `{ "steam_id": "76561198000000000" }` → `{ "steam_id": "76561198000000000" }`
+
+### 게임
+카드 (`GET /api/games`, `popular`, `deals`, `short`, `players/top`, `players/low`, 찜 목록, 추천에 공통). `platforms`는 ERD 코드이고 **표시 이름은 프런트가 바꾼다.**
+```json
+{ "game_id": 119133, "name": "엘든 링", "name_en": "Elden Ring", "genres": ["액션", "RPG"], "platforms": ["PC", "PS5", "XboxSeries"],
+  "cover_url": "https://...", "price_krw": 47900, "regular_krw": 64800, "discount_pct": 26,
+  "positive_ratio": 0.92, "concurrent_players": 412000, "time_to_beat_hours": 60, "wished": false }
+```
+(목업의 `hue`는 ERD에 없어 `cover_url`로 대체하는 제안이며 **결정 대기**, 아래 표 4번)
+`GET /api/games?q=&platform=&genre=&sort=price|discount&page=&size=` → `{ "items": [카드], "total": 1, "page": 1, "size": 20 }` (`platform` 값은 ERD 코드)
+`GET /api/games/autocomplete?q=` → `{ "items": [ { "game_id": 119133, "name": "엘든 링", "name_en": "Elden Ring" } ] }`
+`GET /api/games/popular`, `deals`, `short`, `players/top` → `{ "items": [카드] }`. `players/low` 카드에는 `"warning": "접속자가 적어 매칭이 어려울 수 있어요"` 추가
+`GET /api/genres`, `/api/tags` → `{ "items": ["액션", "RPG"] }`
+`GET /api/exchange-rates` → **USD·EUR·GBP만** (JPY는 프런트에서 뺀다)
+```json
+{ "base": "KRW", "rates": { "USD": 1385.2, "EUR": 1502.8, "GBP": 1760.4 }, "updated_at": "2026-11-21T00:00:00Z" }
+```
+`GET /api/games/119133` → 카드 필드 + 아래
+```json
+{ "release_date": "2022-02-25", "summary": "...", "tags": ["오픈월드", "소울라이크"], "online_only": false,
+  "steam_app_id": 1245620, "lowest_krw": 38900,
+  "insights": [ { "...": "analysis/가 만든 게임별 태그 (모양은 analysis 담당과 확정)" } ] }
+```
+
+### 구매 타이밍
+`GET /api/games/119133/timing`
+```json
+{ "game_id": 119133, "verdict": "buy_now", "reason": "역대 최저가에 가까운 가격이에요.", "current_krw": 47900,
+  "lowest_krw": 38900, "lowest_date": "2025-12-05", "vs_lowest_pct": 23, "sale_count_2y": 9 }
+```
+`verdict`: `buy_now` | `neutral` | `wait` | (콘솔·이력 3건 미만) `insufficient_data` ← 마지막 값은 목업에 없는 제안(결정 대기)
 `GET /api/games/119133/prediction`
 ```json
 { "game_id": 119133, "avg_sale_interval_days": 62, "next_sale_expected": "2026-12-21",
   "expected_discount_pct": 40, "confidence": "medium", "basis": "최근 2년 할인 9회 기준" }
 ```
-`GET /api/games/119133/reviews/summary`
+
+### 찜·알림 (모두 ✓)
+`GET /api/me/wishlist` → `{ "items": [카드], "total": 1 }`
+`POST /api/me/wishlist` 본문 `{ "game_id": 119133 }` → 200 `{ "game_id": 119133, "wished": true }` (이미 찜했어도 200, 멱등)
+`DELETE /api/me/wishlist?game_id=119133` → `{ "game_id": 119133, "wished": false }` (찜하지 않았어도 같은 응답, 멱등)
+`GET /api/me/alerts` → `{ "items": [ { "alert_id": 3, "game_id": 119133, "game_name": "엘든 링", "target_price_krw": 40000, "current_krw": 47900, "active": true, "created_at": "...Z" } ], "total": 1 }`
+`POST /api/me/alerts` 본문 `{ "game_id": 119133, "target_price_krw": 40000 }` → 알림 한 건. **(user_id, game_id)가 이미 있으면 409가 아니라 덮어쓴다.** `target_price_krw`가 0 이하이면 400 `INVALID_PRICE`
+`PATCH /api/me/alerts/{alert_id}` 본문 `{ "target_price_krw"?, "active"? }` → 알림 한 건 (없거나 남의 것이면 404 `NOT_FOUND`)
+`DELETE /api/me/alerts/{alert_id}` → `{ "ok": true }` (※ `alert_logs` FK 삭제 규칙 확인 전이라 구현 보류)
+`GET /api/me/alerts/logs` → `alert_logs`에 `alerts`·`games`를 조인해 `game_id`, `game_name`, `target_price_krw`를 채우고 **`channel`은 `"email"` 고정**
 ```json
-{ "game_id": 119133, "positive_ratio": 0.92, "summary": "AI 요약 한두 줄",
-  "pros": ["보스전", "탐험", "아트"], "cons": ["최적화", "난이도"], "generated_by": "ai", "updated_at": "2026-11-19T18:00:00Z" }
+{ "items": [ { "log_id": 9, "game_id": 119133, "game_name": "엘든 링", "price_krw": 38900, "target_price_krw": 40000,
+               "store": "steam", "sent_at": "2026-11-19T02:30:00Z", "channel": "email" } ], "total": 1 }
 ```
-`GET /api/games/119133/spec-check`
+`GET /api/me/notifications`, `PUT /api/me/notifications` 본문 `{ "email_enabled": true }` → **`email_enabled` 하나** (`notification_settings`와 같음). 행이 없으면 `true`로 응답
 ```json
-{ "game_id": 119133, "verdict": "min_ok", "reason": "GPU가 권장보다 낮아 옵션을 낮춰야 해요", "generated_by": "ai", "cached": true }
+{ "email_enabled": true }
 ```
-`GET /api/search/trending`
+(목업의 `price_alert`, `weekly_deals`는 프런트에서 뺀다. API 개수는 38개 그대로, #22 경로가 `GET·PUT`이 된다.)
+
+### 추천 (✓)
+`GET /api/me/taste` → `{ "total_playtime_hours": 1840, "owned_games": 126, "top_genres": [ { "genre": "액션", "pct": 38 } ], "style": "긴 호흡의 액션·RPG를 즐기는 탐험가형" }`
+`GET /api/me/recommendations` → `{ "items": [카드 + "reason": "RPG를 많이 플레이했어요"] }`
+
+### 리뷰 — **미확정**
+리뷰 저장 구조(MongoDB `reviews`·ES, 팀 결정 대기)가 정해진 뒤 필드를 확정한다. 아래는 목업의 모양이고 확정이 아니다.
+`GET /api/games/119133/reviews?page=&size=10` → `{ "items": [ { "review_id": "119133-0", "source": "steam", "recommended": true, "text": "...", "playtime_hours": 42, "created_at": "...Z" } ], "total": 14, "page": 1, "size": 10 }`
+`GET /api/reviews/search?q=` → 같은 형식 + `game_id`, `game_name` (**미확정**)
+`GET /api/games/119133/reviews/summary` (`review_summaries` 기준) → `{ "game_id": 119133, "positive_ratio": 0.92, "summary": "...", "pros": ["보스전"], "cons": ["최적화"], "generated_by": "ai", "updated_at": "...Z" }`
+
+### 사양
+`GET /api/games/119133/requirements` — **`game_requirements` 텍스트 컬럼 그대로** (`minimum_text`, `recommended_text`, `updated_at`). 구조화(`cpu`, `gpu` 등)는 ⑥ 사양 비교 방식이 정해지면 추가한다.
 ```json
-{ "window": "1h", "items": [ { "rank": 1, "query": "엘든 링", "count": 132, "change": "up" } ] }
+{ "game_id": 119133, "minimum_text": "OS: Windows 10 ... 그래픽: GTX 1060 ...", "recommended_text": "OS: Windows 10/11 ...",
+  "updated_at": "2026-11-19T02:30:00Z" }
 ```
+`GET·PUT /api/me/specs` → `{ "cpu": "", "gpu": "", "ram_gb": null }` (`os` 추가는 결정 대기, 표 10번)
+`GET /api/games/119133/spec-check` → `{ "game_id": 119133, "verdict": "min_ok", "reason": "...", "generated_by": "ai", "cached": true }` (`verdict`: `rec_ok` | `min_ok` | `below_min`)
+
+### 검색·운영
+`GET /api/search/trending` → `{ "window": "1h", "items": [ { "rank": 1, "query": "엘든 링", "count": 132, "change": "up" } ] }` (`change`: `up` | `down` | `same` | `new`)
+`GET /api/search/recent` → `{ "items": ["엘든 링", "하데스"] }`
+`POST /api/events` 본문 `{ "type": "search", "query": "...", "at": "...Z", ... }` → `{ "accepted": true }` (Kafka `clickstream`, 형식 `messages/clickstream.json`)
+`GET /api/stats/api-ranking` → `{ "items": [ { "rank": 1, "api": "GET /api/games", "calls": 18240 } ] }`
+`GET /api/health` → `{ "status": "ok", "server": "backend1", "db_write": "ok", "db_read": "ok", "valkey": "ok", "es": "ok" }`. Replica·Valkey·ES가 안 되면 200 `"status": "degraded"`, Primary가 안 되면 503 `"status": "down"`
+
+## 목업과 ERD가 달랐던 곳 (2026-11-23 결정 상태)
+| # | 목업 | ERD | 결정 | 상태 |
+|---|---|---|---|---|
+| 1 | 게임 `name`(한글) + `name_en`(영문) | `games.name`(영문) + `name_ko`(한글) | API `name` = `name_ko` 우선(없으면 `games.name`), `name_en` = `games.name` | **제안(미결정)** |
+| 2 | `me.name`, `me.picture` | `users.nickname`만 | `name` = `nickname`, `picture`는 응답에서 뺀다 | 결정 |
+| 3 | `notifications` 3개 | `email_enabled` 하나 | `email_enabled` 하나. `price_alert`·`weekly_deals`는 프런트에서 뺀다 | 결정 |
+| 4 | 카드 `hue` | 없음 (`cover_url`) | `cover_url`로 대체, `hue`는 프런트가 계산 | **제안(미결정)** |
+| 5 | `platforms`: `pc`/`ps`/`xbox`/`switch` | ERD 코드 7개 | ERD 코드를 쓰고 표시 이름은 프런트가 바꾼다 | 결정 |
+| 6 | 가격 `edition: "used"` | `edition` + `item_condition` | `physical` + `used`로 표현 | 결정 |
+| 7 | 이력 `date`, 단일 시리즈 | `collected_at`, 여러 시리즈 | `collected_at`, `store`·`edition` 포함, `platform`·`item_condition`으로 시리즈 선택 | 결정 |
+| 8 | 최저가 단일 값 | 플랫폼·상태별 | `lowest`를 `items[]`로 | 결정 |
+| 9 | `requirements` 구조화 | `minimum_text`, `recommended_text` | 텍스트 컬럼 그대로. 구조화는 ⑥ 방식 확정 후 | 결정 |
+| 10 | `specs` 에 `os` 없음 | `user_specs.os` 있음 | `os`를 요청·응답에 추가 | **제안(미결정)** |
+| 11 | 알림 내역 `game_id`, `game_name`, `target_price_krw`, `channel` | `alert_logs`에 없음 | `alerts`·`games` 조인으로 채우고 `channel`은 `"email"` 고정 | 결정 |
+| 12 | 알림 목록 `game_name`, `current_krw` | `alerts`에 없음 | 조인(`games`, `prices_current` 최저가)으로 채움 | 결정(구현 방식) |
+| 13 | 카드 `positive_ratio` 등 | 조인·계산 | 스키마 변경 없음 | 결정(구현 방식) |
+| 14 | 리뷰 필드 | MariaDB 테이블 없음 | 리뷰 저장 구조가 정해진 뒤 확정, api.md에는 "미확정" | 결정(보류) |
+| 15 | `exchange-rates`에 `JPY` | USD·EUR·GBP | USD·EUR·GBP만, JPY는 프런트에서 뺀다 | 결정 |
+| 16 | `GET /api/me/notifications` | #22는 `PUT`만 | #22를 `GET·PUT`으로 적는다(38개 유지) | 결정 |
+| 17 | 이력 중복 제거 | 고유 키 없음 | `(game_id, store, edition, platform, item_condition, collected_at)`, UNIQUE는 넣지 않고 refiner·조회에서 처리 | 결정 |
