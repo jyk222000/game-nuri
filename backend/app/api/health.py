@@ -28,7 +28,7 @@ def health() -> JSONResponse:
 
     body = {
         "status": status,
-        "server": getattr(get_settings(), "server_name", ""),
+        "server": get_settings().server_name,
         "db_write": db_write,
         "db_read": db_read,
         "valkey": valkey,

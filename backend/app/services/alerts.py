@@ -1,0 +1,81 @@
+"""목표가 알림 설정·수정 (#19 POST·PATCH). 삭제(DELETE)는 alert_logs FK 확인 전이라 아직 없다.
+
+alerts는 (user_id, game_id)가 고유라서, 이미 있으면 409가 아니라 덮어쓴다.
+"""
+
+from datetime import UTC, datetime
+
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
+from app.core.errors import ApiError
+from app.db.models import Alert
+
+MAX_INT = 2_147_483_647  # alerts.target_price_krw는 INT
+
+
+def _now() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+def _check_price(price: int) -> None:
+    if not 0 < price <= MAX_INT:
+        raise ApiError(400, "INVALID_PRICE", "목표가를 올바르게 입력해 주세요")
+
+
+def _find(db: Session, user_id: int, game_id: int) -> Alert | None:
+    return db.scalars(
+        select(Alert).where(Alert.user_id == user_id, Alert.game_id == game_id)
+    ).first()
+
+
+def upsert(db: Session, user_id: int, game_id: int, target_price_krw: int) -> Alert:
+    """없으면 만들고, 있으면 목표가를 덮어쓴다(다시 켜진 상태, 만든 시각은 유지)."""
+    _check_price(target_price_krw)
+    alert = _find(db, user_id, game_id)
+    if alert is None:
+        alert = Alert(
+            user_id=user_id,
+            game_id=game_id,
+            target_price_krw=target_price_krw,
+            active=True,
+            created_at=_now(),
+        )
+        db.add(alert)
+    else:
+        alert.target_price_krw = target_price_krw
+        alert.active = True
+    try:
+        db.commit()
+    except IntegrityError:  # 동시에 두 번 만든 경우: 먼저 들어간 행을 덮어쓴다
+        db.rollback()
+        alert = _find(db, user_id, game_id)
+        if alert is None:
+            raise
+        alert.target_price_krw = target_price_krw
+        alert.active = True
+        db.commit()
+    db.refresh(alert)
+    return alert
+
+
+def patch(
+    db: Session,
+    user_id: int,
+    alert_id: int,
+    target_price_krw: int | None,
+    active: bool | None,
+) -> Alert:
+    """내 알림만 고친다. 없거나 남의 것이면 둘 다 404 (존재 여부를 알려 주지 않는다)."""
+    alert = db.get(Alert, alert_id)
+    if alert is None or alert.user_id != user_id:
+        raise ApiError(404, "NOT_FOUND", "알림을 찾을 수 없습니다")
+    if target_price_krw is not None:
+        _check_price(target_price_krw)
+        alert.target_price_krw = target_price_krw
+    if active is not None:
+        alert.active = active
+    db.commit()
+    db.refresh(alert)
+    return alert
