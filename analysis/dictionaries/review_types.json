@@ -1,0 +1,62 @@
+{
+  "_설명": "A4 긍정·불만 유형 사전. ES 리뷰 인덱스(nori)에서 뽑은 키워드를 유형으로 묶는다. 한국어는 어간(앞부분 일치), 영어는 소문자 단어 일치. 한 키워드는 한 유형에만 넣는다.",
+  "negative": {
+    "price": {
+      "label": "가격",
+      "ko": ["가격", "비싸", "비쌈", "돈값", "가성비", "환불", "정가", "제값", "할인", "과금", "현질", "유료", "DLC"],
+      "en": ["price", "expensive", "overpriced", "pricey", "refund", "money", "cost", "microtransaction", "microtransactions", "dlc", "paywall"]
+    },
+    "optimization": {
+      "label": "최적화",
+      "ko": ["최적화", "프레임", "렉", "끊김", "끊겨", "버벅", "발열", "로딩", "사양", "그래픽카드", "스터터", "드랍"],
+      "en": ["optimization", "optimized", "fps", "framerate", "stutter", "stuttering", "lag", "laggy", "performance", "loading", "unoptimized", "drops"]
+    },
+    "server": {
+      "label": "서버",
+      "ko": ["서버", "접속", "매칭", "핑", "튕김", "튕겨", "대기열", "핵", "핵쟁이", "치터", "온라인"],
+      "en": ["server", "servers", "connection", "disconnect", "matchmaking", "ping", "queue", "cheater", "cheaters", "hacker", "hackers", "online"]
+    },
+    "translation": {
+      "label": "번역",
+      "ko": ["번역", "한글", "한국어", "자막", "오역", "더빙", "현지화", "로컬라이징"],
+      "en": ["translation", "localization", "korean", "subtitle", "subtitles", "dub", "dubbing"]
+    },
+    "bug": {
+      "label": "버그",
+      "ko": ["버그", "오류", "크래시", "멈춤", "먹통", "세이브", "패치", "강제종료", "에러"],
+      "en": ["bug", "bugs", "buggy", "glitch", "glitches", "crash", "crashes", "error", "broken", "freeze", "save", "patch"]
+    },
+    "content": {
+      "label": "콘텐츠 부족",
+      "ko": ["콘텐츠", "컨텐츠", "볼륨", "짧", "분량", "반복", "노가다", "지루", "엔드콘텐츠", "할게없"],
+      "en": ["content", "short", "repetitive", "grind", "grindy", "boring", "endgame", "empty", "shallow"]
+    }
+  },
+  "positive": {
+    "story": {
+      "label": "스토리",
+      "ko": ["스토리", "이야기", "세계관", "엔딩", "캐릭터", "연출", "감동"],
+      "en": ["story", "narrative", "lore", "ending", "characters", "writing"]
+    },
+    "graphics": {
+      "label": "그래픽·분위기",
+      "ko": ["그래픽", "아트", "분위기", "풍경", "배경", "음악", "사운드", "OST"],
+      "en": ["graphics", "art", "visuals", "atmosphere", "music", "soundtrack", "beautiful"]
+    },
+    "gameplay": {
+      "label": "게임성",
+      "ko": ["전투", "조작", "타격감", "손맛", "재미", "중독", "레벨디자인", "보스", "탐험", "자유도"],
+      "en": ["combat", "gameplay", "controls", "fun", "addictive", "boss", "bosses", "exploration", "freedom"]
+    },
+    "value": {
+      "label": "가성비·볼륨",
+      "ko": ["플레이타임", "시간가는줄", "혜자", "볼륨빵빵", "할거많"],
+      "en": ["worth", "value", "hours", "replayability", "replay"]
+    },
+    "multiplayer": {
+      "label": "같이 하기",
+      "ko": ["친구", "협동", "멀티", "코옵", "같이"],
+      "en": ["friends", "coop", "co-op", "multiplayer", "together"]
+    }
+  }
+}
