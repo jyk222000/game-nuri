@@ -3,7 +3,7 @@
   "config": {
     "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
     "topics": "refined.prices",
-    "connection.url": "jdbc:mariadb://mariadb-p:3306/gamenuri",
+    "connection.url": "jdbc:mariadb://mariadb-pr:3306/gamenuri",
     "connection.user": "${MARIADB_USER}",
     "connection.password": "${MARIADB_PASSWORD}",
     "table.name.format": "price_history",
