@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models import Wishlist
+from app.services import games
 
 
 def _now() -> datetime:
@@ -14,7 +15,8 @@ def _now() -> datetime:
 
 
 def add(db: Session, user_id: int, game_id: int) -> None:
-    """이미 찜했으면 아무것도 하지 않는다 (200 멱등)."""
+    """이미 찜했으면 아무것도 하지 않는다 (200 멱등). 없는 게임이면 404."""
+    games.ensure_exists(db, game_id)
     if db.get(Wishlist, (user_id, game_id)) is not None:
         return
     db.add(Wishlist(user_id=user_id, game_id=game_id, created_at=_now()))

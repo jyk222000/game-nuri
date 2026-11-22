@@ -3,43 +3,13 @@
 from datetime import datetime
 
 import pytest
-from app.api.deps import CurrentUser, get_current_user
-from app.db.base import Base
-from app.db.models import Alert, NotificationSetting, User, Wishlist
-from app.db.session import get_write_db
+from app.db.models import Alert, NotificationSetting, Wishlist
 from app.main import app
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
-from sqlalchemy.pool import StaticPool
 
 NOW = datetime(2026, 11, 23)
-
-
-@pytest.fixture
-def env():
-    engine = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
-    Base.metadata.create_all(engine)
-    with Session(engine) as s:
-        s.add_all(
-            [
-                User(user_id=1, email="a@example.com", created_at=NOW),
-                User(user_id=2, email="b@example.com", created_at=NOW),
-            ]
-        )
-        s.commit()
-
-    def db():
-        with Session(engine) as s:
-            yield s
-
-    current = {"id": 1}
-    app.dependency_overrides[get_write_db] = db
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id=current["id"])
-    yield TestClient(app), engine, current
-    app.dependency_overrides.clear()
 
 
 def rows(engine, model):
@@ -196,3 +166,25 @@ def test_login_required(method, path, body) -> None:
     r = getattr(TestClient(app), method)(path, **({"json": body} if body is not None else {}))
     assert r.status_code == 401
     assert r.json()["error"]["code"] == "UNAUTHORIZED"
+
+
+# ---------- game_id 존재 확인 (404) ----------
+def test_wish_add_unknown_game_is_404(env) -> None:
+    client, engine, _ = env
+    r = client.post("/api/me/wishlist", json={"game_id": 999999})
+    assert r.status_code == 404
+    assert r.json()["error"] == {"code": "NOT_FOUND", "message": "게임을 찾을 수 없습니다"}
+    assert rows(engine, Wishlist) == []
+
+
+def test_alert_create_unknown_game_is_404(env) -> None:
+    client, engine, _ = env
+    r = client.post("/api/me/alerts", json={"game_id": 999999, "target_price_krw": 1000})
+    assert r.status_code == 404 and r.json()["error"]["code"] == "NOT_FOUND"
+    assert rows(engine, Alert) == []
+
+
+def test_invalid_price_is_checked_before_game_lookup(env) -> None:
+    client, *_ = env
+    r = client.post("/api/me/alerts", json={"game_id": 999999, "target_price_krw": 0})
+    assert r.status_code == 400 and r.json()["error"]["code"] == "INVALID_PRICE"

@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import ApiError
 from app.db.models import Alert
+from app.services import games
 
 MAX_INT = 2_147_483_647  # alerts.target_price_krw는 INT
 
@@ -33,6 +34,7 @@ def _find(db: Session, user_id: int, game_id: int) -> Alert | None:
 def upsert(db: Session, user_id: int, game_id: int, target_price_krw: int) -> Alert:
     """없으면 만들고, 있으면 목표가를 덮어쓴다(다시 켜진 상태, 만든 시각은 유지)."""
     _check_price(target_price_krw)
+    games.ensure_exists(db, game_id)  # 없는 게임이면 404
     alert = _find(db, user_id, game_id)
     if alert is None:
         alert = Alert(

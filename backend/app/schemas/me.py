@@ -1,8 +1,11 @@
 """API 응답·요청 모양 (docs/contracts/api.md). DB 모델(app/db/models)과는 따로 둔다."""
 
+from typing import Literal
+
 from pydantic import BaseModel, Field, model_validator
 
 from app.core.timeutil import UtcDatetime
+from app.schemas.game import Card
 
 
 # ---- 찜 (#17) ----
@@ -39,6 +42,43 @@ class AlertOut(BaseModel):
     target_price_krw: int
     active: bool
     created_at: UtcDatetime
+
+
+# ---- 목록 (#18, #20, #21) ----
+class WishlistOut(BaseModel):
+    items: list[Card]
+    total: int
+
+
+class AlertListItem(BaseModel):
+    alert_id: int
+    game_id: int
+    game_name: str | None
+    target_price_krw: int
+    current_krw: int | None  # 새 상품 현재 최저가. 가격이 없으면 null
+    active: bool
+    created_at: UtcDatetime
+
+
+class AlertListOut(BaseModel):
+    items: list[AlertListItem]
+    total: int
+
+
+class AlertLogItem(BaseModel):
+    log_id: int
+    game_id: int
+    game_name: str | None
+    price_krw: int
+    target_price_krw: int
+    store: str
+    sent_at: UtcDatetime
+    channel: Literal["email"] = "email"  # 메일 발송만 있다
+
+
+class AlertLogListOut(BaseModel):
+    items: list[AlertLogItem]
+    total: int
 
 
 # ---- 메일 수신 설정 (#22) ----

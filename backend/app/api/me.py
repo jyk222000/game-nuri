@@ -12,14 +12,17 @@ from app.api.deps import CurrentUser, get_current_user
 from app.db.session import get_write_db
 from app.schemas.me import (
     AlertCreate,
+    AlertListOut,
+    AlertLogListOut,
     AlertOut,
     AlertPatch,
     NotificationBody,
     NotificationOut,
     WishlistAdd,
+    WishlistOut,
     WishlistState,
 )
-from app.services import alerts, notifications, wishlist
+from app.services import alerts, me_lists, notifications, wishlist
 
 router = APIRouter(prefix="/api/me")
 
@@ -38,6 +41,12 @@ def _alert_out(alert) -> AlertOut:  # noqa: ANN001
 
 
 # ---- #17 찜 ----
+@router.get("/wishlist", response_model=WishlistOut)
+def list_wishlist(user: User, db: Db) -> WishlistOut:
+    items = me_lists.wishlist_cards(db, user.user_id)
+    return WishlistOut(items=items, total=len(items))
+
+
 @router.post("/wishlist", response_model=WishlistState)
 def add_wish(body: WishlistAdd, user: User, db: Db) -> WishlistState:
     wishlist.add(db, user.user_id, body.game_id)
@@ -48,6 +57,19 @@ def add_wish(body: WishlistAdd, user: User, db: Db) -> WishlistState:
 def remove_wish(game_id: Annotated[int, Query(gt=0)], user: User, db: Db) -> WishlistState:
     wishlist.remove(db, user.user_id, game_id)
     return WishlistState(game_id=game_id, wished=False)
+
+
+# ---- #20 목표가 목록, #21 알림 내역 ----
+@router.get("/alerts", response_model=AlertListOut)
+def list_alerts(user: User, db: Db) -> AlertListOut:
+    items = me_lists.alert_items(db, user.user_id)
+    return AlertListOut(items=items, total=len(items))
+
+
+@router.get("/alerts/logs", response_model=AlertLogListOut)
+def list_alert_logs(user: User, db: Db) -> AlertLogListOut:
+    items = me_lists.alert_log_items(db, user.user_id)
+    return AlertLogListOut(items=items, total=len(items))
 
 
 # ---- #19 목표가 알림 (POST·PATCH. DELETE는 보류) ----
