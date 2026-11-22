@@ -23,11 +23,11 @@ Backend의 캐시·세션·실시간 검색어·알림 중복 방지용 Valkey. 
 
 ## 방화벽
 **내부망 신뢰, 게이트웨이에서 제어, 보호는 `requirepass`.** (2026-11-22 결정: 내부 VM은 firewalld를 끈다.)
-- valkey VM의 firewalld는 2026-11-22 `systemctl disable --now firewalld`로 껐다 (`disabled`/`inactive` 확인).
+- valkey VM의 firewalld는 2026-11-22 23:13에 `systemctl disable --now firewalld`로 껐다 (`disabled`/`inactive` 확인).
 - 처음에는 firewalld로 6379를 `10.0.1.0/24`·`10.0.2.0/24`에만 열었으나(rich rule), 위 결정에 맞춰 껐다.
   끄기 전 규칙은 이 문서에 남기지 않는다. 필요하면 `systemctl enable --now firewalld` 후 다시 설정한다.
 - 접속은 비밀번호가 없으면 `NOAUTH`로 거부된다. 비밀번호는 서버의 `valkey.conf`에만 둔다.
-- 끈 뒤 backend1·2에서의 PING은 **다시 확인하지 않았다(미확인)**. 아래 "접속 확인"을 다시 실행한다.
+- 방화벽 해제 후 PING 재확인(11/22): valkey `active`, `0.0.0.0:6379` listen. backend1·backend2 모두 인증 PING `True`, backend1 포트 OPEN 확인.
 
 ## 설치 중 확인된 것
 - 설치 전 `/` 8GB 중 91% 사용. 원인은 `/var/cache/PackageKit` 1.7GB.
@@ -49,11 +49,12 @@ r = redis.Redis(host="valkey", port=6379, password=getpass.getpass(), socket_tim
 print(r.ping())   # True
 EOF
 ```
-- 2026-11-22 backend1에서 포트 OPEN, `PING` True 확인.
+- 2026-11-22 backend1에서 포트 OPEN, `PING` True 확인 (방화벽 해제 후 backend1·2 재확인 포함).
 - 정상: `PONG`/`True`. 비밀번호 없이 접속하면 `NOAUTH`가 나온다(정상).
 
+## 확인됨
+- 출발지 IP 확인(11/22): backend IP 그대로 보인다. `CLIENT LIST`에서 backend1의 출발지는 `10.0.1.103`(laddr `10.0.2.107:6379`)이고 게이트웨이 NAT는 없다. **backend1 기준이며 backend2는 `CLIENT LIST`로 확인하지 않았다.**
+
 ## 미확인
-- Backend → Valkey 접속 시 Valkey가 보는 실제 출발지 IP (`CLIENT LIST`의 `addr`).
-  backend1(10.0.1.103) 그대로인지 게이트웨이 IP인지.
-- Prometheus(PC-2)에서 Valkey 메트릭을 수집할지(별도 exporter 필요). 현재는 방화벽만 열어 둠.
-- backend2에서의 접속 확인(4단계 배포 때).
+- backend2의 출발지 IP (`CLIENT LIST`의 `addr`). backend2 인증 PING은 `True`로 확인했다.
+- Prometheus(PC-2)에서 Valkey 메트릭을 수집할지(별도 exporter 필요). 방화벽은 꺼져 있어 접속 자체는 가능하다.
