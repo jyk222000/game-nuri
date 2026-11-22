@@ -1,0 +1,45 @@
+{
+  "_comment": "JDBC Sink용 JSON+schema. games 테이블 컬럼과 1:1. 날짜(release_date)는 'YYYY-MM-DD', 시각(updated_at)은 UTC ISO 문자열(Connect TimestampConverter가 DATETIME으로 변환). 장르·플랫폼·개발사·별칭·외부 번호(game_store_ids)는 한 메시지가 여러 행이 되므로 이 토픽에 넣지 않는다 (토픽을 나눌지는 팀 결정 필요: docs/contracts 변경 제안 4번)",
+  "schema": {
+    "type": "struct",
+    "name": "refined_game",
+    "fields": [
+      { "field": "game_id", "type": "int64", "optional": false },
+      { "field": "name", "type": "string", "optional": false },
+      { "field": "name_ko", "type": "string", "optional": true },
+      { "field": "slug", "type": "string", "optional": true },
+      { "field": "summary", "type": "string", "optional": true },
+      { "field": "release_date", "type": "string", "optional": true },
+      { "field": "game_type", "type": "int16", "optional": true },
+      { "field": "parent_game_id", "type": "int64", "optional": true },
+      { "field": "version_parent_id", "type": "int64", "optional": true },
+      { "field": "cover_image_id", "type": "string", "optional": true },
+      { "field": "cover_url", "type": "string", "optional": true },
+      { "field": "rating", "type": "double", "optional": true },
+      { "field": "rating_count", "type": "int32", "optional": true },
+      { "field": "age_rating", "type": "int16", "optional": true },
+      { "field": "korean_supported", "type": "boolean", "optional": true },
+      { "field": "is_online", "type": "boolean", "optional": true },
+      { "field": "updated_at", "type": "string", "optional": false }
+    ]
+  },
+  "payload": {
+    "game_id": 119133,
+    "name": "Elden Ring",
+    "name_ko": "엘든 링",
+    "slug": "elden-ring",
+    "summary": "광활한 세계를 탐험하는 액션 RPG",
+    "release_date": "2022-02-25",
+    "game_type": 0,
+    "parent_game_id": null,
+    "version_parent_id": null,
+    "cover_image_id": "co4jni",
+    "cover_url": "https://images.igdb.com/igdb/image/upload/t_cover_big/co4jni.jpg",
+    "rating": 95.12,
+    "rating_count": 3200,
+    "age_rating": 18,
+    "korean_supported": true,
+    "is_online": true,
+    "updated_at": "2026-11-19T02:30:00Z"
+  }
+}
