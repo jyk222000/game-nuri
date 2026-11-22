@@ -202,7 +202,49 @@ function Heatmap({ spec }) {
   );
 }
 
-const TYPES = { line: LineChart, scatter: Scatter, bars: Bars, stacked: Stacked, heatmap: Heatmap };
+// 워드클라우드: 크기 = 많이 나온 정도, 색 = 그룹(불만/만족). 큰 단어부터 가운데에서 나선형으로 빈 곳을 찾아 놓는다.
+// (값을 계산하는 게 아니라 그림 배치만 한다.) 마우스를 올리면 유형과 값이 보인다.
+function layoutCloud(words, W, H) {
+  const ctx = document.createElement('canvas').getContext('2d');
+  const max = Math.max(...words.map((w) => w.weight)), min = Math.min(...words.map((w) => w.weight));
+  const placed = [];
+  const hit = (b) => b.x0 < 4 || b.y0 < 4 || b.x1 > W - 4 || b.y1 > H - 4 || placed.some((p) => !(b.x1 < p.x0 || b.x0 > p.x1 || b.y1 < p.y0 || b.y0 > p.y1));
+  return [...words].sort((a, b) => b.weight - a.weight).map((w, i) => {
+    const size = 15 + ((w.weight - min) / (max - min || 1)) * 46;
+    const bold = w.weight > (max + min) / 2;
+    ctx.font = `${bold ? 700 : 500} ${size}px sans-serif`;
+    const tw = ctx.measureText(w.text).width + 6, th = size * 1.08;
+    const vertical = false; // 글자는 모두 가로로만 놓는다
+    const bw = vertical ? th : tw, bh = vertical ? tw : th;
+    for (let t = 0; t < 900; t += 0.35) {
+      const r = 3.2 * t, cx = W / 2 + Math.cos(t) * r * 1.7, cy = H / 2 + Math.sin(t) * r;
+      const b = { x0: cx - bw / 2, x1: cx + bw / 2, y0: cy - bh / 2, y1: cy + bh / 2 };
+      if (!hit(b)) { placed.push(b); return { ...w, x: cx, y: cy, size, bold, vertical }; }
+    }
+    return null;
+  }).filter(Boolean);
+}
+
+function WordCloud({ spec }) {
+  const W = 720, H = 340;
+  const items = layoutCloud(spec.words, W, H);
+  return (
+    <div className="chart">
+      <Legend items={spec.groups} />
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={spec.title} className="wc">
+        {items.map((w) => (
+          <text key={w.text} x={w.x} y={w.y} textAnchor="middle" dominantBaseline="central" fontSize={w.size} fontWeight={w.bold ? 700 : 500}
+            fill={colorVar(w.color)} transform={w.vertical ? `rotate(-90 ${w.x} ${w.y})` : undefined}>
+            <title>{`${w.type ? `${w.type} · ` : ''}${w.group} · ${num(w.weight)}`}</title>{w.text}
+          </text>
+        ))}
+      </svg>
+      <div className="chart-info"><span className="muted">글자가 클수록 많이 나온 키워드예요 · 마우스를 올리면 유형이 보여요</span></div>
+    </div>
+  );
+}
+
+const TYPES = { wordcloud: WordCloud, line: LineChart, scatter: Scatter, bars: Bars, stacked: Stacked, heatmap: Heatmap };
 
 export function Chart({ spec }) {
   const C = TYPES[spec.type];

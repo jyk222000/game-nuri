@@ -172,3 +172,6 @@ a.pill:hover { text-decoration: none; filter: brightness(.95); }
 .stack li > div { display: flex; height: 22px; border-radius: 6px; overflow: hidden; } .stack i { font-style: normal; font-size: 11px; color: #fff; display: grid; place-items: center; }
 .heat-wrap { overflow-x: auto; } .heat { border-collapse: separate; border-spacing: 2px; font-size: 12px; width: 100%; } .heat th { font-weight: 500; color: var(--muted); padding: 4px 6px; text-align: left; white-space: nowrap; }
 .heat td { text-align: center; padding: 8px 2px; border-radius: 4px; min-width: 34px; }
+
+.picker { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 8px 0 12px; } .picker select { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text); min-width: 220px; }
+.wc text { cursor: default; } .wc text:hover { text-decoration: underline; }
