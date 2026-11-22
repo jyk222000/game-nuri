@@ -14,6 +14,8 @@ from sqlalchemy import URL, Engine, create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.db import guard  # noqa: F401  (읽기 전용 테이블 쓰기 가드를 등록한다)
+
 log = logging.getLogger(__name__)
 
 
