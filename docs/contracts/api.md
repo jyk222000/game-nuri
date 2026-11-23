@@ -71,6 +71,7 @@
 | `INVALID_PRICE` | 400 | 목표가가 0 이하 |
 | `INVALID_STEAM_ID` | 400 | Steam ID가 17자리 숫자가 아님 |
 | `SPEC_REQUIRED` | 400 | PC 사양 미입력 상태에서 spec-check |
+| `STEAM_PROFILE_PRIVATE` | 400 | Steam 프로필·게임 세부 정보가 비공개라 보유 게임을 못 가져옴 |
 | `STEAM_REQUIRED` | 400 | Steam ID 미연동 상태에서 recommendations·taste |
 | `UNAVAILABLE` | 503 | Valkey(세션) 등 의존 서비스 장애 |
 | `INTERNAL` | 500 | 서버 오류 |
@@ -123,7 +124,9 @@
 ```json
 { "user_id": 1, "email": "gamer@example.com", "name": "겜누리 사용자", "steam_id": "76561198000000000" }
 ```
-`PUT /api/me/steam` 본문 `{ "steam_id": "76561198000000000" }` → `{ "steam_id": "76561198000000000" }`
+`PUT /api/me/steam` 본문 `{ "steam_id": "76561198000000000" }` → `{ "steam_id": "76561198000000000", "owned_games": 126 }`
+- **Backend가 Steam `GetOwnedGames`를 직접 호출**해 `user_owned_games`에 `appid`·플레이 시간(분)만 저장한다(collector·pipeline은 관여하지 않음). 같은 ID로 다시 부르면 보유 게임을 새로 고친다(그 사용자의 기존 행을 교체). Steam 조회가 실패하면 Steam ID도 저장하지 않는다.
+- 프로필·게임 세부 정보가 **비공개**(Steam이 빈 응답)이면 400 `STEAM_PROFILE_PRIVATE`(메시지로 공개 설정을 안내). Steam 장애·키 미설정은 503 `UNAVAILABLE`.
 
 ### 게임
 카드 (`GET /api/games`, `popular`, `deals`, `short`, `players/top`, `players/low`, 찜 목록, 추천에 공통). `platforms`는 ERD 코드이고 **표시 이름은 프런트가 바꾼다.**
@@ -210,7 +213,7 @@
 `GET /api/search/trending` → `{ "window": "1h", "items": [ { "rank": 1, "query": "엘든 링", "count": 132, "change": "up" } ] }` (`change`: `up` | `down` | `same` | `new`)
 `GET /api/search/recent` → `{ "items": ["엘든 링", "하데스"] }`
 `POST /api/events` 본문 `{ "type": "search", "query": "...", "at": "...Z", ... }` → `{ "accepted": true }`. **요청은 `type`/`at`, Kafka 메시지는 `messages/clickstream.json`(`event`/`occurred_at`)으로 변환해 `clickstream` 토픽에 보낸다.** `at`(브라우저 시각)은 받기만 하고 `occurred_at`은 서버 시각(UTC)으로 기록한다. `session_id`(선택)는 브라우저가 만든 익명 UUID이며 로그인 세션 쿠키 값과 무관하다. Kafka가 안 되면 200 `{"accepted": false}`.
-`GET /api/stats/api-ranking` → `{ "items": [ { "rank": 1, "api": "GET /api/games", "calls": 18240 } ] }`
+`GET /api/stats/api-ranking?size=10` → `{ "items": [ { "rank": 1, "api": "GET /api/games", "calls": 18240 } ], "status": "ok" }`. Backend가 Prometheus HTTP API(`PROMETHEUS_URL`)에서 `http_requests_total{handler,method}`의 최근 24시간 호출 수(`increase`)를 서버 1·2 합쳐 조회한다(`/api/health`·순위 API 자신은 제외). Prometheus 조회가 실패하면 200 `{ "items": [], "status": "degraded" }`.
 `GET /api/health` → `{ "status": "ok", "server": "backend1", "db_write": "ok", "db_read": "ok", "valkey": "ok", "es": "ok" }`. Replica·Valkey·ES가 안 되면 200 `"status": "degraded"`, Primary가 안 되면 503 `"status": "down"`
 
 ## 목업과 ERD가 달랐던 곳 (2026-11-23 결정 상태)
