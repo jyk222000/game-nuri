@@ -53,6 +53,9 @@
 ## 공통 규칙 (응답 형식은 프론트 목업 `frontend/src/api/mock/router.js`·`data.js` 기준, 2026-11-23 결정 반영)
 - 시각: UTC ISO 8601 `Z` (`2026-11-19T02:30:00Z`). 날짜만 쓰는 필드는 `YYYY-MM-DD`(UTC).
 - 목록: `{"items": [...], "total": 123, "page": 1, "size": 20}`. 페이지가 없는 목록(`genres`, `popular` 등)은 `{"items": [...]}`.
+- **현재가**: `prices_current`에서 `item_condition='new'`인 행 중 `price_krw`가 가장 낮은 값(플랫폼 무관, 새 상품 최저가). 같으면 `store`·`platform` 이름순. 목록·카드·알림의 `price_krw`, `current_krw`가 이 값이다.
+- `time_to_beat_hours`는 값이 없으면 `null`.
+- 예외: 찜 목록(`GET /api/me/wishlist`)·목표가 목록(`GET /api/me/alerts`)은 `page`·`size` 없이 `{"items": [...], "total": N}`만 준다.
 - 오류: `{"error": {"code": "...", "message": "한국어 문장"}}`
   - **형식 검증 실패**(필드 누락·타입 오류 등)는 **422 + `INVALID_REQUEST`**, **업무 규칙 오류**(`INVALID_PRICE` 등)는 **400**.
   - **프런트는 HTTP status가 아니라 `error.code`로 처리한다.** `message`는 한국어 문장이다.
