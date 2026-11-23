@@ -3,6 +3,7 @@
 from pydantic import BaseModel
 
 from app.core.timeutil import UtcDatetime
+from app.schemas.game import Card
 
 
 class PriceItem(BaseModel):
@@ -62,3 +63,7 @@ class LowestItem(BaseModel):
 class LowestOut(BaseModel):
     game_id: int
     items: list[LowestItem]
+
+
+class DealsOut(BaseModel):
+    items: list[Card]
