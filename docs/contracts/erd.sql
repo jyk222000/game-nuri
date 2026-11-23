@@ -22,6 +22,7 @@
 --   이미 적용된 서버는 erd_alter_1122.sql로 바꾼다
 -- 11/23 추가
 --   9) game_review_stats: Steam 리뷰 수·긍정률 (GetItems). review_summaries와 따로 둔다 (29개)
+--  10) stores 기본값 8곳 (빠져 있던 시드). 이미 적용된 서버는 erd_seed_stores_1123.sql
 --
 -- 규칙 (구축 문서 4장)
 --   - 모든 테이블에 PRIMARY KEY
@@ -313,3 +314,11 @@ INSERT INTO platforms (platform, display_name) VALUES
   ('PC', 'PC'), ('PS5', 'PlayStation 5'), ('PS4', 'PlayStation 4'),
   ('Switch', 'Nintendo Switch'), ('Switch2', 'Nintendo Switch 2'),
   ('XboxSeries', 'Xbox Series X|S'), ('XboxOne', 'Xbox One');
+
+-- 스토어 8곳 (정제기 rules/price.py의 store 코드와 같다). ITAD 번호는 Steam(61)만 확인됨, 나머지는 확인 후 채운다.
+-- 목록에 없는 ITAD 판매처(Humble, Fanatical 등)는 정제기가 이름을 소문자로 붙인 코드로 보낸다.
+INSERT INTO stores (store, display_name, platform, itad_shop_id) VALUES
+  ('steam', 'Steam', 'pc', 61), ('epic', 'Epic Games Store', 'pc', NULL), ('gog', 'GOG', 'pc', NULL),
+  ('msstore', 'Microsoft Store', 'pc', NULL), ('blizzard', 'Battle.net', 'pc', NULL),
+  ('ea', 'EA app', 'pc', NULL), ('ubisoft', 'Ubisoft Store', 'pc', NULL),
+  ('danawa', '다나와', 'console', NULL);
