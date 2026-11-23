@@ -47,10 +47,10 @@ input:focus, select:focus, button:focus-visible { outline: 2px solid var(--brand
 .sec-h h2 { font-size: 18px; } .sec-h small { margin-left: 8px; color: var(--muted); font-weight: 400; font-size: 13px; }
 aside .sec { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-top: 0; margin-bottom: 16px; }
 
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 14px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; color: var(--text); box-shadow: var(--shadow); transition: transform .12s; }
 .card:hover { transform: translateY(-2px); text-decoration: none; }
-.cover { position: relative; height: 110px; display: flex; align-items: flex-end; padding: 10px; color: #fff; }
+.cover { position: relative; aspect-ratio: 264 / 374; display: flex; align-items: flex-end; padding: 10px; color: #fff; }
 .cover-t { font-weight: 700; text-shadow: 0 1px 4px rgba(0,0,0,.5); font-size: 14px; }
 .badge { position: absolute; top: 8px; right: 8px; background: var(--ok); color: #fff; font-style: normal; font-weight: 700; font-size: 12px; padding: 2px 7px; border-radius: 6px; }
 .card-b { padding: 10px 12px 12px; display: grid; gap: 4px; }
@@ -65,8 +65,8 @@ aside .sec { background: var(--panel); border: 1px solid var(--line); border-rad
 
 .filters { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
 
-.detail-h { display: grid; grid-template-columns: 240px 1fr; gap: 24px; margin: 24px 0; padding: 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; }
-.big-cover { height: 240px; border-radius: 12px; display: flex; align-items: flex-end; padding: 16px; color: #fff; font-size: 20px; font-weight: 800; text-shadow: 0 1px 6px rgba(0,0,0,.5); }
+.detail-h { display: grid; grid-template-columns: 220px 1fr; gap: 24px; margin: 24px 0; padding: 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; }
+.big-cover { aspect-ratio: 264 / 374; border-radius: 12px; display: flex; align-items: flex-end; padding: 16px; color: #fff; font-size: 20px; font-weight: 800; text-shadow: 0 1px 6px rgba(0,0,0,.5); }
 .detail-h h1 { font-size: 26px; } .detail-h p { margin: 8px 0; }
 .facts { display: flex; gap: 20px; list-style: none; padding: 0; margin: 12px 0; flex-wrap: wrap; color: var(--muted); } .facts b { color: var(--text); font-size: 17px; }
 
@@ -121,7 +121,7 @@ aside .sec { background: var(--panel); border: 1px solid var(--line); border-rad
 .foot { text-align: center; color: var(--muted); font-size: 12px; padding: 32px 16px; }
 
 @media (max-width: 820px) {
-  .two { grid-template-columns: 1fr; } .detail-h { grid-template-columns: 1fr; } .big-cover { height: 140px; }
+  .two { grid-template-columns: 1fr; } .detail-h { grid-template-columns: 1fr; } .big-cover { width: 160px; }
   .hdr-in { flex-wrap: wrap; height: auto; padding: 10px 16px; } .searchbox { order: 3; flex-basis: 100%; max-width: none; }
   .hero h1 { font-size: 26px; }
 }
@@ -175,3 +175,16 @@ a.pill:hover { text-decoration: none; filter: brightness(.95); }
 
 .picker { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 8px 0 12px; } .picker select { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text); min-width: 220px; }
 .wc text { cursor: default; } .wc text:hover { text-decoration: underline; }
+.spec-text { white-space: pre-line; font-size: 12px; color: var(--muted); margin: 0 0 8px; }
+
+/* 표지 이미지 위 글자 가독성: 아래쪽을 어둡게 깔고 글자·배지를 그 위에 올린다 */
+.cover::before, .big-cover::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(to top, rgba(0,0,0,.72) 0%, rgba(0,0,0,.35) 45%, rgba(0,0,0,0) 80%); }
+.big-cover { position: relative; }
+.cover > *, .big-cover > * { position: relative; z-index: 1; }
+.cover .badge { position: absolute; }
+/* 표지 이미지가 있으면 세로형 그대로 보여 주고 이름은 아래 정보 영역에 있으므로 어두운 막·표지 글자는 뺀다 */
+.cover.has-img::before, .big-cover.has-img::before, .cover.has-img .cover-t, .big-cover.has-img > span { display: none; }
+
+.low-banner { display: grid; gap: 2px; margin: 16px 0 0; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--bad); background: var(--bad-bg); color: var(--bad); }
+.low-banner span { color: var(--text); font-size: 13px; }

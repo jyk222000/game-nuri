@@ -11,7 +11,6 @@ export default function Home() {
   const trending = useAsync(() => api.trending(), []);
   const top = useAsync(() => api.playersTop(), []);
   const short = useAsync(() => api.short(), []);
-  const low = useAsync(() => api.playersLow(), []);
 
   return (
     <>
@@ -53,17 +52,13 @@ export default function Home() {
 
       <Section title="👥 지금 접속자가 많은 게임" sub="Steam 동시 접속자">
         <State s={top}>
-          {(d) => <Grid items={d.items} extra={(g) => `${g.concurrent_players.toLocaleString('ko-KR')}명 접속 중`} />}
+          {(d) => <Grid items={d.items} extra={(g) => (g.concurrent_players != null ? `${g.concurrent_players.toLocaleString('ko-KR')}명 접속 중` : null)} />}
         </State>
       </Section>
 
       <Section title="⏱ 짧게 끝낼 수 있는 게임" sub="IGDB 클리어 시간 기준">
-        <State s={short}>{(d) => <Grid items={d.items.slice(0, 6)} extra={(g) => `클리어 약 ${g.time_to_beat_hours}시간`} />}</State>
-      </Section>
-
-      <Section title="⚠ 접속자가 적은 온라인 게임" sub="매칭이 어려울 수 있어요">
-        <State s={low} isEmpty={(d) => !d.items.length}>
-          {(d) => <Grid items={d.items} extra={(g) => g.warning} />}
+        <State s={short} isEmpty={(d) => !d.items.length} emptyMsg="아직 보여 줄 게임이 없어요.">
+          {(d) => <Grid items={d.items.slice(0, 6)} extra={(g) => (g.time_to_beat_hours != null ? `클리어 약 ${g.time_to_beat_hours}시간` : null)} />}
         </State>
       </Section>
     </>

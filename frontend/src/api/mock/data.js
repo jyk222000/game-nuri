@@ -22,7 +22,6 @@ export const STORES = {
   microsoft: { name: 'Microsoft Store', kind: 'pc' },
   danawa: { name: '다나와', kind: 'console' },
 };
-export const EDITIONS = { digital: '다운로드(DL)', physical: '패키지(PKG)', used: '중고 PKG' };
 
 export const GENRES = ['액션', 'RPG', '어드벤처', '시뮬레이션', '인디', '전략', '로그라이크', '슈터'];
 export const TAGS = ['오픈월드', '소울라이크', '협동', '스토리 중심', '힐링', '픽셀 아트', '탐험', '1인칭'];
@@ -40,12 +39,15 @@ const RAW = [
   [26192, '갓 오브 워', 'God of War', ['액션', '어드벤처'], ['pc', 'ps'], 59800, '2022-01-14', 20, 21000, 0.96, 8, '북유럽 신화로 무대를 옮긴 크라토스의 부자(父子) 여정.'],
   [25076, '레드 데드 리뎀션 2', 'Red Dead Redemption 2', ['액션', '어드벤처'], ['pc', 'ps', 'xbox'], 66000, '2019-12-05', 50, 54000, 0.9, 20, '서부 시대 갱단의 몰락을 그린 오픈월드 대작.'],
   [3277, '데이브 더 다이버', 'Dave the Diver', ['시뮬레이션', '인디', '어드벤처'], ['pc', 'switch', 'ps'], 24000, '2023-06-28', 20, 7000, 0.97, 190, '낮에는 바다를 탐사하고 밤에는 초밥집을 운영하는 하이브리드 게임.'],
-  [135400, '팰월드', 'Palworld', ['시뮬레이션', '어드벤처'], ['pc', 'xbox'], 29800, '2024-01-19', 40, 38000, 0.84, 160, '팰을 수집하고 부리며 생존·건설하는 오픈월드.'],
+  [135400, '팰월드', 'Palworld', ['시뮬레이션', '어드벤처'], ['pc', 'xbox'], 29800, '2024-01-19', 40, 640, 0.84, 160, '팰을 수집하고 부리며 생존·건설하는 오픈월드.'],
   [150080, '헬다이버즈 2', 'Helldivers 2', ['슈터'], ['pc', 'ps'], 49000, '2024-02-08', 30, 61000, 0.82, 48, '4인 협동으로 은하 민주주의를 수호하는 3인칭 슈터.'],
   [9630, '포켓몬스터 스칼렛', 'Pokémon Scarlet', ['RPG', '어드벤처'], ['switch'], 69800, '2022-11-18', 35, 0, 0.7, 350, '팔데아 지방을 자유롭게 누비는 오픈월드 포켓몬.'],
+  [90001, '인사이드', 'Inside', ['어드벤처', '인디'], ['pc', 'switch', 'ps', 'xbox'], 22000, '2016-06-29', 4, 1800, 0.96, 205, '정체를 알 수 없는 세계를 가로지르는 소년의 어두운 퍼즐 플랫포머.'],
+  [90002, '언패킹', 'Unpacking', ['시뮬레이션', '인디'], ['pc', 'switch', 'ps', 'xbox'], 24000, '2021-11-02', 4, 900, 0.95, 320, '상자를 풀며 한 사람의 삶을 따라가는 힐링 퍼즐.'],
 ];
 
-const ONLINE_ONLY = new Set([150080, 135400]);
+// 접속자 적은 온라인 게임(#33) = is_online 이고 동접자 1000 미만 (api.md '서버 정의'). 목은 팰월드·포켓몬 스칼렛.
+const ONLINE_ONLY = new Set([150080, 135400, 9630]);
 
 function makeHistory(id, regular, days = 720) {
   const r = rng(id);
@@ -72,49 +74,73 @@ function makeHistory(id, regular, days = 720) {
   return out;
 }
 
-export const GAMES = RAW.map(([id, name, name_en, genres, platforms, regular, release, ttb, ccu, pos, hue, summary]) => {
+// 목 원본의 간단한 플랫폼 이름을 ERD 코드(api.md '목업과 ERD가 달랐던 곳' 5번)로 바꾼다.
+// game_id → IGDB cover image_id. 여기 없는 게임은 cover_url=null 이라 화면이 색 그라데이션을 쓴다 (실데이터와 같은 동작).
+// 확인된 값만 넣는다. 다른 게임은 IGDB 응답의 cover.image_id 를 보고 추가한다.
+const COVER_IDS = { 119133: 'co4jni' };
+
+const ERD_PLATFORM = { pc: 'PC', ps: 'PS5', xbox: 'XboxSeries', switch: 'Switch' };
+
+export const GAMES = RAW.map(([id, name, name_en, genres, rawPlatforms, regular, release, ttb, ccu, pos, , summary]) => {
   const history = makeHistory(id, regular);
+  const platforms = rawPlatforms.map((p) => ERD_PLATFORM[p]);
   return {
     game_id: id, name, name_en, genres, platforms, regular_krw: regular,
     release_date: release, time_to_beat_hours: ttb, concurrent_players: ccu,
-    positive_ratio: pos, hue, summary, online_only: ONLINE_ONLY.has(id),
+    positive_ratio: pos, summary, online_only: ONLINE_ONLY.has(id),
+    cover_url: COVER_IDS[id] ? `https://images.igdb.com/igdb/image/upload/t_cover_big/${COVER_IDS[id]}.jpg` : null,
     tags: TAGS.filter((_, i) => (id + i * 7) % 3 === 0).slice(0, 4),
-    steam_app_id: platforms.includes('pc') ? 100000 + (id % 900000) : null,
+    steam_app_id: platforms.includes('PC') ? 100000 + (id % 900000) : null,
     history,
   };
 });
 
 export const byId = (id) => GAMES.find((g) => g.game_id === Number(id));
 
-// 현재 스토어별 가격: 오늘 Steam 가격을 기준으로 스토어마다 조금씩 다르게
+// 현재 스토어별 가격: 오늘 Steam 가격을 기준으로 스토어마다 조금씩 다르게.
+// 키는 (store, edition, platform, item_condition) — api.md '가격 키'. 중고는 edition=physical + item_condition=used.
 export function currentPrices(g) {
   const today = g.history[g.history.length - 1];
   const r = rng(g.game_id * 3);
   const items = [];
   const collected_at = '2026-11-21T02:30:00Z';
-  if (g.platforms.includes('pc')) {
+  if (g.platforms.includes('PC')) {
     Object.entries(STORES).filter(([, s]) => s.kind === 'pc').forEach(([key], i) => {
       if (key === 'microsoft' && r() < 0.5) return;
       const drift = i === 0 ? 0 : Math.round((r() - 0.45) * 0.18 * 100) / 100;
       const price = Math.max(1000, Math.round((today.price_krw * (1 + drift)) / 100) * 100);
       const pct = Math.max(0, Math.round((1 - price / g.regular_krw) * 100));
       items.push({
-        store: key, edition: 'digital', price_krw: price, regular_krw: g.regular_krw,
-        discount_pct: pct || null, url: '#', collected_at,
+        store: key, edition: 'digital', platform: 'PC', item_condition: 'new', price_krw: price,
+        regular_krw: g.regular_krw, discount_pct: pct || null, url: '#', collected_at,
       });
     });
   }
-  if (g.platforms.some((p) => p !== 'pc')) {
-    const consoles = g.platforms.filter((p) => p !== 'pc');
-    const label = { ps: 'PS', xbox: 'Xbox', switch: 'Switch' };
-    consoles.forEach((c) => {
-      const base = Math.round((g.regular_krw * (0.8 + r() * 0.15)) / 100) * 100;
-      items.push({ store: 'danawa', edition: 'digital', platform: label[c], price_krw: base, regular_krw: g.regular_krw, discount_pct: Math.round((1 - base / g.regular_krw) * 100) || null, url: '#', collected_at });
-      items.push({ store: 'danawa', edition: 'physical', platform: label[c], price_krw: Math.round((base * 1.04) / 100) * 100, regular_krw: null, discount_pct: null, url: '#', collected_at });
-      items.push({ store: 'danawa', edition: 'used', platform: label[c], price_krw: Math.round((base * 0.7) / 100) * 100, regular_krw: null, discount_pct: null, url: '#', collected_at });
+  g.platforms.filter((p) => p !== 'PC').forEach((platform) => {
+    const base = Math.round((g.regular_krw * (0.8 + r() * 0.15)) / 100) * 100;
+    const row = (edition, item_condition, price_krw, regular_krw, discount_pct) => ({
+      store: 'danawa', edition, platform, item_condition, price_krw, regular_krw, discount_pct, url: '#', collected_at,
     });
-  }
+    items.push(row('digital', 'new', base, g.regular_krw, Math.round((1 - base / g.regular_krw) * 100) || null));
+    items.push(row('physical', 'new', Math.round((base * 1.04) / 100) * 100, null, null));
+    items.push(row('physical', 'used', Math.round((base * 0.7) / 100) * 100, null, null));
+  });
   return items;
+}
+
+// 가격 이력 한 시리즈(platform·item_condition). 목은 PC 새 상품 이력을 기준으로 다른 시리즈를 비율로 만든다.
+export function historySeries(g, platform, itemCondition) {
+  if (!g.platforms.includes(platform)) return [];
+  const ratio = itemCondition === 'used' ? 0.7 : platform === 'PC' ? 1 : 0.92;
+  const store = platform === 'PC' ? 'steam' : 'danawa';
+  const edition = platform === 'PC' ? 'digital' : itemCondition === 'used' ? 'physical' : 'digital';
+  return g.history.map((h) => ({
+    store, edition, platform, item_condition: itemCondition,
+    collected_at: `${h.date}T02:30:00Z`,
+    price_krw: Math.round((h.price_krw * ratio) / 100) * 100,
+    regular_krw: platform === 'PC' || itemCondition === 'new' ? h.regular_krw : null,
+    discount_pct: platform === 'PC' ? h.discount_pct : null,
+  }));
 }
 
 // 할인 이력에서 "세일 구간"을 뽑는다 (예측·타이밍의 근거)
@@ -143,10 +169,20 @@ export const KEYWORDS = {
   150080: { pros: ['협동', '타격감', '재미'], cons: ['서버', '밸런스', '버그'] },
 };
 
+// game_requirements 텍스트 컬럼 그대로 (api.md '사양'). 구조화는 ⑥ 사양 비교 방식이 정해진 뒤에 추가한다.
 export const SPEC_TEMPLATE = (g) => ({
   game_id: g.game_id,
-  minimum: { os: 'Windows 10 64-bit', cpu: 'Intel Core i5-8400 / AMD Ryzen 3 3300X', gpu: 'NVIDIA GTX 1060 3GB / AMD RX 580 4GB', ram_gb: 12, storage_gb: 60 },
-  recommended: { os: 'Windows 10/11 64-bit', cpu: 'Intel Core i7-8700K / AMD Ryzen 5 3600X', gpu: 'NVIDIA GTX 1070 8GB / AMD RX Vega 56 8GB', ram_gb: 16, storage_gb: 60 },
+  minimum_text: `OS: Windows 10 64-bit
+CPU: Intel Core i5-8400 / AMD Ryzen 3 3300X
+그래픽: NVIDIA GTX 1060 3GB / AMD RX 580 4GB
+RAM: 12GB
+저장공간: 60GB`,
+  recommended_text: `OS: Windows 10/11 64-bit
+CPU: Intel Core i7-8700K / AMD Ryzen 5 3600X
+그래픽: NVIDIA GTX 1070 8GB / AMD RX Vega 56 8GB
+RAM: 16GB
+저장공간: 60GB`,
+  updated_at: '2026-11-19T02:30:00Z',
 });
 
 export const TRENDING = [

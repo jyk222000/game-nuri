@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { won, PLATFORM } from '../lib/format.js';
+import { won, platformName, hueOf } from '../lib/format.js';
 
 // useAsync 결과를 로딩·오류·빈 상태로 나눠 그린다.
 export function State({ s, children, isEmpty, emptyMsg = '결과가 없어요.' }) {
@@ -10,20 +10,25 @@ export function State({ s, children, isEmpty, emptyMsg = '결과가 없어요.' 
   return children(s.data);
 }
 
-export const cover = (hue) => ({
-  background: `linear-gradient(135deg, hsl(${hue} 60% 38%), hsl(${(hue + 40) % 360} 55% 18%))`,
-});
+// 표지: cover_url(IGDB)이 있으면 이미지, 없으면 game_id로 만든 색 그라데이션.
+export const cover = (g) => {
+  const hue = hueOf(g.game_id);
+  const grad = `linear-gradient(135deg, hsl(${hue} 60% 38%), hsl(${(hue + 40) % 360} 55% 18%))`;
+  return g.cover_url
+    ? { background: grad, backgroundImage: `url("${g.cover_url}"), ${grad}`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : { background: grad };
+};
 
 export function GameCard({ g, extra }) {
   return (
     <Link to={`/games/${g.game_id}`} className="card">
-      <div className="cover" style={cover(g.hue)}>
-        <span className="cover-t">{g.name}</span>
+      <div className={`cover${g.cover_url ? ' has-img' : ''}`} style={cover(g)}>
+        {!g.cover_url && <span className="cover-t">{g.name}</span>}
         {g.discount_pct > 0 && <em className="badge">-{g.discount_pct}%</em>}
       </div>
       <div className="card-b">
         <strong className="ellip">{g.name}</strong>
-        <div className="chips">{g.platforms.map((p) => <i key={p}>{PLATFORM[p]}</i>)}</div>
+        <div className="chips">{g.platforms.map((p) => <i key={p}>{platformName(p)}</i>)}</div>
         <div className="price">
           {g.discount_pct > 0 && <s>{won(g.regular_krw)}</s>}
           <b>{won(g.price_krw)}</b>

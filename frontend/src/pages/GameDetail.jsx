@@ -6,12 +6,13 @@ import { useAsync } from '../lib/useAsync.js';
 import { State, Section, cover } from '../components/ui.jsx';
 import { byKey } from './analysis/meta.js';
 import PriceChart from '../components/PriceChart.jsx';
-import { won, dateKST, dateTimeKST, PLATFORM, STORE_NAME, EDITION } from '../lib/format.js';
+import { won, dateKST, dateTimeKST, platformName, storeName, editionLabel, CONDITION } from '../lib/format.js';
 
 const VERDICT = {
   buy_now: { label: '지금 사세요', cls: 'ok' },
   neutral: { label: '조금 더 기다려도 좋아요', cls: 'mid' },
   wait: { label: '기다리세요', cls: 'bad' },
+  insufficient_data: { label: '판단할 데이터가 부족해요', cls: 'mid' },
 };
 const SPEC_VERDICT = {
   rec_ok: { label: '권장 사양 충족', cls: 'ok' },
@@ -23,6 +24,9 @@ export default function GameDetail() {
   const { id } = useParams();
   const { user } = useAuth();
   const game = useAsync(() => api.game(id), [id]);
+  // 상세 응답의 wished는 항상 false(공개 API)라서, 로그인했으면 찜 목록으로 직접 확인한다.
+  const wl = useAsync(() => (user ? api.wishlist() : Promise.resolve(null)), [user]);
+  const wished = !!wl.data?.items.some((x) => x.game_id === Number(id));
 
   useEffect(() => { api.event('view_game', { game_id: Number(id) }); }, [id]);
 
@@ -30,12 +34,14 @@ export default function GameDetail() {
     <State s={game}>
       {(g) => (
         <>
-          <Head g={g} user={user} />
+          <Head key={String(wished)} g={g} user={user} wished0={wished} />
+          <LowPlayersBanner id={g.game_id} />
           <div className="two">
             <div>
               <Timing id={id} />
               <Prices id={id} />
-              <History id={id} user={user} />
+              <Lowest id={id} />
+              <History id={id} user={user} platforms={g.platforms} />
             </div>
             <aside>
               <AlertBox g={g} user={user} />
@@ -50,8 +56,21 @@ export default function GameDetail() {
   );
 }
 
-function Head({ g, user }) {
-  const [wished, setWished] = useState(g.wished);
+// 접속자가 적은 온라인 게임(#33 players/low 목록에 있는 게임)이면 경고를 띄운다.
+function LowPlayersBanner({ id }) {
+  const s = useAsync(() => api.playersLow(), []);
+  const hit = s.data?.items.find((x) => x.game_id === Number(id));
+  if (!hit) return null;
+  return (
+    <div className="low-banner" role="alert">
+      <b>⚠ 접속자가 적은 온라인 게임이에요</b>
+      <span>{hit.warning || '접속자가 적어 매칭이 어려울 수 있어요'}. 구매 전에 한 번 더 확인해 보세요.</span>
+    </div>
+  );
+}
+
+function Head({ g, user, wished0 }) {
+  const [wished, setWished] = useState(wished0);
   const toggle = async () => {
     if (!user) return alert('로그인 후 찜할 수 있어요.');
     if (wished) await api.unwish(g.game_id); else await api.wish(g.game_id);
@@ -59,19 +78,19 @@ function Head({ g, user }) {
   };
   return (
     <section className="detail-h">
-      <div className="big-cover" style={cover(g.hue)}><span>{g.name}</span></div>
+      <div className={`big-cover${g.cover_url ? ' has-img' : ''}`} style={cover(g)}>{!g.cover_url && <span>{g.name}</span>}</div>
       <div>
         <h1>{g.name}</h1>
         <p className="muted">{g.name_en} · 출시 {dateKST(g.release_date)}</p>
         <div className="chips">
-          {g.platforms.map((p) => <i key={p}>{PLATFORM[p]}</i>)}
+          {g.platforms.map((p) => <i key={p}>{platformName(p)}</i>)}
           {g.genres.map((x) => <i key={x} className="g">{x}</i>)}
         </div>
         <p>{g.summary}</p>
         <ul className="facts">
-          <li><b>{Math.round(g.positive_ratio * 100)}%</b> 긍정 리뷰</li>
-          <li><b>{g.time_to_beat_hours}시간</b> 클리어(IGDB)</li>
-          {g.concurrent_players > 0 && <li><b>{g.concurrent_players.toLocaleString('ko-KR')}</b> 명 접속 중</li>}
+          {g.positive_ratio != null && <li><b>{Math.round(g.positive_ratio * 100)}%</b> 긍정 리뷰</li>}
+          {g.time_to_beat_hours != null && <li><b>{g.time_to_beat_hours}시간</b> 클리어(IGDB)</li>}
+          {g.concurrent_players != null && g.concurrent_players > 0 && <li><b>{g.concurrent_players.toLocaleString('ko-KR')}</b> 명 접속 중</li>}
         </ul>
         {g.insights?.length > 0 && (
           <ul className="insights" aria-label="분석 태그">
@@ -101,21 +120,60 @@ function Timing({ id }) {
           <div className={`verdict ${VERDICT[d.verdict].cls}`}>
             <strong>{VERDICT[d.verdict].label}</strong>
             <p>{d.reason}</p>
-            <small>
-              현재 {won(d.current_krw)} · 역대 최저 {won(d.lowest_krw)} ({dateKST(d.lowest_date)}) ·
-              최저가 대비 {d.vs_lowest_pct > 0 ? '+' : ''}{d.vs_lowest_pct}%
-            </small>
+            {d.verdict !== 'insufficient_data' && (
+              <small>
+                PC 새 상품 기준 현재 {won(d.current_krw)} · 역대 최저 {won(d.lowest_krw)} ({dateKST(d.lowest_date)}) ·
+                최저가 대비 {d.vs_lowest_pct > 0 ? '+' : ''}{d.vs_lowest_pct}%
+              </small>
+            )}
           </div>
         )}
       </State>
       <State s={p}>
         {(d) => (
-          <div className="predict">
-            <span>📅 다음 할인 예상 <b>{dateKST(d.next_sale_expected)}</b></span>
-            <span>예상 할인율 <b>{d.expected_discount_pct}%</b></span>
-            <span>평균 {d.avg_sale_interval_days}일 간격</span>
-            <small className="muted">{d.basis} · 신뢰도 {{ low: '낮음', medium: '보통', high: '높음' }[d.confidence]}</small>
-          </div>
+          d.confidence === 'insufficient_data' ? (
+            <p className="muted">할인 예측: {d.basis}</p>
+          ) : (
+            <div className="predict">
+              <span>📅 다음 할인 예상 <b>{dateKST(d.next_sale_expected)}</b></span>
+              <span>예상 할인율 <b>{d.expected_discount_pct}%</b></span>
+              <span>평균 {d.avg_sale_interval_days}일 간격</span>
+              <small className="muted">{d.basis} · 신뢰도 {{ low: '낮음', medium: '보통', high: '높음' }[d.confidence]}</small>
+            </div>
+          )
+        )}
+      </State>
+    </Section>
+  );
+}
+
+// 원화 환산 기준 환율 (#14). 응답은 USD·EUR·GBP, 1단위당 원.
+function Rates() {
+  const r = useAsync(() => api.exchangeRates(), []);
+  if (!r.data) return null;
+  const txt = Object.entries(r.data.rates).map(([c, v]) => `1 ${c} = ${Math.round(v).toLocaleString('ko-KR')}원`).join(' · ');
+  return <span>({txt}{r.data.updated_at && `, ${dateKST(r.data.updated_at)} 기준`})</span>;
+}
+
+// 플랫폼·상태별 역대 최저가 (#12). 콘솔은 다나와를 수집하기 시작한 뒤의 최저가다.
+function Lowest({ id }) {
+  const s = useAsync(() => api.lowest(id), [id]);
+  return (
+    <Section title="역대 최저가">
+      <State s={s} isEmpty={(d) => !d.items.length} emptyMsg="아직 모인 가격이 없어요.">
+        {(d) => (
+          <>
+            <table className="tbl"><tbody>
+              {d.items.map((i) => (
+                <tr key={i.platform + i.item_condition}>
+                  <td>{platformName(i.platform)} · {CONDITION[i.item_condition]}</td>
+                  <td>{storeName(i.store)} · {editionLabel(i)}</td>
+                  <td className="num"><b>{won(i.price_krw)}</b> {i.discount_pct > 0 && <em className="badge s">-{i.discount_pct}%</em>}</td>
+                  <td className="muted">{dateKST(i.date)}{i.platform !== 'PC' && ' (수집 이후)'}</td>
+                </tr>
+              ))}
+            </tbody></table>
+          </>
         )}
       </State>
     </Section>
@@ -129,25 +187,27 @@ function Prices({ id }) {
       <State s={s} isEmpty={(d) => !d.items.length}>
         {(d) => {
           const sorted = [...d.items].sort((a, b) => a.price_krw - b.price_krw);
-          const pc = sorted.filter((i) => i.store !== 'danawa');
-          const con = sorted.filter((i) => i.store === 'danawa');
+          const pc = sorted.filter((i) => i.platform === 'PC');
+          const con = sorted.filter((i) => i.platform !== 'PC');
+          // 최저가 표시는 서버가 알려 준 새 상품 최저가(lowest)와 같은 행에만 붙인다.
+          const L = d.lowest;
           const Row = ({ i }) => {
-            const best = i.price_krw === d.lowest.price_krw && i.store === d.lowest.store;
+            const best = !!L && ['store', 'edition', 'platform', 'item_condition'].every((k) => i[k] === L[k]);
             return (
               <tr className={best ? 'best' : ''}>
-                <td>{STORE_NAME[i.store]}{i.platform && ` · ${i.platform}`}</td>
-                <td>{EDITION[i.edition]}</td>
+                <td>{storeName(i.store)}{i.platform !== 'PC' && ` · ${platformName(i.platform)}`}</td>
+                <td>{editionLabel(i)}</td>
                 <td className="num">{i.discount_pct > 0 && <s>{won(i.regular_krw)}</s>} <b>{won(i.price_krw)}</b></td>
                 <td>{i.discount_pct > 0 ? <em className="badge s">-{i.discount_pct}%</em> : ''}{best && <em className="badge low">최저가</em>}</td>
-                <td><a href={i.url} onClick={() => api.event('store_click', { game_id: Number(id), store: i.store })}>구매 →</a></td>
+                <td><a href={i.url || '#'} onClick={() => api.event('click_store', { game_id: Number(id), store: i.store })}>구매 →</a></td>
               </tr>
             );
           };
           return (
             <>
-              {pc.length > 0 && <><h3>PC 스토어</h3><table className="tbl"><tbody>{pc.map((i) => <Row key={i.store + i.edition} i={i} />)}</tbody></table></>}
-              {con.length > 0 && <><h3>콘솔 (다나와)</h3><table className="tbl"><tbody>{con.map((i) => <Row key={i.platform + i.edition} i={i} />)}</tbody></table></>}
-              <small className="muted">수집 {dateTimeKST(d.items[0].collected_at)} · 원화 환산 기준</small>
+              {pc.length > 0 && <><h3>PC 스토어</h3><table className="tbl"><tbody>{pc.map((i) => <Row key={[i.store, i.edition, i.platform, i.item_condition].join()} i={i} />)}</tbody></table></>}
+              {con.length > 0 && <><h3>콘솔 (다나와 · 새 상품·중고)</h3><table className="tbl"><tbody>{con.map((i) => <Row key={[i.store, i.edition, i.platform, i.item_condition].join()} i={i} />)}</tbody></table></>}
+              <small className="muted">수집 {dateTimeKST(d.items[0].collected_at)} · 원화 환산 기준 <Rates /></small>
             </>
           );
         }}
@@ -156,9 +216,23 @@ function Prices({ id }) {
   );
 }
 
-function History({ id, user }) {
+// 같은 날 여러 스토어·여러 번 수집된 행은 그날 가장 싼 값 하나로 줄여 차트 한 줄로 그린다.
+function dailyLowest(items) {
+  const by = new Map();
+  for (const r of items) {
+    const date = r.collected_at.slice(0, 10);
+    const cur = by.get(date);
+    if (!cur || r.price_krw < cur.price_krw) by.set(date, { date, price_krw: r.price_krw, regular_krw: r.regular_krw, discount_pct: r.discount_pct });
+  }
+  return [...by.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
+}
+
+function History({ id, user, platforms }) {
   const [days, setDays] = useState(180);
-  const h = useAsync(() => api.history(id, days), [id, days]);
+  const [platform, setPlatform] = useState(platforms.includes('PC') ? 'PC' : platforms[0]);
+  const [cond, setCond] = useState('new');
+  const itemCondition = platform === 'PC' ? 'new' : cond; // PC는 새 상품(스토어)만 모은다
+  const h = useAsync(() => api.history(id, days, { platform, item_condition: itemCondition }), [id, days, platform, itemCondition]);
   const alerts = useAsync(() => (user ? api.alerts() : Promise.resolve({ items: [] })), [id, user]);
   const target = alerts.data?.items.find((a) => a.game_id === Number(id))?.target_price_krw;
   return (
@@ -166,11 +240,15 @@ function History({ id, user }) {
       title="가격 이력"
       right={
         <div className="seg">
+          {platforms.length > 1 && platforms.map((p) => <button key={p} className={p === platform ? 'on' : ''} onClick={() => setPlatform(p)}>{platformName(p)}</button>)}
+          {platform !== 'PC' && ['new', 'used'].map((c) => <button key={c} className={c === cond ? 'on' : ''} onClick={() => setCond(c)}>{CONDITION[c]}</button>)}
           {[30, 90, 180, 365].map((d) => <button key={d} className={d === days ? 'on' : ''} onClick={() => setDays(d)}>{d}일</button>)}
         </div>
       }
     >
-      <State s={h}>{(d) => <PriceChart items={d.items} target={target} />}</State>
+      <State s={h} isEmpty={(d) => !d.items.length} emptyMsg="아직 모인 가격 이력이 없어요.">
+        {(d) => <PriceChart items={dailyLowest(d.items)} target={target} />}
+      </State>
     </Section>
   );
 }
@@ -182,7 +260,7 @@ function AlertBox({ g, user }) {
     e.preventDefault();
     try {
       await api.addAlert(g.game_id, Number(price));
-      api.event('alert_add', { game_id: g.game_id });
+      api.event('set_alert', { game_id: g.game_id });
       setMsg({ ok: true, t: `${won(Number(price))} 이하가 되면 메일로 알려드려요.` });
     } catch (err) { setMsg({ ok: false, t: err.message }); }
   };
@@ -245,25 +323,15 @@ function Requirements({ id, user }) {
   const run = async () => {
     try { setCheck({ data: await api.specCheck(id) }); } catch (e) { setCheck({ error: e }); }
   };
-  const rows = [['os', 'OS'], ['cpu', 'CPU'], ['gpu', 'GPU'], ['ram_gb', 'RAM'], ['storage_gb', '저장공간']];
   return (
     <Section title="PC 사양">
       <State s={r}>
         {(d) => (
           <>
           <TrustBadge t={d.trust} />
-          <table className="tbl spec">
-            <thead><tr><th></th><th>최소</th><th>권장</th></tr></thead>
-            <tbody>
-              {rows.map(([k, label]) => (
-                <tr key={k}>
-                  <th>{label}</th>
-                  <td>{k.endsWith('_gb') ? `${d.minimum[k]}GB` : d.minimum[k]}</td>
-                  <td>{k.endsWith('_gb') ? `${d.recommended[k]}GB` : d.recommended[k]}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {/* game_requirements 텍스트 컬럼 그대로 (api.md). 구조화는 ⑥ 방식이 정해진 뒤. */}
+          <h3>최소</h3><p className="spec-text">{d.minimum_text || '정보 없음'}</p>
+          <h3>권장</h3><p className="spec-text">{d.recommended_text || '정보 없음'}</p>
           </>
         )}
       </State>

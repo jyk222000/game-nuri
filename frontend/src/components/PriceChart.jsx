@@ -6,10 +6,10 @@ export default function PriceChart({ items, target }) {
   const [hover, setHover] = useState(null);
   const W = 720, H = 240, P = { l: 56, r: 12, t: 12, b: 24 };
   const prices = items.map((i) => i.price_krw);
-  const max = Math.max(...items.map((i) => i.regular_krw));
+  const max = Math.max(...items.map((i) => i.regular_krw ?? i.price_krw));
   const min = Math.min(...prices, target ?? Infinity) * 0.9;
-  const x = (i) => P.l + (i / (items.length - 1)) * (W - P.l - P.r);
-  const y = (v) => P.t + (1 - (v - min) / (max - min)) * (H - P.t - P.b);
+  const x = (i) => P.l + (i / Math.max(items.length - 1, 1)) * (W - P.l - P.r);
+  const y = (v) => P.t + (1 - (v - min) / Math.max(max - min, 1)) * (H - P.t - P.b);
 
   let d = `M${x(0)},${y(prices[0])}`;
   for (let i = 1; i < items.length; i++) d += `L${x(i)},${y(prices[i - 1])}L${x(i)},${y(prices[i])}`;
