@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Game, GameTimeToBeat, PlayerCount, Wishlist
 from app.schemas.game import Card, WarningCard
-from app.services import cards
+from app.services import cards, deals
 
 SHORT_MAX_SEC = 10 * 3600  # '짧게 끝낼 게임': 보통 플레이 시간이 10시간 이하
 LOW_PLAYERS_MAX = 1000  # '접속자가 적다': 가장 최근 동접자가 이 값 미만
@@ -33,13 +33,18 @@ def latest_players(db: Session) -> dict[int, int]:
 
 
 def popular(db: Session, size: int) -> list[Card]:
-    """인기 = 찜한 사용자 수가 많은 순, 같으면 동접자 많은 순. 찜도 동접자도 없으면 제외."""
+    """인기 = 찜한 사용자 수가 많은 순, 같으면 동접자 많은 순.
+
+    찜도 동접자도 있는 게임이 하나도 없으면 최근 할인 게임(할인율 큰 순)으로 대신한다.
+    """
     wishes = dict(
         db.execute(select(Wishlist.game_id, func.count()).group_by(Wishlist.game_id)).all()
     )
     players = latest_players(db)
     ids = {i for i in set(wishes) | set(players) if wishes.get(i, 0) > 0 or players.get(i, 0) > 0}
     ranked = sorted(ids, key=lambda i: (-wishes.get(i, 0), -players.get(i, 0), i))
+    if not ranked:  # 찜도 동접자도 없으면 최근 할인 게임으로 대신 채운다
+        return deals.get_deals(db, size)
     return cards.build_cards(db, ranked[:size], wished_ids=set())
 
 

@@ -2,9 +2,10 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from app.api.deps import get_optional_user_id
+from app.core.keys import SESSION_COOKIE_NAME
 from app.schemas.events import EventAccepted, EventIn
 from app.services import events
 
@@ -13,6 +14,9 @@ router = APIRouter(prefix="/api")
 
 @router.post("/events", response_model=EventAccepted)
 def post_event(
-    body: EventIn, user_id: Annotated[int | None, Depends(get_optional_user_id)]
+    body: EventIn,
+    request: Request,
+    user_id: Annotated[int | None, Depends(get_optional_user_id)],
 ) -> EventAccepted:
-    return EventAccepted(accepted=events.publish(body, user_id))
+    login_cookie = request.cookies.get(SESSION_COOKIE_NAME)  # Kafka에는 절대 보내지 않는다
+    return EventAccepted(accepted=events.publish(body, user_id, login_cookie))

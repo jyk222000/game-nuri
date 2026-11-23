@@ -27,12 +27,23 @@ def _on_delivery(err, _msg) -> None:  # noqa: ANN001
         log.warning("clickstream 전달 실패: %s", err.name())
 
 
+def anonymous_session_id(event: EventIn, login_cookie: str | None) -> str:
+    """Kafka의 session_id: 브라우저의 익명 id. 로그인 쿠키 값과 같으면 버리고 새로 만든다."""
+    requested = str(event.session_id) if event.session_id else None
+    if requested and requested != login_cookie:
+        return requested
+    return str(uuid.uuid4())
+
+
 def build_message(
-    event: EventIn, user_id: int | None, now: datetime | None = None
+    event: EventIn,
+    user_id: int | None,
+    now: datetime | None = None,
+    login_cookie: str | None = None,
 ) -> ClickstreamMessage:
     return ClickstreamMessage(
         event_id=str(uuid.uuid4()),
-        session_id=str(event.session_id or uuid.uuid4()),
+        session_id=anonymous_session_id(event, login_cookie),
         user_id=user_id,
         event=event.type,
         game_id=event.game_id,
@@ -43,9 +54,9 @@ def build_message(
     )
 
 
-def publish(event: EventIn, user_id: int | None) -> bool:
+def publish(event: EventIn, user_id: int | None, login_cookie: str | None = None) -> bool:
     """Kafka 발행 큐에 넣었으면 True. 큐에 못 넣으면 False (전달 결과는 콜백이 로그로만 남긴다)."""
-    message = build_message(event, user_id)
+    message = build_message(event, user_id, login_cookie=login_cookie)
     try:
         producer = get_producer()
         producer.produce(

@@ -112,6 +112,22 @@ def test_logged_in_user_id_recorded_but_session_cookie_never_sent(client, monkey
     assert "secret-cookie" not in json.dumps(producer.sent[0])  # 로그인 세션 값은 Kafka로 안 간다
 
 
+def test_session_id_equal_to_login_cookie_is_replaced(client, monkeypatch) -> None:
+    c, producer = client
+    cookie = str(uuid.uuid4())
+
+    class Valkey:
+        def get(self, key):  # noqa: ANN001
+            return "7"
+
+    monkeypatch.setattr(session_store, "get_valkey", lambda: Valkey())
+    c.cookies.set(SESSION_COOKIE_NAME, cookie)
+    c.post("/api/events", json={"type": "view_game", "game_id": 5, "session_id": cookie})
+    sent = producer.sent[0]
+    assert cookie not in json.dumps(sent)  # 쿠키 값과 같은 session_id는 새 익명 값으로 바뀐다
+    assert sent["key"] == sent["value"]["session_id"]
+
+
 def test_valkey_down_or_bad_session_is_anonymous_not_error(client, monkeypatch) -> None:
     c, producer = client
 

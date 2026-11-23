@@ -3,7 +3,7 @@
 from datetime import datetime
 
 import pytest
-from app.db.models import Game, GameTimeToBeat, PlayerCount, Wishlist
+from app.db.models import Game, GameTimeToBeat, PlayerCount, PriceCurrent, Wishlist
 
 from tests.conftest import NOW, seed
 
@@ -131,6 +131,31 @@ def test_popular_tie_on_wishes_uses_players_and_empty(env) -> None:
             ]
         )
     assert _ids(client, "/api/games/popular") == [7, 5]
+
+
+def test_popular_falls_back_to_deals_when_no_wishes_or_players(env) -> None:
+    client, engine, _ = env
+    with seed(engine) as s:
+        s.add_all(
+            [
+                PriceCurrent(
+                    game_id=gid,
+                    store="steam",
+                    edition="digital",
+                    platform="PC",
+                    item_condition="new",
+                    price_krw=1000,
+                    regular_krw=2000,
+                    discount_pct=pct,
+                    collected_at=NOW,
+                )
+                for gid, pct in [(5, 20), (7, 60), (119133, 0)]
+            ]
+        )
+    assert _ids(client, "/api/games/popular") == [7, 5]  # 할인 큰 순, 할인 0은 제외
+    with seed(engine) as s:
+        s.add(_pc(119133, 10))  # 동접자가 생기면 대체가 아니라 본래 기준
+    assert _ids(client, "/api/games/popular") == [119133]
 
 
 @pytest.mark.parametrize("path", ["popular", "short", "players/top", "players/low"])
