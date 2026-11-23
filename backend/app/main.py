@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from app.api import events, games, health, me, prices, profile, timing
+from app.api import events, games, health, me, prices, profile, stats, timing
 from app.clients import kafka
 from app.core.config import get_backend_settings
 from app.core.errors import register_error_handlers
@@ -32,6 +32,7 @@ app.include_router(prices.router)
 app.include_router(timing.router)
 app.include_router(games.router)
 app.include_router(events.router)
+app.include_router(stats.router)
 
 # /metrics — Prometheus가 수집한다 (⑩ API 순위).
 Instrumentator().instrument(app).expose(app, include_in_schema=False)
