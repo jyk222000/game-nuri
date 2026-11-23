@@ -10,6 +10,7 @@ Steam 과 ITAD 처럼 호출이 많은 단계는 게임마다 캐시에 저장�
 
 사용:  python analysis/scripts/build_pool.py --pool-size 4000 [--limit 20]
 """
+
 from __future__ import annotations
 
 import argparse
@@ -18,7 +19,7 @@ import os
 import re
 import sys
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -29,13 +30,20 @@ REPO = Path(__file__).resolve().parents[2]
 DATA = REPO / "analysis" / "data" / "game_pool"
 CACHE = DATA / ".cache"
 UA = "gamenuri-pool-builder/0.1"
-PLATFORM_IDS = {6: "PC", 167: "PS5", 48: "PS4", 130: "Switch", 508: "Switch2",
-                169: "XboxSeries", 49: "XboxOne"}
-ONLINE_MODES = {2, 3, 5, 6}        # IGDB game_modes: multiplayer, co-op, MMO, battle royale
-EROTIC_THEME = 42                  # IGDB themes: Erotic
-STEAM_SHOP_ID = 61                 # ITAD shops: Steam
-MIN_KO_REVIEWS = 200               # select_games.py 의 MIN_KO_REVIEWS 와 같은 값으로 맞춘다
-EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+PLATFORM_IDS = {
+    6: "PC",
+    167: "PS5",
+    48: "PS4",
+    130: "Switch",
+    508: "Switch2",
+    169: "XboxSeries",
+    49: "XboxOne",
+}
+ONLINE_MODES = {2, 3, 5, 6}  # IGDB game_modes: multiplayer, co-op, MMO, battle royale
+EROTIC_THEME = 42  # IGDB themes: Erotic
+STEAM_SHOP_ID = 61  # ITAD shops: Steam
+MIN_KO_REVIEWS = 200  # select_games.py 의 MIN_KO_REVIEWS 와 같은 값으로 맞춘다
+EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 HANGUL = re.compile(r"[가-힣]")
 
 
@@ -91,43 +99,60 @@ def get(url, retries=5, **kw):
 # ------------------------------------------------------------------ IGDB
 class Igdb:
     def __init__(self):
-        r = requests.post("https://id.twitch.tv/oauth2/token", timeout=30, data=dict(
-            client_id=os.environ["TWITCH_CLIENT_ID"], client_secret=os.environ["TWITCH_CLIENT_SECRET"],
-            grant_type="client_credentials"))
+        r = requests.post(
+            "https://id.twitch.tv/oauth2/token",
+            timeout=30,
+            data=dict(
+                client_id=os.environ["TWITCH_CLIENT_ID"],
+                client_secret=os.environ["TWITCH_CLIENT_SECRET"],
+                grant_type="client_credentials",
+            ),
+        )
         if not r.ok:
             raise RuntimeError(f"Twitch 토큰 발급 실패: HTTP {r.status_code}")
-        self.h = {"Client-ID": os.environ["TWITCH_CLIENT_ID"],
-                  "Authorization": f"Bearer {r.json()['access_token']}"}
+        self.h = {
+            "Client-ID": os.environ["TWITCH_CLIENT_ID"],
+            "Authorization": f"Bearer {r.json()['access_token']}",
+        }
 
     def q(self, endpoint, body):
         for i in range(4):
-            r = requests.post(f"https://api.igdb.com/v4/{endpoint}", headers=self.h,
-                              data=body.encode("utf-8"), timeout=30)
+            r = requests.post(
+                f"https://api.igdb.com/v4/{endpoint}",
+                headers=self.h,
+                data=body.encode("utf-8"),
+                timeout=30,
+            )
             if r.status_code == 429:
                 time.sleep(2 ** (i + 1))
                 continue
             if not r.ok:
                 raise RuntimeError(f"IGDB {endpoint} HTTP {r.status_code}: {r.text[:200]}")
-            time.sleep(0.3)                      # 초당 4회 한도
+            time.sleep(0.3)  # 초당 4회 한도
             return r.json()
         raise RuntimeError("IGDB 재시도 초과")
 
 
-FIELDS = ("name,slug,game_type,first_release_date,total_rating_count,aggregated_rating,"
-          "aggregated_rating_count,platforms,genres.name,game_modes,themes,collections.id,"
-          "collections.name,involved_companies.publisher,involved_companies.developer,"
-          "involved_companies.company.name,external_games.external_game_source,external_games.uid,"
-          "release_dates.date,release_dates.platform,game_localizations.name,"
-          "game_localizations.region.name")
+FIELDS = (
+    "name,slug,game_type,first_release_date,total_rating_count,aggregated_rating,"
+    "aggregated_rating_count,platforms,genres.name,game_modes,themes,collections.id,"
+    "collections.name,involved_companies.publisher,involved_companies.developer,"
+    "involved_companies.company.name,external_games.external_game_source,external_games.uid,"
+    "release_dates.date,release_dates.platform,game_localizations.name,"
+    "game_localizations.region.name"
+)
 
 
 def igdb_pool(ig: Igdb, size: int, limit: int | None) -> list[dict]:
     """IGDB 평가 수 상위부터 size건. Steam 외부 ID 없는 건 나중에 거른다."""
     out, offset = [], 0
     while len(out) < size:
-        page = ig.q("games", f"fields {FIELDS}; where total_rating_count > 10 & "
-                             f"first_release_date != null; sort total_rating_count desc; "
-                             f"limit 500; offset {offset};")
+        page = ig.q(
+            "games",
+            f"fields {FIELDS}; where total_rating_count > 10 & "
+            f"first_release_date != null; sort total_rating_count desc; "
+            f"limit 500; offset {offset};",
+        )
         if not page:
             break
         out += page
@@ -140,50 +165,88 @@ def igdb_pool(ig: Igdb, size: int, limit: int | None) -> list[dict]:
 def igdb_ttb(ig: Igdb, ids: list[int]) -> dict[int, dict]:
     res = {}
     for i in range(0, len(ids), 500):
-        chunk = ids[i:i + 500]
-        for row in ig.q("game_time_to_beats",
-                        f"fields game_id,hastily,normally,completely,count; "
-                        f"where game_id = ({','.join(map(str, chunk))}); limit 500;"):
+        chunk = ids[i : i + 500]
+        for row in ig.q(
+            "game_time_to_beats",
+            f"fields game_id,hastily,normally,completely,count; "
+            f"where game_id = ({','.join(map(str, chunk))}); limit 500;",
+        ):
             res[row["game_id"]] = row
     return res
 
 
 def flatten_igdb(g: dict) -> dict:
-    # uid 가 "292030,378649,378648"처럼 여러 appid 를 쉼표로 묶어 오는 게임이 있다 → 첫 값(본편) 사용
-    steam = next((str(e["uid"]).split(",")[0].strip() for e in g.get("external_games", [])
-                  if e.get("external_game_source") == 1
-                  and str(e.get("uid", "")).split(",")[0].strip().isdigit()), None)
+    # uid 가 "292030,378649,378648"처럼 appid 여러 개를 쉼표로 묶어 오는 게임이 있다 → 첫 값 사용
+    steam = next(
+        (
+            str(e["uid"]).split(",")[0].strip()
+            for e in g.get("external_games", [])
+            if e.get("external_game_source") == 1
+            and str(e.get("uid", "")).split(",")[0].strip().isdigit()
+        ),
+        None,
+    )
     plats = [PLATFORM_IDS[p] for p in g.get("platforms", []) if p in PLATFORM_IDS]
     comps = g.get("involved_companies", [])
-    pub = next((c["company"]["name"] for c in comps
-                if c.get("publisher") and c.get("company", {}).get("name")), None)
-    dev = next((c["company"]["name"] for c in comps
-                if c.get("developer") and c.get("company", {}).get("name")), None)
+    pub = next(
+        (
+            c["company"]["name"]
+            for c in comps
+            if c.get("publisher") and c.get("company", {}).get("name")
+        ),
+        None,
+    )
+    dev = next(
+        (
+            c["company"]["name"]
+            for c in comps
+            if c.get("developer") and c.get("company", {}).get("name")
+        ),
+        None,
+    )
     col = (g.get("collections") or [{}])[0]
-    ko = next((loc["name"] for loc in g.get("game_localizations", [])
-               if loc.get("name") and "korea" in (loc.get("region", {}).get("name", "")).lower()),
-              None)
-    pc_dates = [d["date"] for d in g.get("release_dates", [])
-                if d.get("platform") == 6 and d.get("date")]
-    con_dates = [d["date"] for d in g.get("release_dates", [])
-                 if PLATFORM_IDS.get(d.get("platform")) not in (None, "PC") and d.get("date")]
+    ko = next(
+        (
+            loc["name"]
+            for loc in g.get("game_localizations", [])
+            if loc.get("name") and "korea" in (loc.get("region", {}).get("name", "")).lower()
+        ),
+        None,
+    )
+    pc_dates = [
+        d["date"] for d in g.get("release_dates", []) if d.get("platform") == 6 and d.get("date")
+    ]
+    con_dates = [
+        d["date"]
+        for d in g.get("release_dates", [])
+        if PLATFORM_IDS.get(d.get("platform")) not in (None, "PC") and d.get("date")
+    ]
 
     def ts(v):
         # fromtimestamp 는 Windows 에서 1970년 이전(음수) 값을 못 읽으므로 epoch 에 더한다
         return (EPOCH + timedelta(seconds=v)).date().isoformat() if v else None
 
     return dict(
-        game_id=g["id"], name=g.get("name"), name_ko=ko, steam_appid=steam,
+        game_id=g["id"],
+        name=g.get("name"),
+        name_ko=ko,
+        steam_appid=steam,
         game_type=g.get("game_type", 0),
-        release_date=ts(g.get("first_release_date")), rating_count=g.get("total_rating_count"),
+        release_date=ts(g.get("first_release_date")),
+        rating_count=g.get("total_rating_count"),
         aggregated_rating=g.get("aggregated_rating"),
         aggregated_rating_count=g.get("aggregated_rating_count", 0),
-        platforms="|".join(plats), genres="|".join(x["name"] for x in g.get("genres", []) if x.get("name")),
-        publisher=pub, developer=dev, series_id=str(col["id"]) if col.get("id") else None,
-        series_name=col.get("name"), is_online=bool(set(g.get("game_modes", [])) & ONLINE_MODES),
+        platforms="|".join(plats),
+        genres="|".join(x["name"] for x in g.get("genres", []) if x.get("name")),
+        publisher=pub,
+        developer=dev,
+        series_id=str(col["id"]) if col.get("id") else None,
+        series_name=col.get("name"),
+        is_online=bool(set(g.get("game_modes", [])) & ONLINE_MODES),
         is_adult=EROTIC_THEME in g.get("themes", []),
         pc_release_date=ts(min(pc_dates)) if pc_dates else None,
-        console_first_release_date=ts(min(con_dates)) if con_dates else None)
+        console_first_release_date=ts(min(con_dates)) if con_dates else None,
+    )
 
 
 # ------------------------------------------------------------------ Steam (키 불필요)
@@ -191,11 +254,17 @@ def steam_reviews(appids: list[str]) -> dict[str, dict]:
     """GetItems 로 한국어 리뷰 수·긍정률·무료 여부. 100개씩. Steam 구매 기준(steam-notes 2절)."""
     res = {}
     for i in range(0, len(appids), 100):
-        inp = json.dumps(dict(ids=[{"appid": int(a)} for a in appids[i:i + 100]],
-                              context=dict(language="koreana", country_code="KR"),
-                              data_request=dict(include_reviews=True)))
-        data = get("https://api.steampowered.com/IStoreBrowseService/GetItems/v1/",
-                   params={"input_json": inp})
+        inp = json.dumps(
+            dict(
+                ids=[{"appid": int(a)} for a in appids[i : i + 100]],
+                context=dict(language="koreana", country_code="KR"),
+                data_request=dict(include_reviews=True),
+            )
+        )
+        data = get(
+            "https://api.steampowered.com/IStoreBrowseService/GetItems/v1/",
+            params={"input_json": inp},
+        )
         for it in data.get("response", {}).get("store_items", []):
             s = (it.get("reviews") or {}).get("summary_language_specific") or {}
             res[str(it.get("appid"))] = dict(
@@ -203,21 +272,24 @@ def steam_reviews(appids: list[str]) -> dict[str, dict]:
                 positive_pct_ko=float(s.get("percent_positive", 0) or 0),
                 is_free=bool(it.get("is_free")),
                 has_kr_price=bool(it.get("best_purchase_option")) or bool(it.get("is_free")),
-                name_steam_ko=it.get("name"))
+                name_steam_ko=it.get("name"),
+            )
         print(f"  [steam] {min(i + 100, len(appids))}/{len(appids)}")
         time.sleep(1.5)
     return res
 
 
 def steam_ccu(appid: str) -> int | None:
-    d = get("https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/",
-            params={"appid": appid})
+    d = get(
+        "https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/",
+        params={"appid": appid},
+    )
     return d["response"].get("player_count")
 
 
 # ------------------------------------------------------------------ ITAD
 def itad_history(appid: str) -> dict:
-    """lookup → history. 할인 이벤트 = Steam 가격 변동에서 cut 이 0 → 양수로 바뀐 횟수 (최근 24개월)."""
+    """lookup → history. 할인 이벤트 = Steam 가격에서 cut 이 0 → 양수로 바뀐 횟수 (최근 24개월)."""
     key = os.environ["ITAD_KEY"]
     base = "https://api.isthereanydeal.com"
     lk = get(f"{base}/games/lookup/v1", params={"key": key, "appid": appid})  # app/ 접두사 금지
@@ -225,9 +297,16 @@ def itad_history(appid: str) -> dict:
         return dict(itad_id=None)
     gid = lk["game"]["id"]
     time.sleep(0.3)
-    hist = get(f"{base}/games/history/v2",
-               params={"key": key, "id": gid, "country": "KR", "shops": STEAM_SHOP_ID,
-                       "since": "2000-01-01T00:00:00Z"})  # since 없으면 최근 약 3개월만 온다
+    hist = get(
+        f"{base}/games/history/v2",
+        params={
+            "key": key,
+            "id": gid,
+            "country": "KR",
+            "shops": STEAM_SHOP_ID,
+            "since": "2000-01-01T00:00:00Z",
+        },
+    )  # since 없으면 최근 약 3개월만 온다
     ev = sorted(hist, key=lambda e: e["timestamp"])
     time.sleep(0.3)
     if not ev:
@@ -236,15 +315,16 @@ def itad_history(appid: str) -> dict:
     def t(e):
         return datetime.fromisoformat(e["timestamp"].replace("Z", "+00:00"))
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     events, prev_cut = 0, 0
     for e in ev:
         cut = (e.get("deal") or {}).get("cut", 0) or 0
         if cut > 0 and prev_cut == 0 and (now - t(e)).days <= 730:
             events += 1
         prev_cut = cut
-    return dict(itad_id=gid, discount_events_24m=events,
-                history_months=int((now - t(ev[0])).days / 30))
+    return dict(
+        itad_id=gid, discount_events_24m=events, history_months=int((now - t(ev[0])).days / 30)
+    )
 
 
 # ------------------------------------------------------------------ main
@@ -262,13 +342,15 @@ def main() -> None:
     ig = Igdb()
     raw = cached(f"igdb{tag}", lambda: igdb_pool(ig, a.pool_size, a.limit))
     rows = [flatten_igdb(g) for g in raw]
-    rows = [r for r in rows if r["steam_appid"]]                    # ID 통합 불가는 여기서 제외
-    seen: set[str] = set()                                           # 같은 appid 는 평가 수 많은 쪽만
+    rows = [r for r in rows if r["steam_appid"]]  # ID 통합 불가는 여기서 제외
+    seen: set[str] = set()  # 같은 appid 는 평가 수 많은 쪽만
     rows = [r for r in rows if not (r["steam_appid"] in seen or seen.add(r["steam_appid"]))]
     print(f"IGDB {len(raw)}건 중 Steam ID 있는 {len(rows)}건(appid 중복 제거 후)")
 
-    ttb = cached(f"ttb{tag}", lambda: {str(k): v for k, v in
-                                       igdb_ttb(ig, [r["game_id"] for r in rows]).items()})
+    ttb = cached(
+        f"ttb{tag}",
+        lambda: {str(k): v for k, v in igdb_ttb(ig, [r["game_id"] for r in rows]).items()},
+    )
     for r in rows:
         t = ttb.get(str(r["game_id"]), {})
         r["ttb_normally_sec"], r["ttb_count"] = t.get("normally"), t.get("count")
@@ -289,7 +371,7 @@ def main() -> None:
     ccu = cached_map(f"ccu{tag}", appids, steam_ccu)
     itad = cached_map(f"itad{tag}", appids, itad_history)
     for r in rows:
-        r["ccu_peak"] = ccu.get(r["steam_appid"])           # 현재 접속자 스냅샷 (최고치 아님, 근사)
+        r["ccu_peak"] = ccu.get(r["steam_appid"])  # 현재 접속자 스냅샷 (최고치 아님, 근사)
         r.update(itad.get(r["steam_appid"], {}))
     pd.DataFrame(rows).to_csv(a.out, index=False, encoding="utf-8-sig")
     print(f"→ {a.out} ({len(rows)}건)")
