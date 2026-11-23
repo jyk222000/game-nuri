@@ -55,8 +55,8 @@ PYTHONPATH=collector python -m collector.main --source itad
   PYTHONPATH=collector python -m collector.main --source itad --kind price_history --dry-run --limit 3
   PYTHONPATH=collector python -m collector.main --source itad --kind price_history --since-days 14
   ```
-- 시험: 단위 테스트 8개 추가(총 67개). 실제 호출 `--limit 3`로 3/3건. 그 샘플을 **정제기 브랜치 `NW2-32`의 `refine_price_history`**에 넣어 이력 항목 336개가 모두 `refined.price_history` 행이 되는 것을 확인했다 (매칭 실패 0건, 월평균 환율 적용).
+- 시험: 단위 테스트 8개 추가(총 67개). 실제 호출 `--limit 3`로 3/3건. 그 샘플을 **정제기(`main`, PR #49)의 `refine_price_history`**에 넣어 이력 항목 336개가 모두 `refined.price_history` 행이 되는 것을 확인했다 (매칭 실패 0건, 월평균 환율 적용).
 
 ## 아직 안 한 것
 - Kafka 실제 전송 시험, 스케줄 (`igdb.md` 참고).
-- 정제기 `NW2-32`가 `main`에 합쳐지기 전에는 이 메시지를 받는 쪽이 없다. 그래도 `raw.price`에는 쌓이고, 지금 정제기는 모르는 kind를 건너뛴다.
+- 이 메시지를 받는 정제기(`refine_price_history`, 월평균 환율)는 PR #49로 `main`에 합쳐졌다.
