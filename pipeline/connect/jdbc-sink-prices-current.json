@@ -4,6 +4,7 @@
     "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
     "topics": "refined.prices",
     "connection.url": "jdbc:mariadb://mariadb-pr:3306/gamenuri",
+    "dialect.name": "MySqlDatabaseDialect",
     "connection.user": "${MARIADB_USER}",
     "connection.password": "${MARIADB_PASSWORD}",
     "table.name.format": "prices_current",
@@ -13,6 +14,11 @@
     "auto.create": "false",
     "value.converter": "org.apache.kafka.connect.json.JsonConverter",
     "value.converter.schemas.enable": "true",
+    "transforms": "ts",
+    "transforms.ts.type": "org.apache.kafka.connect.transforms.TimestampConverter$Value",
+    "transforms.ts.field": "collected_at",
+    "transforms.ts.target.type": "Timestamp",
+    "transforms.ts.format": "yyyy-MM-dd'T'HH:mm:ssX",
     "tasks.max": "3"
   }
 }
