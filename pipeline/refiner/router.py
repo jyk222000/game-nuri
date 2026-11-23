@@ -11,6 +11,7 @@ from refiner.rules import (
     links,
     price_history,
     requirements,
+    review_stats,
     steam_info,
 )
 from refiner.rules import price as price_rules
@@ -23,6 +24,7 @@ OUT_TOPICS = {
     "prices": "refined.prices",
     "games": "refined.games",
     "requirements": "refined.requirements",
+    "review_stats": "refined.review_stats",  # Steam 리뷰 수·긍정률 (GetItems)
     "games_steam": "refined.games_steam",  # Steam → games 칼럼 3개 (update)
     "unmatched": "refined.unmatched",
     "price_history": "refined.price_history",  # ITAD history/v2 → price_history
@@ -218,6 +220,12 @@ def route(envelope: dict[str, Any], maps: Maps) -> dict[str, Any]:
         for r in rows:
             if r["currency_original"] not in (None, "KRW"):
                 out += rate_messages(maps, r["collected_at"], (r["currency_original"],))
+    elif kind == "review_summary":
+        rows, unmatched = review_stats.refine_review_stats(envelope, maps.steam.get)
+        out = [
+            ("review_stats", review_stats.message_key(r), review_stats.to_connect_message(r))
+            for r in rows
+        ]
     elif kind == "time_to_beat":
         out, unmatched = links.refine_time_to_beat(envelope)
     elif kind == "player_count":
