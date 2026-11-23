@@ -1,5 +1,5 @@
 {
-  "_comment": "refined.price_history: ITAD 가격 이력 한 항목 = price_history 한 행. 필드는 refined.prices와 같다(PC·new·digital). collected_at은 가격이 바뀐 시각(UTC Z), price_krw는 그 달 월평균 환율로 환산, price_original·currency_original은 원본. 키 = game_id:store:edition:platform:item_condition:collected_at. 같은 이력을 다시 받아도 price_history 유니크 키 + upsert로 한 줄만 남는다.",
+  "_comment": "refined.price_history: ITAD 가격 이력 한 항목 = price_history 한 행. 필드는 refined.prices와 같다(PC·new·digital). collected_at은 가격이 바뀐 시각(UTC Z), price_krw는 그 달 월평균 환율로 환산, price_original·currency_original은 원본. 키 = game_id:store:edition:platform:item_condition:collected_at. price_history에는 유니크 키가 없어(insert) 같은 이력을 다시 받으면 줄이 겹칠 수 있고, Backend가 (game_id, store, edition, platform, item_condition, collected_at)으로 합친다 (backend/app/services/history.py).",
   "schema": {
     "type": "struct",
     "name": "refined_price",
