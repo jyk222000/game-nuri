@@ -113,7 +113,9 @@ def test_jdbc_sink_matches_contract(name):
     ts = c.get("transforms.ts.field")
     if ts:
         assert ts in contract["fields"]
-        assert c["transforms.ts.format"] == "yyyy-MM-dd'T'HH:mm:ssX"
+        # 'X'(시간대)를 넣지 않는다: SimpleDateFormat은 패턴 뒤에 남는 글자(소수 초, Z)를 무시하고
+        # TimestampConverter가 UTC로 읽는다. 수집기는 …27.029971Z 처럼 소수 초를 보낸다.
+        assert c["transforms.ts.format"] == "yyyy-MM-dd'T'HH:mm:ss"
 
 
 def test_topics_in_create_script():

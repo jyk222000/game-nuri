@@ -18,7 +18,7 @@
     "transforms.ts.type": "org.apache.kafka.connect.transforms.TimestampConverter$Value",
     "transforms.ts.field": "collected_at",
     "transforms.ts.target.type": "Timestamp",
-    "transforms.ts.format": "yyyy-MM-dd'T'HH:mm:ssX",
+    "transforms.ts.format": "yyyy-MM-dd'T'HH:mm:ss",
     "tasks.max": "3"
   }
 }
