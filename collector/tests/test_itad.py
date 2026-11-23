@@ -29,7 +29,11 @@ class FakeSession:
         self.calls: list[dict[str, Any]] = []
 
     def post(self, url: str, **kw: Any) -> FakeResp:
-        self.calls.append({"url": url, **kw})
+        self.calls.append({"method": "POST", "url": url, **kw})
+        return self.responses.pop(0)
+
+    def get(self, url: str, **kw: Any) -> FakeResp:
+        self.calls.append({"method": "GET", "url": url, **kw})
         return self.responses.pop(0)
 
 
@@ -99,3 +103,86 @@ def test_load_targets_from_real_list() -> None:
     assert len(targets) > 900  # itad_id 없는 게임은 건너뛴다
     assert targets[0] == Target("018d937f-2997-7131-b8b9-7c8af4825fa8", 1091500)
     assert itad.load_targets(limit=3) == targets[:3]
+
+
+# ---- 가격 이력 (kind=price_history)
+def hist_item(ts: str, shop_id: int = 61, amount: float = 29.99, cur: str = "USD") -> dict:
+    return {
+        "timestamp": ts,
+        "shop": {"id": shop_id, "name": "Steam"},
+        "deal": {
+            "price": {"amount": amount, "amountInt": int(amount * 100), "currency": cur},
+            "regular": {"amount": 59.99, "amountInt": 5999, "currency": cur},
+            "cut": 50,
+        },
+    }
+
+
+def test_history_payload_matches_contract() -> None:
+    items = [hist_item("2022-10-02T05:10:46+02:00"), hist_item("2022-11-01T10:00:00+01:00", 20)]
+    c, s, _ = make_client([FakeResp(200, items)])
+    out = list(itad.collect_history([Target("uuid-1", 1245620)], client=c))
+    assert len(out) == 1
+    key, env = out[0]
+    assert key == "uuid-1"
+    assert (env.source, env.kind) == ("itad", "price_history")
+    assert env.payload == {"id": "uuid-1", "history": items}  # 응답 항목 그대로
+    assert env.request["params"]["id"] == "uuid-1"
+    assert env.request["params"]["appid"] == "1245620"  # 계약 예시처럼 문자열
+    assert "key" not in env.request["params"]
+    call = s.calls[0]
+    assert call["method"] == "GET"
+    assert call["url"].endswith("/games/history/v2")
+    assert call["params"]["id"] == "uuid-1"
+    assert call["params"]["country"] == "KR"
+    assert call["params"]["since"] == itad.HISTORY_FULL_SINCE  # 없으면 최근 3개월만 온다
+
+
+def test_history_since_is_passed_through() -> None:
+    c, s, _ = make_client([FakeResp(200, [hist_item("2026-11-20T00:00:00+01:00")])])
+    list(itad.collect_history([Target("u", None)], client=c, since="2026-11-10T00:00:00Z"))
+    assert s.calls[0]["params"]["since"] == "2026-11-10T00:00:00Z"
+
+
+def test_history_without_appid_omits_it() -> None:
+    c, _, _ = make_client([FakeResp(200, [hist_item("2026-11-20T00:00:00+01:00")])])
+    [(_, env)] = list(itad.collect_history([Target("u", None)], client=c))
+    assert "appid" not in env.request["params"]
+
+
+def test_history_empty_and_failed_games_are_skipped() -> None:
+    ok = [hist_item("2026-11-20T00:00:00+01:00")]
+    c, _, _ = make_client([FakeResp(200, []), FakeResp(403), FakeResp(200, ok)])
+    out = list(itad.collect_history([Target("a", 1), Target("b", 2), Target("c", 3)], client=c))
+    assert [k for k, _ in out] == ["c"]  # 한 게임이 실패해도 계속한다
+
+
+def test_history_is_split_when_too_big() -> None:
+    items = [hist_item(f"2022-01-{d:02d}T00:00:00+01:00") for d in range(1, 11)]
+    one = len(__import__("json").dumps(items[0], ensure_ascii=False).encode()) + 1
+    c, _, _ = make_client([FakeResp(200, items)])
+    out = list(itad.collect_history([Target("u", 1)], client=c, max_bytes=one * 4))
+    sizes = [len(e.payload["history"]) for _, e in out]
+    assert sizes == [4, 4, 2]  # 순서 유지, 같은 모양으로 나눔
+    assert all(e.payload["id"] == "u" for _, e in out)
+    assert [i for _, e in out for i in e.payload["history"]] == items
+
+
+def test_split_never_returns_empty_chunk_for_huge_item() -> None:
+    items = [hist_item("2022-01-01T00:00:00+01:00")]
+    assert [len(c) for c in itad.split_history(items, max_bytes=1)] == [1]
+
+
+def test_since_from_days() -> None:
+    from datetime import UTC, datetime
+
+    assert itad.since_from_days(None) == itad.HISTORY_FULL_SINCE
+    now = datetime(2026, 11, 23, 12, 0, 0, tzinfo=UTC)
+    assert itad.since_from_days(14, now) == "2026-11-09T12:00:00Z"
+
+
+def test_history_error_message_never_contains_key() -> None:
+    c, _, _ = make_client([FakeResp(403)])
+    with pytest.raises(ItadError) as e:
+        c.get("/games/history/v2", {"id": "x"})
+    assert "SECRETKEY" not in str(e.value)

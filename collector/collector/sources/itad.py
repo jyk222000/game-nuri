@@ -1,20 +1,26 @@
-"""ITAD: POST /games/prices/v3 (country=KR) → raw.price
+"""ITAD → raw.price
 
 수집 대상은 `analysis/game_list/games_1000.csv`의 `itad_id` (Steam appid로 미리 조회해 둔 값).
 응답은 가공하지 않고 봉투(payload)에 그대로 담는다.
-게임 1건 = 봉투 1개 (`{id, historyLow, deals[]}`).
+
+| kind | 호출 | 봉투 단위 | 주기 |
+|---|---|---|---|
+| price | POST /games/prices/v3 (country=KR) | 게임 1건 `{id, historyLow, deals[]}` | 6시간 |
+| price_history | GET /games/history/v2 | 게임 1건 `{id, history[]}` | 처음 1번 + 주 1번 |
 
 - 키는 쿼리 파라미터(`key`)로 가므로 URL·예외 문구에 절대 넣지 않는다.
-- 한도는 5분당 1,000건. 한 번에 여러 게임을 보내므로 1,000게임이 10회 안팎이다.
-- 가격 이력(`games/history/v2`, USD)은 정제기에 받는 쪽(kind)이 없어 이번 범위에서 뺐다.
+- 한도는 5분당 1,000건. 현재가는 100게임씩 한 번에, 이력은 게임당 1회(1,000게임 약 8분).
+- 이력 가격의 통화는 판매처에 따라 KRW(한국에서 파는 곳)나 USD로 섞여 온다. 환산은 정제기가 한다.
 """
 
 from __future__ import annotations
 
 import csv
+import json
 import time
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -27,6 +33,9 @@ log = get_logger("collector.itad")
 
 API_URL = "https://api.isthereanydeal.com"
 PRICES_PATH = "/games/prices/v3"
+HISTORY_PATH = "/games/history/v2"
+HISTORY_FULL_SINCE = "2000-01-01T00:00:00Z"  # since가 없으면 최근 약 3개월만 온다
+MAX_MESSAGE_BYTES = 800_000  # Kafka 메시지 기본 한도(1MB)보다 작게
 COUNTRY = "KR"
 USER_AGENT = "game-nuri-collector/0.1"
 
@@ -99,14 +108,23 @@ class ItadClient:
 
     def post(self, path: str, params: dict[str, Any], body: Any) -> Any:
         """POST. 응답 JSON 원본을 그대로 돌려준다. 오류 문구에는 경로와 상태 코드만 쓴다."""
+        return self._request("POST", path, params, body)
+
+    def get(self, path: str, params: dict[str, Any]) -> Any:
+        """GET. 응답 JSON 원본을 그대로 돌려준다 (가격 이력 `games/history/v2`)."""
+        return self._request("GET", path, params, None)
+
+    def _request(self, method: str, path: str, params: dict[str, Any], body: Any) -> Any:
         for attempt in range(MAX_RETRIES + 1):
             self._throttle()
-            r = self._s.post(
+            send = self._s.post if method == "POST" else self._s.get
+            kwargs: dict[str, Any] = {} if body is None else {"json": body}
+            r = send(
                 API_URL + path,
                 params={"key": self._key, **params},
-                json=body,
                 headers={"User-Agent": USER_AGENT},
                 timeout=30,
+                **kwargs,
             )
             if r.status_code == 429 or r.status_code >= 500:
                 if attempt == MAX_RETRIES:
@@ -159,3 +177,71 @@ def collect(
         if missing:
             log.warning("ITAD가 돌려주지 않은 게임 %d건: %s", len(missing), missing[:5])
     log.info("ITAD 수집 완료: %d/%d건", got, len(targets))
+
+
+# ---------------------------------------------------------------- 가격 이력 (price_history)
+def since_from_days(days: int | None, now: datetime | None = None) -> str:
+    """`--since-days N` → ITAD `since` 값 (UTC). 없으면 전체 이력(2000-01-01)."""
+    if days is None:
+        return HISTORY_FULL_SINCE
+    now = now or datetime.now(UTC)
+    return (now - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def split_history(
+    items: list[dict[str, Any]], max_bytes: int = MAX_MESSAGE_BYTES
+) -> Iterator[list[dict[str, Any]]]:
+    """이력 항목을 JSON 크기가 max_bytes를 넘지 않게 나눈다 (Kafka 메시지 한도 대비)."""
+    chunk: list[dict[str, Any]] = []
+    size = 0
+    for it in items:
+        n = len(json.dumps(it, ensure_ascii=False).encode()) + 1
+        if chunk and size + n > max_bytes:
+            yield chunk
+            chunk, size = [], 0
+        chunk.append(it)
+        size += n
+    if chunk:
+        yield chunk
+
+
+def collect_history(
+    targets: list[Target],
+    client: ItadClient | None = None,
+    since: str = HISTORY_FULL_SINCE,
+    max_bytes: int = MAX_MESSAGE_BYTES,
+) -> Iterator[tuple[str, RawEnvelope]]:
+    """게임마다 `games/history/v2`를 받아 (키 = itad_id, 봉투)를 낸다 (계약 raw.price_history.json).
+
+    payload = {"id": itad_id, "history": 응답 항목 그대로}. 메시지가 max_bytes를 넘으면 같은
+    모양으로 여러 개로 나눈다. 한 게임이 실패해도 계속한다. 같은 이력을 다시 받아도
+    정제·Backend가 합치므로 겹쳐도 된다 (주 1회 수집은 `since`를 며칠 앞당겨 겹치게 받는다).
+    """
+    client = client or ItadClient.from_settings()
+    sent = empty = failed = 0
+    for t in targets:
+        params = {"id": t.itad_id, "country": COUNTRY, "since": since}
+        try:
+            items = client.get(HISTORY_PATH, params)
+        except ItadError as e:
+            failed += 1
+            log.warning("가격 이력 %s 실패: %s", t.itad_id, e)
+            continue
+        if not isinstance(items, list) or not items:
+            empty += 1
+            continue
+        req: dict[str, Any] = {"id": t.itad_id, "country": COUNTRY, "since": since}
+        if t.steam_appid is not None:
+            req["appid"] = str(t.steam_appid)
+        for chunk in split_history(items, max_bytes):
+            sent += 1
+            yield (
+                t.itad_id,
+                RawEnvelope(
+                    source="itad",
+                    kind="price_history",
+                    request={"url": API_URL + HISTORY_PATH, "params": req},
+                    payload={"id": t.itad_id, "history": chunk},
+                ),
+            )
+    log.info("ITAD 가격 이력 수집 완료: 메시지 %d, 이력 없음 %d, 실패 %d", sent, empty, failed)
