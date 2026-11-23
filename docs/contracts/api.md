@@ -147,12 +147,18 @@
 { "game_id": 119133, "verdict": "buy_now", "reason": "역대 최저가에 가까운 가격이에요.", "current_krw": 47900,
   "lowest_krw": 38900, "lowest_date": "2025-12-05", "vs_lowest_pct": 23, "sale_count_2y": 9 }
 ```
-`verdict`: `buy_now` | `neutral` | `wait` | (콘솔·이력 3건 미만) `insufficient_data` ← 마지막 값은 목업에 없는 값(확정)
+`verdict`: `buy_now` | `neutral` | `wait` | `insufficient_data` ← 마지막 값은 목업에 없는 값(확정)
+- **기준 이력은 PC·새 상품(`item_condition='new'`)** 이다. 하루에 여러 건이면 그날 최저가 한 줄만 쓴다. 따라서 **`current_krw`는 이 이력의 최신 값**이며, 카드의 현재가(플랫폼 무관 새 상품 최저가)와 **다를 수 있다.**
+- **`insufficient_data` 조건**: PC·새 상품 이력이 없거나(콘솔 전용 포함), **이력 일수가 3 미만**(하루 한 줄로 합친 뒤 날짜 수)일 때. 이때 `current_krw`, `lowest_krw`, `lowest_date`, `vs_lowest_pct`, `sale_count_2y`는 `null`이고 `reason`에 이유를 쓴다.
+- 판정 규칙(임시, analysis A1 확정 전 — 프런트 목업과 같음): 할인율 ≥ 30이고 가격이 역대 최저가의 105% 이하면 `buy_now`, 할인율 ≥ 10이면 `neutral`, 그 외 `wait`.
+
 `GET /api/games/119133/prediction`
 ```json
 { "game_id": 119133, "avg_sale_interval_days": 62, "next_sale_expected": "2026-12-21",
   "expected_discount_pct": 40, "confidence": "medium", "basis": "최근 2년 할인 9회 기준" }
 ```
+- **이력이 부족하거나 최근 2년 할인이 2회 미만이면** `confidence`는 `"insufficient_data"`이고 `avg_sale_interval_days`, `next_sale_expected`, `expected_discount_pct`는 `null`이다(`basis`에 이유). `confidence`: `high`(할인 8회 이상) | `medium`(4회 이상) | `low` | `insufficient_data`.
+- **예상일이 이미 지났으면** 오늘 + 14일로 계산한다.
 
 ### 찜·알림 (모두 ✓)
 `GET /api/me/wishlist` → `{ "items": [카드], "total": 1 }`
