@@ -1,0 +1,12 @@
+# /etc/systemd/system/collector-danawa.timer  (proxy, 6시간마다)
+# 한 번 실행이 2~3시간 걸린다(요청 사이 10초 이상). 6시간 간격이라 보통 겹치지 않지만,
+# 늦어져 다음 시각과 겹치면 systemd가 같은 서비스를 두 번 띄우지 않고, run-collector.sh의 flock이 한 번 더 막는다.
+[Unit]
+Description=다나와 콘솔 가격 수집 (6시간마다, 실행 약 2~3시간)
+
+[Timer]
+OnCalendar=*-*-* 00,06,12,18:30:00
+Unit=collector@danawa.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,10 @@
+# /etc/systemd/system/collector-steam-reviews.timer  (proxy, 매일. 최초 전체 수집은 약 2시간, 이후 증분)
+[Unit]
+Description=Steam 리뷰 수집 (매일)
+
+[Timer]
+OnCalendar=*-*-* 05:00:00
+Unit=collector@steam-reviews.service
+
+[Install]
+WantedBy=timers.target

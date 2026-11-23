@@ -1,0 +1,10 @@
+# /etc/systemd/system/collector-steam-players.timer  (proxy, 1시간마다)
+[Unit]
+Description=Steam 동접자 수집 (1시간마다)
+
+[Timer]
+OnCalendar=*-*-* *:20:00
+Unit=collector@steam-players.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,26 @@
+# /etc/systemd/system/collector@.service  (수집 서버 = proxy)
+# 인스턴스 이름이 수집 종류다: collector@itad-price.service, collector@danawa.service ...
+# 종류별 인자는 /usr/local/bin/run-collector.sh (infra/collector/run-collector.sh, install -m 0755)
+# 환경 변수: /etc/game-nuri/collector.env (root:collector, 640) — 예시는 collector.env.example
+#
+# 겹침 방지 (다나와는 한 번에 2~3시간 걸린다)
+#  1) oneshot 서비스는 실행 중이면 같은 서비스의 새 시작 요청이 합쳐진다(두 번 뜨지 않는다).
+#  2) run-collector.sh가 이름별 flock으로 한 번 더 막는다 (손으로 실행한 경우 포함).
+[Unit]
+Description=game-nuri collector (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=collector
+Group=collector
+EnvironmentFile=/etc/game-nuri/collector.env
+# /var/lib/game-nuri/collector (steam 리뷰 수집 위치 파일), /run/game-nuri-collector (잠금 파일)
+StateDirectory=game-nuri/collector
+RuntimeDirectory=game-nuri-collector
+RuntimeDirectoryPreserve=yes
+ExecStart=/usr/local/bin/run-collector.sh %i
+# 멈춘 수집이 다음 시각을 막지 않게 상한을 둔다. 종류별로 timer 옆 주석의 값을 drop-in으로 바꿀 수 있다.
+TimeoutStartSec=6h
+Nice=10

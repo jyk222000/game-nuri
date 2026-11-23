@@ -1,0 +1,10 @@
+# /etc/systemd/system/collector-igdb.timer  (proxy, 매일)
+[Unit]
+Description=IGDB 게임 정보·클리어 시간 수집 (매일)
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+Unit=collector@igdb.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,10 @@
+# /etc/systemd/system/collector-steam-details.timer  (proxy, 매일: appdetails 사양 등)
+[Unit]
+Description=Steam appdetails 수집 (매일)
+
+[Timer]
+OnCalendar=*-*-* 04:00:00
+Unit=collector@steam-details.service
+
+[Install]
+WantedBy=timers.target
