@@ -27,6 +27,7 @@ class SteamBody(BaseModel):
 
 class SteamOut(BaseModel):
     steam_id: str
+    owned_games: int  # Steam에서 가져와 저장한 보유 게임 수
 
 
 class SpecsBody(BaseModel):

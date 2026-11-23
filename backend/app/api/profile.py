@@ -34,7 +34,8 @@ def patch_me(body: MePatch, user: User, db: Db) -> MeOut:
 
 @router.put("/steam", response_model=SteamOut)
 def put_steam(body: SteamBody, user: User, db: Db) -> SteamOut:
-    return SteamOut(steam_id=profile.set_steam_id(db, user.user_id, body.steam_id))
+    steam_id, owned = profile.set_steam_id(db, user.user_id, body.steam_id)
+    return SteamOut(steam_id=steam_id, owned_games=owned)
 
 
 @router.get("/specs", response_model=SpecsOut)

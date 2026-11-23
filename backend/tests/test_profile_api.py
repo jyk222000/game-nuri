@@ -1,8 +1,14 @@
 """#3 내 정보, #4 Steam ID 연동, #30 내 PC 사양 등록·조회."""
 
+import httpx
 import pytest
+from app.clients import steam
+from app.db.models import UserOwnedGame
 from app.main import app
 from fastapi.testclient import TestClient
+from gamenuri_common.config import get_settings
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 
 # ---------- #3 ----------
@@ -49,11 +55,151 @@ def test_me_unknown_user_404(env) -> None:
 
 
 # ---------- #4 ----------
-def test_put_steam(env) -> None:
+STEAM_ID = "76561198000000000"
+
+
+def _owned(engine, user_id=1) -> dict[int, int]:
+    with Session(engine) as s:
+        rows = s.scalars(select(UserOwnedGame).where(UserOwnedGame.user_id == user_id))
+        return {r.steam_appid: r.playtime_forever_min for r in rows}
+
+
+def _fake_steam(monkeypatch, games=None, exc=None) -> list[str]:
+    calls: list[str] = []
+
+    def get_owned_games(steam_id):  # noqa: ANN001
+        calls.append(steam_id)
+        if exc:
+            raise exc
+        return games
+
+    monkeypatch.setattr(steam, "get_owned_games", get_owned_games)
+    return calls
+
+
+def test_put_steam_saves_id_and_owned_games(env, monkeypatch) -> None:
+    client, engine, _ = env
+    calls = _fake_steam(monkeypatch, [steam.OwnedGame(500, 120), steam.OwnedGame(730, 0)])
+    r = client.put("/api/me/steam", json={"steam_id": STEAM_ID})
+    assert r.status_code == 200 and r.json() == {"steam_id": STEAM_ID, "owned_games": 2}
+    assert calls == [STEAM_ID]
+    assert client.get("/api/me").json()["steam_id"] == STEAM_ID
+    assert _owned(engine) == {500: 120, 730: 0}  # appid와 플레이 시간(분)만 저장
+
+
+def test_put_steam_again_replaces_owned_games_of_that_user_only(env, monkeypatch) -> None:
+    client, engine, current = env
+    _fake_steam(monkeypatch, [steam.OwnedGame(500, 120), steam.OwnedGame(730, 5)])
+    client.put("/api/me/steam", json={"steam_id": STEAM_ID})
+    current["id"] = 2
+    client.put("/api/me/steam", json={"steam_id": "76561198000000001"})
+    current["id"] = 1
+    _fake_steam(monkeypatch, [steam.OwnedGame(500, 300)])  # 730은 사라지고 500은 갱신
+    assert client.put("/api/me/steam", json={"steam_id": STEAM_ID}).json()["owned_games"] == 1
+    assert _owned(engine, 1) == {500: 300}
+    assert _owned(engine, 2) == {500: 120, 730: 5}
+
+
+def test_put_steam_private_profile_is_400_and_saves_nothing(env, monkeypatch) -> None:
+    client, engine, _ = env
+    _fake_steam(monkeypatch, exc=steam.SteamPrivateProfile())
+    r = client.put("/api/me/steam", json={"steam_id": STEAM_ID})
+    assert r.status_code == 400 and r.json()["error"]["code"] == "STEAM_PROFILE_PRIVATE"
+    assert "공개" in r.json()["error"]["message"]
+    assert client.get("/api/me").json()["steam_id"] is None
+    assert _owned(engine) == {}
+
+
+def test_put_steam_unavailable_is_503_and_keeps_previous(env, monkeypatch) -> None:
+    client, engine, _ = env
+    _fake_steam(monkeypatch, [steam.OwnedGame(500, 1)])
+    client.put("/api/me/steam", json={"steam_id": STEAM_ID})
+    _fake_steam(monkeypatch, exc=steam.SteamUnavailable("ConnectError"))
+    r = client.put("/api/me/steam", json={"steam_id": "76561198000000001"})
+    assert r.status_code == 503 and r.json()["error"]["code"] == "UNAVAILABLE"
+    assert client.get("/api/me").json()["steam_id"] == STEAM_ID
+    assert _owned(engine) == {500: 1}
+
+
+def test_put_steam_public_but_no_games_is_ok_with_zero(env, monkeypatch) -> None:
+    client, engine, _ = env
+    _fake_steam(monkeypatch, [])
+    r = client.put("/api/me/steam", json={"steam_id": STEAM_ID})
+    assert r.json() == {"steam_id": STEAM_ID, "owned_games": 0} and _owned(engine) == {}
+
+
+# ---- Steam 클라이언트(키 보호, 응답 해석) ----
+class _Resp:
+    def __init__(self, payload, status=200) -> None:
+        self.payload, self.status = payload, status
+
+    def raise_for_status(self) -> None:
+        if self.status >= 400:
+            req = httpx.Request("GET", f"{steam.OWNED_GAMES_URL}?key=super-secret-key")
+            raise httpx.HTTPStatusError("bad", request=req, response=httpx.Response(self.status))
+
+    def json(self):
+        return self.payload
+
+
+@pytest.fixture
+def steam_key(monkeypatch):
+    monkeypatch.setenv("STEAM_KEY", "super-secret-key")
+    get_settings.cache_clear()
+    yield "super-secret-key"
+    get_settings.cache_clear()
+
+
+def test_steam_client_parses_games_and_sends_key_as_param(steam_key, monkeypatch) -> None:
+    seen: dict = {}
+
+    def fake_get(url, params=None, timeout=None):  # noqa: ANN001
+        seen.update(url=url, params=params)
+        payload = {
+            "response": {
+                "game_count": 2,
+                "games": [
+                    {"appid": 10, "playtime_forever": 5, "name": "ignored"},
+                    {"appid": "x"},  # 모양이 다른 항목은 건너뜀
+                    {"appid": 20},
+                ],
+            }
+        }
+        return _Resp(payload)
+
+    monkeypatch.setattr(httpx, "get", fake_get)
+    games = steam.get_owned_games(STEAM_ID)
+    assert games == [steam.OwnedGame(10, 5), steam.OwnedGame(20, 0)]
+    assert seen["url"] == steam.OWNED_GAMES_URL and seen["params"]["steamid"] == STEAM_ID
+    assert "key" not in seen["url"]
+
+
+def test_steam_client_empty_response_means_private(steam_key, monkeypatch) -> None:
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: _Resp({"response": {}}))
+    with pytest.raises(steam.SteamPrivateProfile):
+        steam.get_owned_games(STEAM_ID)
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: _Resp({"response": {"game_count": 0}}))
+    assert steam.get_owned_games(STEAM_ID) == []
+
+
+def test_steam_key_never_in_error_log_or_response(env, steam_key, monkeypatch, caplog) -> None:
     client, *_ = env
-    r = client.put("/api/me/steam", json={"steam_id": "76561198000000000"})
-    assert r.status_code == 200 and r.json() == {"steam_id": "76561198000000000"}
-    assert client.get("/api/me").json()["steam_id"] == "76561198000000000"
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: _Resp({}, status=403))
+    with caplog.at_level("DEBUG"):
+        r = client.put("/api/me/steam", json={"steam_id": STEAM_ID})
+    assert r.status_code == 503
+    assert steam_key not in r.text and steam_key not in caplog.text
+    assert STEAM_ID not in caplog.text
+
+
+def test_steam_client_without_key_is_unavailable(monkeypatch) -> None:
+    monkeypatch.setenv("STEAM_KEY", "")
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(steam.SteamUnavailable):
+            steam.get_owned_games(STEAM_ID)
+    finally:
+        get_settings.cache_clear()
 
 
 @pytest.mark.parametrize(
