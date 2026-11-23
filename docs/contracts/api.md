@@ -55,6 +55,9 @@
 - 목록: `{"items": [...], "total": 123, "page": 1, "size": 20}`. 페이지가 없는 목록(`genres`, `popular` 등)은 `{"items": [...]}`.
 - **현재가**: `prices_current`에서 `item_condition='new'`인 행 중 `price_krw`가 가장 낮은 값(플랫폼 무관, 새 상품 최저가). 같으면 `store`·`platform` 이름순. 목록·카드·알림의 `price_krw`, `current_krw`가 이 값이다.
 - `time_to_beat_hours`는 값이 없으면 `null`.
+- 할인 목록(`GET /api/games/deals`): **할인 중 = 새 상품 최저가의 `discount_pct` > 0**, 할인율 큰 순, `size` 기본 20 / 최대 100. 로그인 없이 보는 목록이라 `wished`는 항상 `false`.
+- 역대 최저가(`GET /api/games/{id}/lowest`) 동점: 가장 이른 날짜 → `store`·`edition` 이름순.
+- 가격 이력(`GET /api/games/{id}/history`)의 항목에는 `platform`·`item_condition`이 들어 있어, 필터 없이 불러도 플랫폼·상태를 구분할 수 있다.
 - 예외: 찜 목록(`GET /api/me/wishlist`)·목표가 목록(`GET /api/me/alerts`)은 `page`·`size` 없이 `{"items": [...], "total": N}`만 준다.
 - 오류: `{"error": {"code": "...", "message": "한국어 문장"}}`
   - **형식 검증 실패**(필드 누락·타입 오류 등)는 **422 + `INVALID_REQUEST`**, **업무 규칙 오류**(`INVALID_PRICE` 등)는 **400**.
@@ -89,8 +92,8 @@
 `GET /api/games/119133/history?days=180&platform=PC&item_condition=new`
 ```json
 { "game_id": 119133, "days": 180, "platform": "PC", "item_condition": "new",
-  "items": [ { "store": "steam", "edition": "digital", "collected_at": "2026-11-19T02:30:00Z",
-               "price_krw": 47900, "regular_krw": 64800, "discount_pct": 26 } ] }
+  "items": [ { "store": "steam", "edition": "digital", "platform": "PC", "item_condition": "new",
+               "collected_at": "2026-11-19T02:30:00Z", "price_krw": 47900, "regular_krw": 64800, "discount_pct": 26 } ] }
 ```
 **가격 이력 중복 제거 (결정)**
 - 중복 판단 키: **`(game_id, store, edition, platform, item_condition, collected_at)`**. 같은 시각에 `edition`만 다른 행(digital·physical)은 서로 다른 행이다.
