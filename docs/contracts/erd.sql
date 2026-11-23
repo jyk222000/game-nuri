@@ -133,7 +133,7 @@ CREATE TABLE game_tags (                         -- 게임 N:M 태그
   PRIMARY KEY (game_id, tag_id)
 );
 
-CREATE TABLE stores (
+CREATE TABLE stores (                            -- 판매처 기준표. ITAD 판매처는 Kafka Connect(refined.stores, upsert)가 채우고, 다나와는 시드
   store            VARCHAR(32) PRIMARY KEY,       -- steam, epic, gog, msstore, blizzard, ea, ubisoft, danawa
   display_name     VARCHAR(64) NOT NULL,
   platform         ENUM('pc','console') NOT NULL,
@@ -315,8 +315,8 @@ INSERT INTO platforms (platform, display_name) VALUES
   ('Switch', 'Nintendo Switch'), ('Switch2', 'Nintendo Switch 2'),
   ('XboxSeries', 'Xbox Series X|S'), ('XboxOne', 'Xbox One');
 
--- 스토어 8곳 (정제기 rules/price.py의 store 코드와 같다). ITAD 번호는 Steam(61)만 확인됨, 나머지는 확인 후 채운다.
--- 목록에 없는 ITAD 판매처(Humble, Fanatical 등)는 정제기가 이름을 소문자로 붙인 코드로 보낸다.
+-- 스토어 8곳 (정제기 rules/price.py의 store 코드와 같다). 시드는 처음 상태이고, ITAD 판매처는 수집이 돌면
+-- refined.stores가 itad_shop_id를 채우고 8곳 밖 판매처(Humble, Fanatical 등)도 추가한다.
 INSERT INTO stores (store, display_name, platform, itad_shop_id) VALUES
   ('steam', 'Steam', 'pc', 61), ('epic', 'Epic Games Store', 'pc', NULL), ('gog', 'GOG', 'pc', NULL),
   ('msstore', 'Microsoft Store', 'pc', NULL), ('blizzard', 'Battle.net', 'pc', NULL),
