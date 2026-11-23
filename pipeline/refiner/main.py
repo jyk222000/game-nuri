@@ -14,6 +14,9 @@
        ID_MAP_STATE_PATH          배운 대응표를 저장할 경로
                                   (예: /var/lib/game-nuri/refiner_id_map.json)
                                   비우면 저장하지 않는다 (재시작하면 다시 배워야 함)
+       PRICE_STATE_PATH           지난번 가격을 저장할 경로 (가격이 바뀐 때만 이력을 보내려고)
+                                  (예: /var/lib/game-nuri/refiner_last_prices.json)
+                                  비우면 재시작 뒤 첫 가격을 한 번 더 이력으로 보낸다
        REFINER_TOPICS_IN          기본 raw.price,raw.console,raw.igdb,raw.steam
        REFINER_TOPIC_PRICES       기본 refined.prices
        REFINER_TOPIC_GAMES        기본 refined.games
@@ -45,6 +48,7 @@ except ImportError:  # 공통 패키지 의존성이 없는 환경(내 PC 시험
 
 
 from refiner.router import OUT_TOPICS, Maps, route
+from refiner.rules.price_change import LastPrices
 from refiner.rules.rates import RateBook
 
 log = get_logger("refiner")
@@ -70,6 +74,7 @@ def load_maps(path: str | None, state_path: str | None = None) -> Maps:
         maps.merge(Maps(json.loads(Path(state_path).read_text(encoding="utf-8"))))
     maps.changed = False
     maps.rates = RateBook.load(os.environ.get("RATES_PATH"))
+    maps.last_prices = LastPrices.load(os.environ.get("PRICE_STATE_PATH"))
     return maps
 
 
@@ -193,6 +198,7 @@ def run_kafka() -> None:  # pragma: no cover - 서버(kafka1~3)에서만 실행
                 counts["unmatched"] = counts.get("unmatched", 0) + 1
             producer.flush()
             save_maps(maps, state_path)  # commit 전에 저장: 재시작해도 배운 대응표가 남는다
+            maps.last_prices.save(os.environ.get("PRICE_STATE_PATH"))
             consumer.commit(msg)
             if res["out"] or res["unmatched"]:
                 log.info("누계 %s", ", ".join(f"{k} {v}" for k, v in sorted(counts.items())))
