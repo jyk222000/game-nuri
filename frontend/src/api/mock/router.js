@@ -3,13 +3,13 @@ import insights from './generated/game_insights.json';
 import specTrust from './generated/spec_trust.json';
 import {
   GAMES, GENRES, TAGS, STORES, NOW, byId, currentPrices, saleEvents, KEYWORDS, SPEC_TEMPLATE,
-  TRENDING, API_RANKING, REVIEW_SNIPPETS,
+  TRENDING, API_RANKING, REVIEW_SNIPPETS, historySeries,
 } from './data.js';
 
 const KEY = 'gamenuri_mock_state';
 const defaults = () => ({
   user: null, wishlist: [], alerts: [], alert_logs: [], recent: [],
-  specs: null, steam_id: null, notifications: { email: true, price_alert: true, weekly_deals: false },
+  specs: null, steam_id: null, notifications: { email_enabled: true },
   events: [],
 });
 let state = defaults();
@@ -37,13 +37,21 @@ function card(g) {
   const t = today(g);
   return {
     game_id: g.game_id, name: g.name, name_en: g.name_en, genres: g.genres, platforms: g.platforms,
-    hue: g.hue, price_krw: t.price_krw, regular_krw: g.regular_krw, discount_pct: t.discount_pct || null,
+    cover_url: g.cover_url, price_krw: t.price_krw, regular_krw: g.regular_krw, discount_pct: t.discount_pct || null,
     positive_ratio: g.positive_ratio, concurrent_players: g.concurrent_players,
     time_to_beat_hours: g.time_to_beat_hours, wished: state.wishlist.includes(g.game_id),
   };
 }
 
+// 기준 이력은 PC·새 상품. PC가 없으면(콘솔 전용) 판단할 수 없다 (api.md '구매 타이밍').
+const noPcHistory = (g) => !g.platforms.includes('PC');
 function timing(g) {
+  if (noPcHistory(g)) {
+    return {
+      game_id: g.game_id, verdict: 'insufficient_data', reason: '가격 이력이 부족해 판단하기 어려워요.',
+      current_krw: null, lowest_krw: null, lowest_date: null, vs_lowest_pct: null, sale_count_2y: null,
+    };
+  }
   const t = today(g), low = lowestOf(g), ev = saleEvents(g.history);
   const pred = prediction(g);
   const nearLow = t.price_krw <= low.price_krw * 1.05;
@@ -60,6 +68,12 @@ function timing(g) {
 
 function prediction(g) {
   const ev = saleEvents(g.history);
+  if (noPcHistory(g) || ev.length < 2) {
+    return {
+      game_id: g.game_id, avg_sale_interval_days: null, next_sale_expected: null, expected_discount_pct: null,
+      confidence: 'insufficient_data', basis: '가격 이력이 부족해 예측하기 어려워요.',
+    };
+  }
   const starts = ev.map((e) => new Date(e.start).getTime());
   const gaps = starts.slice(1).map((s, i) => (s - starts[i]) / 86400000);
   const avg = gaps.length ? Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length) : 60;
@@ -114,6 +128,7 @@ function search(q) {
   }
   if (q.platform) list = list.filter((g) => g.platforms.includes(q.platform));
   if (q.genre) list = list.filter((g) => g.genres.includes(q.genre));
+  if (q.tag) list = list.filter((g) => g.tags.includes(q.tag));
   if (q.sort === 'price') list = [...list].sort((a, b) => today(a).price_krw - today(b).price_krw);
   if (q.sort === 'discount') list = [...list].sort((a, b) => (today(b).discount_pct || 0) - (today(a).discount_pct || 0));
   return list;
@@ -125,7 +140,7 @@ const routes = [
 
   // 인증 (구글 로그인은 모의 계정으로 대체)
   ['POST', /^\/api\/auth\/mock-login$/, () => {
-    state.user = { user_id: 1, email: 'gamer@example.com', name: '겜누리 사용자', picture: null };
+    state.user = { user_id: 1, email: 'gamer@example.com', name: '겜누리 사용자' };
     save(); return state.user;
   }],
   ['POST', /^\/api\/auth\/logout$/, () => { state.user = null; save(); return { ok: true }; }],
@@ -135,7 +150,7 @@ const routes = [
   ['PUT', /^\/api\/me\/steam$/, (m, q, b) => {
     need();
     if (!/^\d{17}$/.test(b.steam_id || '')) throw new ApiError(400, 'INVALID_STEAM_ID', 'Steam ID는 17자리 숫자예요');
-    state.steam_id = b.steam_id; save(); return { steam_id: b.steam_id };
+    state.steam_id = b.steam_id; save(); return { steam_id: b.steam_id, owned_games: 126 };
   }],
 
   // 게임
@@ -145,18 +160,20 @@ const routes = [
   })],
   ['GET', /^\/api\/games\/popular$/, () => ({ items: [...GAMES].sort((a, b) => b.concurrent_players - a.concurrent_players || b.positive_ratio - a.positive_ratio).slice(0, 8).map(card) })],
   ['GET', /^\/api\/games\/deals$/, () => ({
-    items: GAMES.filter((g) => today(g).discount_pct >= 10).sort((a, b) => today(b).discount_pct - today(a).discount_pct).map(card),
+    // 할인 중 = 새 상품 최저가의 discount_pct > 0, 할인율 큰 순. 로그인 없이 보는 목록이라 wished는 항상 false.
+    items: GAMES.filter((g) => today(g).discount_pct > 0).sort((a, b) => today(b).discount_pct - today(a).discount_pct)
+      .slice(0, 20).map((g) => ({ ...card(g), wished: false })),
   })],
-  ['GET', /^\/api\/games\/short$/, () => ({ items: [...GAMES].filter((g) => g.time_to_beat_hours <= 30).sort((a, b) => a.time_to_beat_hours - b.time_to_beat_hours).map(card) })],
+  ['GET', /^\/api\/games\/short$/, () => ({ items: [...GAMES].filter((g) => g.time_to_beat_hours <= 10).sort((a, b) => a.time_to_beat_hours - b.time_to_beat_hours).map(card) })],
   ['GET', /^\/api\/games\/players\/top$/, () => ({
     items: [...GAMES].filter((g) => g.concurrent_players > 0).sort((a, b) => b.concurrent_players - a.concurrent_players).slice(0, 6).map(card),
   })],
   ['GET', /^\/api\/games\/players\/low$/, () => ({
-    items: GAMES.filter((g) => g.online_only).map((g) => ({ ...card(g), warning: '접속자가 적어 매칭이 어려울 수 있어요' })),
+    items: GAMES.filter((g) => g.online_only && g.concurrent_players < 1000).sort((a, b) => a.concurrent_players - b.concurrent_players).map((g) => ({ ...card(g), warning: '접속자가 적어 매칭이 어려울 수 있어요' })),
   })],
   ['GET', /^\/api\/genres$/, () => ({ items: GENRES })],
   ['GET', /^\/api\/tags$/, () => ({ items: TAGS })],
-  ['GET', /^\/api\/exchange-rates$/, () => ({ base: 'KRW', rates: { USD: 1385.2, EUR: 1502.8, JPY: 9.21 }, updated_at: '2026-11-21T00:00:00Z' })],
+  ['GET', /^\/api\/exchange-rates$/, () => ({ base: 'KRW', rates: { USD: 1385.2, EUR: 1502.8, GBP: 1760.4 }, updated_at: '2026-11-21T00:00:00Z' })],
 
   ['GET', /^\/api\/games\/(\d+)$/, (m) => {
     const g = game(m[1]);
@@ -166,16 +183,32 @@ const routes = [
   }],
   ['GET', /^\/api\/games\/(\d+)\/prices$/, (m) => {
     const g = game(m[1]); const items = currentPrices(g);
-    const low = items.reduce((a, b) => (b.price_krw < a.price_krw ? b : a), items[0]);
-    return { game_id: g.game_id, items, lowest: { store: low.store, price_krw: low.price_krw } };
+    // lowest = 새 상품 최저가 (api.md '현재가' 정의). 새 상품이 없으면 null.
+    const news = items.filter((i) => i.item_condition === 'new');
+    const low = news.reduce((a, b) => (!a || b.price_krw < a.price_krw ? b : a), null);
+    return {
+      game_id: g.game_id, items,
+      lowest: low && { store: low.store, edition: low.edition, platform: low.platform, item_condition: low.item_condition, price_krw: low.price_krw },
+    };
   }],
   ['GET', /^\/api\/games\/(\d+)\/history$/, (m, q) => {
     const g = game(m[1]); const days = Number(q.days || 180);
-    return { game_id: g.game_id, days, items: g.history.slice(-days) };
+    // 필터를 안 주면 모든 시리즈를 합쳐 준다 (실제 Backend와 같게).
+    const platform = q.platform || null, item_condition = q.item_condition || null;
+    const combos = g.platforms.flatMap((p) => ['new', 'used'].filter((c) => !(p === 'PC' && c === 'used')).map((c) => [p, c]))
+      .filter(([p, c]) => (!platform || p === platform) && (!item_condition || c === item_condition));
+    const items = combos.flatMap(([p, c]) => historySeries(g, p, c).slice(-days));
+    return { game_id: g.game_id, days, platform, item_condition, items };
   }],
   ['GET', /^\/api\/games\/(\d+)\/lowest$/, (m) => {
-    const g = game(m[1]); const l = lowestOf(g);
-    return { game_id: g.game_id, price_krw: l.price_krw, date: l.date, discount_pct: l.discount_pct };
+    // platform·item_condition별 역대 최저가 (콘솔은 수집 이후 최저가)
+    const g = game(m[1]);
+    const items = g.platforms.flatMap((p) => ['new', 'used'].filter((c) => !(p === 'PC' && c === 'used')).map((c) => {
+      const ser = historySeries(g, p, c);
+      const l = ser.reduce((a, b) => (b.price_krw < a.price_krw ? b : a), ser[0]);
+      return { platform: p, item_condition: c, store: l.store, edition: l.edition, price_krw: l.price_krw, regular_krw: l.regular_krw, discount_pct: l.discount_pct, date: l.collected_at.slice(0, 10) };
+    }));
+    return { game_id: g.game_id, items };
   }],
   ['GET', /^\/api\/games\/(\d+)\/timing$/, (m) => timing(game(m[1]))],
   ['GET', /^\/api\/games\/(\d+)\/prediction$/, (m) => prediction(game(m[1]))],
@@ -233,9 +266,9 @@ const routes = [
   }],
   ['GET', /^\/api\/me\/alerts\/logs$/, () => { need(); return { items: state.alert_logs, total: state.alert_logs.length }; }],
   ['GET', /^\/api\/me\/notifications$/, () => { need(); return state.notifications; }],
-  ['PUT', /^\/api\/me\/notifications$/, (m, q, b) => { need(); state.notifications = { ...state.notifications, ...b }; save(); return state.notifications; }],
-  ['GET', /^\/api\/me\/specs$/, () => { need(); return state.specs || { cpu: '', gpu: '', ram_gb: null }; }],
-  ['PUT', /^\/api\/me\/specs$/, (m, q, b) => { need(); state.specs = { cpu: b.cpu || '', gpu: b.gpu || '', ram_gb: b.ram_gb ? Number(b.ram_gb) : null }; save(); return state.specs; }],
+  ['PUT', /^\/api\/me\/notifications$/, (m, q, b) => { need(); state.notifications = { email_enabled: !!b.email_enabled }; save(); return state.notifications; }],
+  ['GET', /^\/api\/me\/specs$/, () => { need(); return state.specs || { os: '', cpu: '', gpu: '', ram_gb: null }; }],
+  ['PUT', /^\/api\/me\/specs$/, (m, q, b) => { need(); state.specs = { os: b.os || '', cpu: b.cpu || '', gpu: b.gpu || '', ram_gb: b.ram_gb ? Number(b.ram_gb) : null }; save(); return state.specs; }],
 
   // 추천
   ['GET', /^\/api\/me\/taste$/, () => {
@@ -251,7 +284,7 @@ const routes = [
     need();
     if (!state.steam_id) throw new ApiError(400, 'STEAM_REQUIRED', 'Steam ID를 먼저 연동해 주세요');
     const picks = [GAMES[2], GAMES[7], GAMES[8], GAMES[6]];
-    return { items: picks.map((g, i) => ({ ...card(g), reason: ['RPG를 많이 플레이했어요', '소울라이크 취향과 비슷해요', '액션 플레이타임이 높아요', '클리어 시간이 짧아 부담 없어요'][i] })) };
+    return { items: picks.map((g, i) => ({ ...card(g), reason: ['RPG 장르를 많이 플레이했어요', '액션 장르를 많이 플레이했어요', '어드벤처 장르를 많이 플레이했어요', '시뮬레이션 장르를 많이 플레이했어요'][i] })) };
   }],
 
   // 검색·운영
