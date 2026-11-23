@@ -43,7 +43,7 @@ class Maps:
         self.alias = {k: int(v) for k, v in (data.get("alias") or {}).items()}
         self.changed = False
         self.sent_rates: set[str] = set()  # 이번 실행에서 이미 보낸 환율 "날짜:통화" (저장 안 함)
-        self.rates = RateBook()  # 월별 환율. main 이 rates_monthly.csv 로 채운다
+        self.rates = RateBook()  # 월별 환율. main 이 rates_monthly.json 으로 채운다
 
     def size(self) -> str:
         return f"itad {len(self.itad)}, steam {len(self.steam)}, alias {len(self.alias)}"

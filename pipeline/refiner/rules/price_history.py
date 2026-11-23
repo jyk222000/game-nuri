@@ -11,7 +11,8 @@
   - collected_at = 항목 timestamp 를 UTC "...Z" 로 (R04). 수집 시각이 아니라 가격이 바뀐 시각이다.
   - 원화 = 그 날짜가 속한 달의 환율 (rules/rates.py).
     price_original·currency_original 은 원본 그대로.
-  - 같은 이력을 다시 받아도 같은 행이 나온다 (멱등). 중복은 DB 유니크 키 + upsert 로 막는다.
+  - 같은 이력을 다시 받아도 같은 행이 나온다 (멱등). price_history 는 insert 라 줄이 겹칠 수 있고,
+    Backend 가 키 6개로 합친다 (backend/app/services/history.py).
 """
 
 from __future__ import annotations
@@ -115,7 +116,7 @@ def refine_price_history(
 
 
 def message_key(row: dict[str, Any]) -> str:
-    """키 = game_id:store:edition:platform:item_condition:collected_at (price_history 유니크 키)."""
+    """키 = game_id:store:edition:platform:item_condition:collected_at (Backend 합치기 기준)."""
     return ":".join(
         str(row[k])
         for k in ("game_id", "store", "edition", "platform", "item_condition", "collected_at")

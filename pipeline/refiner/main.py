@@ -10,7 +10,7 @@
      python -m refiner.main
        KAFKA_BOOTSTRAP            kafka1:9092,kafka2:9092,kafka3:9092   (필수)
        ID_MAP_PATH                시작 대응표 JSON 경로 (읽기만 한다)
-       RATES_PATH                 월별 환율 CSV (기본 refiner/rates_monthly.csv)
+       RATES_PATH                 월별 환율 JSON (기본 refiner/rates_monthly.json)
        ID_MAP_STATE_PATH          배운 대응표를 저장할 경로
                                   (예: /var/lib/game-nuri/refiner_id_map.json)
                                   비우면 저장하지 않는다 (재시작하면 다시 배워야 함)
