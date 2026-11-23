@@ -8,14 +8,15 @@
 
 | 파일 | 읽는 토픽 | 저장 위치 | 방식 | 등록 조건 |
 |---|---|---|---|---|
-| `jdbc-sink-games.json` | refined.games | `games` | upsert (game_id) | 바로 |
+| `jdbc-sink-games.json` | refined.games | `games` (IGDB 칸) | upsert (game_id) | 바로 |
+| `jdbc-sink-games-steam.json` | refined.games_steam | `games`의 `age_rating`·`korean_supported`·`is_online` | update (game_id) — 이미 있는 줄의 이 칸만 바꾼다. 줄이 없으면 아무것도 안 함(오류 아님) | 바로 |
 | `jdbc-sink-game-store-ids.json` | refined.game_store_ids | `game_store_ids` | upsert | 바로 |
 | `jdbc-sink-time-to-beat.json` | refined.time_to_beat | `game_time_to_beat` | upsert | 바로 |
 | `jdbc-sink-requirements.json` | refined.requirements | `game_requirements` | upsert | 바로 (시간 변환 추가) |
 | `jdbc-sink-player-counts.json` | refined.player_counts | `player_counts` | upsert | 바로 |
 | `jdbc-sink-review-summary.json` | refined.review_summary | `review_summaries` | upsert | 바로 (시간 변환 추가) |
 | `jdbc-sink-prices-current.json` | refined.prices | `prices_current` | upsert (game_id, store, edition, platform, item_condition) | `erd_alter_1122.sql` 적용 후 |
-| `jdbc-sink-price-history.json` | refined.prices, refined.price_history | `price_history` | upsert (유니크 키 game_id, store, edition, platform, item_condition, collected_at) | `erd_alter_1123.sql`(#48) 적용 후 |
+| `jdbc-sink-price-history.json` | refined.price_history | `price_history` | insert. 정제기가 ITAD 이력과 "가격이 바뀐 때"만 보낸다 | 바로 |
 | `jdbc-sink-game-platforms.json` | refined.game_platforms | `game_platforms` | upsert (game_id, platform) | 바로 |
 | `jdbc-sink-genres.json` · `companies` · `tags` · `game-series` · `game-aliases` · `exchange-rates` | 같은 이름의 refined.* | 같은 이름의 테이블 | upsert | 바로 |
 | `jdbc-sink-game-links.json` | refined.game_genres·game_companies·game_tags·game_series_map | 토픽 이름에서 `refined.`를 뗀 테이블 | upsert (모든 컬럼이 키) | 바로 |
@@ -64,4 +65,4 @@ curl -s http://kafka1:8083/connectors/<이름>/status          # 상태 (FAILED�
 
 - `mongo-sink-reviews`는 `raw.steam` 전체(사양·동접자·보유 게임 포함)를 `reviews`에 넣는다. 리뷰만 남기는 방법(정제에서 리뷰 전용 토픽으로 펼치기 등)을 정해야 한다.
 - 연결 테이블은 행을 지우지 않는다. 원본에서 빠진 장르·태그 등은 옛 행이 남는다.
-- `price_history`는 유니크 키 + upsert라 같은 메시지를 다시 받아도 한 줄만 남는다. 테이블 PK는 자동 번호 `id`이지만 MariaDB의 `ON DUPLICATE KEY UPDATE`가 유니크 키에도 걸린다.
+- `price_history`는 insert라 같은 메시지를 다시 받으면 줄이 겹칠 수 있다. Backend가 (game_id, store, edition, platform, item_condition, collected_at)으로 합친다 (#48).

@@ -44,6 +44,13 @@ def _contracts() -> dict[str, dict]:
         "refined.requirements": ("game_requirements", ["game_id"]),
         "refined.review_summary": ("review_summaries", ["game_id"]),
     }
+    optional = {  # 계약 PR이 먼저 merge되지 않았을 수 있다
+        "refined.games_steam": ("games", ["game_id"]),
+        "refined.price_history": ("price_history", []),
+    }
+    for topic, spec in optional.items():
+        if (MSG / f"{topic}.json").exists():
+            single[topic] = spec
     for topic, (table, pk) in single.items():
         ex = json.loads((MSG / f"{topic}.json").read_text(encoding="utf-8"))
         out[topic] = {
@@ -86,14 +93,19 @@ def test_jdbc_sink_matches_contract(name):
             assert CONTRACTS[t]["pk"] == CONTRACTS[t]["fields"], t
             assert CONTRACTS[t]["table"] == t.removeprefix("refined.")
         return
-    contract = CONTRACTS[topics[0]]
+    assert len(topics) == 1
+    contract = CONTRACTS.get(topics[0])
+    if contract is None:  # 계약 파일이 아직 main에 없음
+        pytest.skip(f"{topics[0]} 메시지 형식이 아직 main에 없음")
     if c["table.name.format"] == "price_history":
-        # refined.prices(수집 때마다) + refined.price_history(ITAD 이력)를 유니크 키로 upsert
-        assert topics[0] == "refined.prices"
-        assert c["insert.mode"] == "upsert"
-        assert c["pk.fields"].split(",") == contract["pk"] + ["collected_at"]
+        # 정제기가 ITAD 이력 + 가격이 바뀐 때만 보낸다. 자동 번호 id라 pk 없이 insert
+        assert topics == ["refined.price_history"]
+        assert c["insert.mode"] == "insert" and "pk.fields" not in c
+    elif c["insert.mode"] == "update":
+        # games_steam: 이미 있는 games 줄의 Steam 칸만 바꾼다
+        assert c["table.name.format"] == contract["table"]
+        assert c["pk.fields"].split(",") == contract["pk"]
     else:
-        assert len(topics) == 1
         assert c["table.name.format"] == contract["table"]
         assert c["insert.mode"] == "upsert"
         assert c["pk.fields"].split(",") == contract["pk"]
