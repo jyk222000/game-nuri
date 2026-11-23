@@ -13,6 +13,7 @@ from refiner.rules import (
     requirements,
     review_stats,
     steam_info,
+    stores,
 )
 from refiner.rules import price as price_rules
 from refiner.rules.normalize_title import normalize_title
@@ -24,6 +25,7 @@ OUT_TOPICS = {
     "prices": "refined.prices",
     "games": "refined.games",
     "requirements": "refined.requirements",
+    "stores": "refined.stores",  # ITAD 판매처 → stores (upsert)
     "review_stats": "refined.review_stats",  # Steam 리뷰 수·긍정률 (GetItems)
     "games_steam": "refined.games_steam",  # Steam → games 칼럼 3개 (update)
     "unmatched": "refined.unmatched",
@@ -55,6 +57,7 @@ class Maps:
         self.alias = {k: int(v) for k, v in (data.get("alias") or {}).items()}
         self.changed = False
         self.sent_rates: set[str] = set()  # 이번 실행에서 이미 보낸 환율 "날짜:통화" (저장 안 함)
+        self.sent_stores: set[str] = set()  # 이번 실행에서 이미 보낸 판매처 코드 (저장 안 함)
         self.rates = RateBook()  # 월별 환율. main 이 rates_monthly.json 으로 채운다
         self.last_prices = LastPrices()  # 지난번 가격 (main 이 PRICE_STATE_PATH 로 채운다)
         self.steam_info: dict[int, dict[str, Any]] = {}  # 게임별 마지막 Steam 값 (저장 안 함)
@@ -160,6 +163,9 @@ def route(envelope: dict[str, Any], maps: Maps) -> dict[str, Any]:
                 )
             if rows:
                 out += rate_messages(maps, day, ("USD", "EUR", "GBP"))
+                out += stores.store_messages(
+                    stores.shops_in(envelope.get("payload")), maps.sent_stores
+                )
         else:
             rows, unmatched = console.refine_console_price(
                 envelope, maps.alias.get, danawa_match.maps_matcher(maps)
@@ -220,6 +226,8 @@ def route(envelope: dict[str, Any], maps: Maps) -> dict[str, Any]:
         for r in rows:
             if r["currency_original"] not in (None, "KRW"):
                 out += rate_messages(maps, r["collected_at"], (r["currency_original"],))
+        if rows:
+            out += stores.store_messages(stores.shops_in(envelope.get("payload")), maps.sent_stores)
     elif kind == "review_summary":
         rows, unmatched = review_stats.refine_review_stats(envelope, maps.steam.get)
         out = [
