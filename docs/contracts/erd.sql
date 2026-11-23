@@ -20,6 +20,10 @@
 --   7) games: aggregated_rating, aggregated_rating_count (IGDB 평론 점수, A3 평론 vs 유저)
 --   8) game_platforms: release_date (플랫폼별 출시일, A6 콘솔→PC 지연, A8 경과 기간)
 --   이미 적용된 서버는 erd_alter_1122.sql로 바꾼다
+-- 11/23 추가
+--   9) price_history: 유니크 키 (game_id, store, edition, platform, item_condition, collected_at)
+--      ITAD 이력을 주마다 다시 받거나 같은 메시지가 두 번 와도 한 줄만 남게 (JDBC Sink upsert)
+--   이미 적용된 서버는 erd_alter_1123.sql로 바꾼다
 --
 -- 규칙 (구축 문서 4장)
 --   - 모든 테이블에 PRIMARY KEY
@@ -214,7 +218,8 @@ CREATE TABLE price_history (                     -- JDBC Sink insert
   url              VARCHAR(512),
   collected_at     DATETIME NOT NULL,
   INDEX idx_game_time (game_id, collected_at),
-  INDEX idx_game_platform_time (game_id, platform, item_condition, collected_at)
+  INDEX idx_game_platform_time (game_id, platform, item_condition, collected_at),
+  UNIQUE KEY uq_price_history (game_id, store, edition, platform, item_condition, collected_at)
 );
 
 CREATE TABLE exchange_rates (                    -- 원화 환산 기준 (정제 단계에서 사용)

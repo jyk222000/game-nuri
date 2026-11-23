@@ -7,7 +7,8 @@
 | `raw.steam` | collector (Steam 리뷰·사양(appdetails)·동접자·보유 게임) | refiner, Mongo Sink | `steam_appid` | 3 | 3 | 7일 |
 | `raw.igdb` | collector (IGDB 게임 정보·클리어 시간) | refiner, Mongo Sink | `igdb_id` | 3 | 3 | 7일 |
 | `refined.games` | refiner | JDBC Sink → `games` / Mongo Sink → `games` 컬렉션(→ Monstache → ES) | `game_id` | 3 | 3 | 3일 |
-| `refined.prices` | refiner | JDBC Sink → `prices_current`(upsert), `price_history`(insert) | `game_id:store:edition:platform:item_condition` | 3 | 3 | 3일 |
+| `refined.prices` | refiner | JDBC Sink → `prices_current`(upsert), `price_history`(upsert, 유니크 키 6개) | `game_id:store:edition:platform:item_condition` | 3 | 3 | 3일 |
+| `refined.price_history` | refiner (ITAD history/v2) | JDBC Sink → `price_history` (upsert, 유니크 키 `game_id,store,edition,platform,item_condition,collected_at`) | `game_id:store:edition:platform:item_condition:collected_at` | 3 | 3 | 3일 |
 | `refined.requirements` | refiner | JDBC Sink → `game_requirements` | `game_id` | 3 | 3 | 3일 |
 | `refined.review_summary` | review-summarizer (하루 1회) | JDBC Sink → `review_summaries` | `game_id` | 3 | 3 | 3일 |
 | `refined.genres` · `refined.companies` · `refined.tags` · `refined.game_series` | refiner (raw.igdb) | JDBC Sink → 같은 이름 테이블 (upsert) | 테이블 PK | 3 | 3 | 3일 |
@@ -22,6 +23,7 @@
 - 모든 메시지는 UTF-8 JSON.
 - raw.* 메시지는 아래 **공통 봉투(envelope)** 안에 원본을 그대로 담는다.
 - refined.* 메시지는 JDBC Sink가 읽을 수 있게 **JSON + schema** 형식으로 보낸다 (`messages/refined.prices.json` 참고).
+- ITAD 가격 이력은 `raw.price`에 kind `price_history`로 보낸다 (`messages/raw.price_history.json`). 원화는 그 달 환율(월평균)로 정제에서 환산한다.
 - 예시: `messages/` 폴더. 한 게임이 여러 행이 되는 토픽 14개는 `messages/refined.links.json` 한 파일에 모았다. Python 모델: `shared/gamenuri_common/messages.py`
 
 ## raw 공통 봉투
@@ -29,7 +31,7 @@
 {
   "schema_version": 1,
   "source": "itad | danawa | steam | igdb",
-  "kind": "price | console_price | review | owned_games | game_info | app_details | player_count | time_to_beat",
+  "kind": "price | price_history | console_price | review | owned_games | game_info | app_details | player_count | time_to_beat",
   "collected_at": "2026-11-19T02:30:00Z",
   "request": { "url": "...", "params": {} },
   "payload": { "...API 응답 원본 그대로..." }

@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 Source = Literal["itad", "danawa", "steam", "igdb"]
 Kind = Literal[
     "price",
+    "price_history",
     "console_price",
     "review",
     "owned_games",

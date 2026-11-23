@@ -1,0 +1,22 @@
+{
+  "_comment": "ITAD games/history/v2 응답을 게임 1개 단위로 담는다. payload.id = ITAD id, history = 응답 항목 그대로 (가격 통화는 주로 USD). 처음 1번 + 주 1번 수집. lookup에 쓴 Steam appid는 request.params.appid.",
+  "schema_version": 1,
+  "source": "itad",
+  "kind": "price_history",
+  "collected_at": "2026-11-23T04:00:00Z",
+  "request": { "url": "https://api.isthereanydeal.com/games/history/v2", "params": { "id": "018d937f-590c-728b-ac35-38bcff85f086", "appid": "1245620" } },
+  "payload": {
+    "id": "018d937f-590c-728b-ac35-38bcff85f086",
+    "history": [
+      {
+        "timestamp": "2022-10-02T05:10:46+02:00",
+        "shop": { "id": 61, "name": "Steam" },
+        "deal": {
+          "price": { "amount": 29.99, "amountInt": 2999, "currency": "USD" },
+          "regular": { "amount": 59.99, "amountInt": 5999, "currency": "USD" },
+          "cut": 50
+        }
+      }
+    ]
+  }
+}
