@@ -1,0 +1,20 @@
+# /etc/systemd/system/kafka-connect.service  (kafka1~3)
+[Unit]
+Description=Kafka Connect (distributed)
+After=network-online.target kafka.service
+Wants=network-online.target
+
+[Service]
+User=kafka
+Group=kafka
+Environment="KAFKA_HEAP_OPTS=-Xms512m -Xmx512m"
+Environment="KAFKA_OPTS=-Djava.net.preferIPv4Stack=true"
+Environment="LOG_DIR=/DATA/connect-applog"
+ExecStart=/opt/kafka/bin/connect-distributed.sh /etc/kafka/connect-distributed.properties
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=10
+LimitNOFILE=100000
+
+[Install]
+WantedBy=multi-user.target

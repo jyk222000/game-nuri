@@ -1,0 +1,10 @@
+# /etc/systemd/system/kafka-log-cleanup.timer  (5대 공통)
+[Unit]
+Description=Daily Kafka app log cleanup
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target

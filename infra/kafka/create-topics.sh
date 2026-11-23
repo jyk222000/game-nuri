@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # kafka1에서 실행. docs/contracts/topics.md 와 일치
+# min.insync.replicas는 브로커 기본값(2)을 따른다. 토픽에 따로 넣지 않는다:
+# 2대 장애 때 브로커 기본값만 바꿔 1대 운영으로 전환하는 절차(README 6장)가 토픽 설정에 막히지 않게 하려는 것이다.
 set -euo pipefail
 BS=kafka1:9092,kafka2:9092,kafka3:9092
 create() { kafka-topics.sh --bootstrap-server $BS --create --if-not-exists --topic "$1" --partitions 3 --replication-factor 3 --config retention.ms="$2"; }

@@ -1,0 +1,19 @@
+# /etc/systemd/system/node-exporter.service  (모든 VM 공통, 포트 9100)
+# 바이너리: prometheus/node_exporter 1.13.1 → /usr/local/bin/node_exporter (install -m 0755)
+# 게이트웨이 VM(monitoring, proxy)은 외부 주소에 열리지 않게 --web.listen-address에 내부 주소를 준다.
+#   예) monitoring: --web.listen-address=10.0.2.1:9100
+# --collector.textfile.directory: 다른 프로그램이 남긴 *.prom 파일을 지표로 낸다 (kafka1: Connect 작업 상태).
+# --collector.systemd: Kafka 서비스 상태(active/inactive/failed)를 지표로 낸다. 다른 VM은 unit-include를 바꾼다.
+[Unit]
+Description=Prometheus node exporter
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=node_exporter
+ExecStart=/usr/local/bin/node_exporter --web.listen-address=:9100 --collector.textfile.directory=/var/lib/node_exporter/textfile --collector.systemd --collector.systemd.unit-include=(kafka|kafka-connect|kafka-exporter)\.service
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

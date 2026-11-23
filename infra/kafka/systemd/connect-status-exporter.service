@@ -1,0 +1,10 @@
+# /etc/systemd/system/connect-status-exporter.service  (kafka1만)
+# 스크립트: /usr/local/bin/connect-status-exporter.sh (infra/kafka/connect-status-exporter.sh, install -m 0755)
+# node_exporter에 --collector.textfile.directory=/var/lib/node_exporter/textfile 를 추가해야 지표가 보인다.
+[Unit]
+Description=Export Kafka Connect task status for node_exporter
+
+[Service]
+Type=oneshot
+User=node_exporter
+ExecStart=/usr/local/bin/connect-status-exporter.sh

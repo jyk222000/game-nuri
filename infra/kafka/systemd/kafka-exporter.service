@@ -1,0 +1,15 @@
+# /etc/systemd/system/kafka-exporter.service  (kafka1만, 포트 9308)
+# 바이너리: danielqsj/kafka_exporter 1.11.0 → /usr/local/bin/kafka_exporter (install -m 0755로 복사, SELinux 레이블 때문에 mv 금지)
+[Unit]
+Description=Kafka exporter for Prometheus
+After=network-online.target kafka.service
+Wants=network-online.target
+
+[Service]
+User=kafka_exporter
+ExecStart=/usr/local/bin/kafka_exporter --kafka.server=kafka1:9092 --kafka.server=kafka2:9092 --kafka.server=kafka3:9092 --web.listen-address=:9308
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
