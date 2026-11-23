@@ -1,0 +1,83 @@
+{
+  "_comment": "refined.price_history: ITAD 가격 이력 한 항목 = price_history 한 행. 필드는 refined.prices와 같다(PC·new·digital). collected_at은 가격이 바뀐 시각(UTC Z), price_krw는 그 달 월평균 환율로 환산, price_original·currency_original은 원본. 키 = game_id:store:edition:platform:item_condition:collected_at. price_history에는 유니크 키가 없어(insert) 같은 이력을 다시 받으면 줄이 겹칠 수 있고, Backend가 (game_id, store, edition, platform, item_condition, collected_at)으로 합친다 (backend/app/services/history.py).",
+  "schema": {
+    "type": "struct",
+    "name": "refined_price",
+    "fields": [
+      {
+        "field": "game_id",
+        "type": "int64",
+        "optional": false
+      },
+      {
+        "field": "store",
+        "type": "string",
+        "optional": false
+      },
+      {
+        "field": "edition",
+        "type": "string",
+        "optional": false
+      },
+      {
+        "field": "platform",
+        "type": "string",
+        "optional": false
+      },
+      {
+        "field": "item_condition",
+        "type": "string",
+        "optional": false
+      },
+      {
+        "field": "price_krw",
+        "type": "int32",
+        "optional": false
+      },
+      {
+        "field": "regular_krw",
+        "type": "int32",
+        "optional": true
+      },
+      {
+        "field": "discount_pct",
+        "type": "int32",
+        "optional": true
+      },
+      {
+        "field": "price_original",
+        "type": "double",
+        "optional": true
+      },
+      {
+        "field": "currency_original",
+        "type": "string",
+        "optional": true
+      },
+      {
+        "field": "url",
+        "type": "string",
+        "optional": true
+      },
+      {
+        "field": "collected_at",
+        "type": "string",
+        "optional": false
+      }
+    ]
+  },
+  "payload": {
+    "game_id": 119133,
+    "store": "steam",
+    "edition": "digital",
+    "platform": "PC",
+    "item_condition": "new",
+    "price_krw": 42768,
+    "regular_krw": 85550,
+    "discount_pct": 50,
+    "price_original": 29.99,
+    "currency_original": "USD",
+    "url": null,
+    "collected_at": "2022-10-02T03:10:46Z"
+  }
+}
