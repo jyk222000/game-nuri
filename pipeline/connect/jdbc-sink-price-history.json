@@ -13,11 +13,6 @@
     "auto.create": "false",
     "value.converter": "org.apache.kafka.connect.json.JsonConverter",
     "value.converter.schemas.enable": "true",
-    "transforms": "ts",
-    "transforms.ts.type": "org.apache.kafka.connect.transforms.TimestampConverter$Value",
-    "transforms.ts.field": "collected_at",
-    "transforms.ts.target.type": "Timestamp",
-    "transforms.ts.format": "yyyy-MM-dd'T'HH:mm:ssX",
     "tasks.max": "3"
   }
 }

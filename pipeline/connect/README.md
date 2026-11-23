@@ -10,7 +10,7 @@
 | `jdbc-sink-price-history.json` | refined.prices | MariaDB `price_history` | insert | ERD 적용 후 |
 | `jdbc-sink-requirements.json` | refined.requirements | MariaDB `game_requirements` | upsert (game_id) | ERD 적용 후 |
 | `jdbc-sink-review-summary.json` | refined.review_summary | MariaDB `review_summaries` | upsert (game_id) | ERD 적용 후 |
-| `mongo-sink-raw.json` | raw.* | MongoDB `raw` | 원본 그대로 | MongoDB 계정 |
+| `mongo-sink-raw.json` | raw.* | MongoDB `raw_itad`·`raw_danawa`·`raw_steam`·`raw_igdb` (토픽별) | 원본 그대로 + `ingested_at` | MongoDB 계정 |
 | `mongo-sink-games.json` | refined.games | MongoDB `games` (→ Monstache → ES) | game_id 기준 교체 | MongoDB 계정 |
 | `mongo-sink-reviews.json` | raw.steam | MongoDB `reviews` | 원본 그대로 | 아래 "남은 문제" 확인 후 |
 | `es-sink-clickstream.json` | clickstream | ES `clickstream` | 이벤트 저장 | ES 플러그인 설치 후 |
@@ -38,7 +38,10 @@ curl -s http://kafka1:8083/connectors/<이름>/status          # 상태 (FAILED�
 ## 설정 값의 이유
 
 - `dialect.name: MySqlDatabaseDialect` — JDBC 커넥터는 `jdbc:mariadb://` 주소로 DB 종류를 알아내지 못한다. 지정하지 않으면 upsert가 동작하지 않는다.
-- `transforms.ts` (TimestampConverter) — 메시지의 시간은 팀 규칙대로 `2026-11-19T02:30:00Z` 문자열이고 테이블 컬럼은 `DATETIME`이다. 넣기 직전에 날짜로 바꾼다. **형식은 초 단위 + `Z`만 받는다.** 소수점 초(`02:30:00.123456Z`)가 오면 변환에 실패하므로, 정제 쪽은 초 단위로 잘라 보낸다.
+- 시간 형식 — 정제 규칙표 R04대로 `refined.*`의 시간은 UTC `YYYY-MM-DD HH:MM:SS` 문자열로 온다. MariaDB가 이 형식을 `DATETIME`으로 그대로 받으므로 변환 설정을 두지 않는다. `2026-11-19T02:30:00Z`처럼 `T`·`Z`가 붙은 형식이 오면 적재가 실패한다.
+- `topic.override.<토픽>.collection` — 원본은 출처별 컬렉션에 나눠 담는다(MongoDB 구축 문서 4장 안). 목록에 없는 토픽이 오면 `raw_unknown`에 들어간다.
+- `ingested_at` (InsertField) — 저장 시각을 BSON Date로 넣는다. 원본의 `collected_at`은 문자열이라 TTL 인덱스가 동작하지 않기 때문이다. TTL을 쓸지는 컬렉션 확정 때 정한다.
+- `max.num.retries=3`, `retries.defer.timeout=5000` — MongoDB PRIMARY가 바뀌는 몇 초 동안의 쓰기 오류를 재시도로 넘긴다.
 - `auto.create: false` — 테이블은 ERD(`docs/contracts/erd.sql`)로만 만든다.
 - `value.converter.schemas.enable: true` — JDBC Sink는 컬럼 타입을 알아야 해서 `refined.*`는 JSON+schema 형식이다(`docs/contracts/messages/`).
 

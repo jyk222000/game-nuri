@@ -5,9 +5,18 @@
     "topics": "raw.price,raw.console,raw.steam,raw.igdb",
     "connection.uri": "${MONGO_URI}",
     "database": "gamenuri_raw",
-    "collection": "raw",
+    "collection": "raw_unknown",
+    "topic.override.raw.price.collection": "raw_itad",
+    "topic.override.raw.console.collection": "raw_danawa",
+    "topic.override.raw.steam.collection": "raw_steam",
+    "topic.override.raw.igdb.collection": "raw_igdb",
     "value.converter": "org.apache.kafka.connect.json.JsonConverter",
     "value.converter.schemas.enable": "false",
-    "tasks.max": "3"
+    "tasks.max": "3",
+    "transforms": "ingested",
+    "transforms.ingested.type": "org.apache.kafka.connect.transforms.InsertField$Value",
+    "transforms.ingested.timestamp.field": "ingested_at",
+    "max.num.retries": "3",
+    "retries.defer.timeout": "5000"
   }
 }
