@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from refiner.rules import console, game, links, requirements
+from refiner.rules import console, game, links, price_history, requirements
 from refiner.rules import price as price_rules
 from refiner.rules.normalize_title import normalize_title
+from refiner.rules.rates import RateBook
 
 # 출력 이름 → (환경변수로 바꿀 수 있는) 기본 토픽
 OUT_TOPICS = {
@@ -14,6 +15,7 @@ OUT_TOPICS = {
     "games": "refined.games",
     "requirements": "refined.requirements",
     "unmatched": "refined.unmatched",
+    "price_history": "refined.price_history",  # ITAD history/v2 → price_history
     # 한 게임이 여러 행이 되는 테이블 (rules/links.py, 토픽 이름 = refined.<이름>)
     **{name: f"refined.{name}" for name in links.LINK_FIELDS},
 }
@@ -40,7 +42,8 @@ class Maps:
         self.steam = {int(k): int(v) for k, v in (data.get("steam") or {}).items()}
         self.alias = {k: int(v) for k, v in (data.get("alias") or {}).items()}
         self.changed = False
-        self.sent_rates: set[str] = set()  # 이번 실행에서 이미 보낸 환율 날짜 (저장 안 함)
+        self.sent_rates: set[str] = set()  # 이번 실행에서 이미 보낸 환율 "날짜:통화" (저장 안 함)
+        self.rates = RateBook()  # 월별 환율. main 이 rates_monthly.json 으로 채운다
 
     def size(self) -> str:
         return f"itad {len(self.itad)}, steam {len(self.steam)}, alias {len(self.alias)}"
@@ -91,13 +94,30 @@ def steam_hint(envelope: dict[str, Any]) -> int | None:
 
     찾는 곳: payload.steam_appid, request.params.steam_appid / appid
     """
-    payload = envelope.get("payload") or {}
+    payload = envelope.get("payload")
+    payload = payload if isinstance(payload, dict) else {}
     params = (envelope.get("request") or {}).get("params") or {}
     for v in (payload.get("steam_appid"), params.get("steam_appid"), params.get("appid")):
         s = str(v).removeprefix("app/") if v is not None else ""
         if s.isdigit():
             return int(s)
     return None
+
+
+def rate_messages(
+    maps: Maps, day: str, currencies: tuple[str, ...]
+) -> list[tuple[str, str, dict[str, Any]]]:
+    """쓴 환율을 refined.exchange_rates 로 (날짜·통화마다 한 번)."""
+    out = []
+    for cur in currencies:
+        row = maps.rates.rate_row(cur, day) if day else None
+        if row is None:
+            continue
+        k = f"{row['rate_date']}:{cur}"
+        if k not in maps.sent_rates:
+            maps.sent_rates.add(k)
+            out.append(links.message("exchange_rates", row))
+    return out
 
 
 def route(envelope: dict[str, Any], maps: Maps) -> dict[str, Any]:
@@ -113,8 +133,9 @@ def route(envelope: dict[str, Any], maps: Maps) -> dict[str, Any]:
             hint = steam_hint(envelope)
             itad_id = (envelope.get("payload") or {}).get("id")
             known = itad_id in maps.itad
+            day = envelope.get("collected_at") or ""
             rows, unmatched = price_rules.refine_price(
-                envelope, lambda i: maps.resolve_itad(i, hint)
+                envelope, lambda i: maps.resolve_itad(i, hint), maps.rates.rates_for(day)
             )
             if rows and itad_id and not known:  # 새로 배운 ITAD id → game_store_ids
                 out.append(
@@ -123,12 +144,8 @@ def route(envelope: dict[str, Any], maps: Maps) -> dict[str, Any]:
                         {"game_id": rows[0]["game_id"], "store": "itad", "external_id": itad_id},
                     )
                 )
-            day = (envelope.get("collected_at") or "")[:10]
-            if rows and day and day not in maps.sent_rates:
-                maps.sent_rates.add(day)
-                out += links.exchange_rate_rows(
-                    envelope.get("collected_at"), price_rules.DEFAULT_RATES
-                )
+            if rows:
+                out += rate_messages(maps, day, ("USD", "EUR", "GBP"))
         else:
             rows, unmatched = console.refine_console_price(envelope, maps.alias.get)
             pcode = (envelope.get("payload") or {}).get("pcode")
@@ -159,6 +176,18 @@ def route(envelope: dict[str, Any], maps: Maps) -> dict[str, Any]:
             ("requirements", requirements.message_key(r), requirements.to_connect_message(r))
             for r in rows
         ]
+    elif kind == "price_history":
+        hint = steam_hint(envelope)
+        rows, unmatched = price_history.refine_price_history(
+            envelope, lambda i: maps.resolve_itad(i, hint), maps.rates
+        )
+        out = [
+            ("price_history", price_history.message_key(r), price_rules.to_connect_message(r))
+            for r in rows
+        ]
+        for r in rows:
+            if r["currency_original"] not in (None, "KRW"):
+                out += rate_messages(maps, r["collected_at"], (r["currency_original"],))
     elif kind == "time_to_beat":
         out, unmatched = links.refine_time_to_beat(envelope)
     elif kind == "player_count":
