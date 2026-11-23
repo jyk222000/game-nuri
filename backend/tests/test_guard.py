@@ -81,7 +81,7 @@ def test_writable_tables_are_not_blocked(session: Session) -> None:
 
 
 def test_every_read_only_model_is_covered() -> None:
-    assert len(READ_ONLY_MODELS) == 21
+    assert len(READ_ONLY_MODELS) == 22
 
 
 def test_direct_sql_is_not_caught_known_limit(session: Session) -> None:

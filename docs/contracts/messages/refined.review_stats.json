@@ -1,0 +1,65 @@
+{
+  "_comment": "refined.review_stats: Steam 스토어에 보이는 리뷰 수·긍정률 (raw.steam kind=review_summary, IStoreBrowseService/GetItems). 게임 1개 = 메시지 1개, 키 game_id. JDBC Sink → game_review_stats (upsert, pk game_id). *_ko = summary_language_specific(한국어 리뷰), *_all = summary_filtered(스토어 기본 표시, 전체 언어). 항목이 없으면 null. AI 요약(refined.review_summary → review_summaries)과는 다른 테이블이라 서로 덮어쓰지 않는다.",
+  "schema": {
+    "type": "struct",
+    "name": "refined_review_stats",
+    "fields": [
+      {
+        "field": "game_id",
+        "type": "int64",
+        "optional": false
+      },
+      {
+        "field": "review_count_ko",
+        "type": "int32",
+        "optional": true
+      },
+      {
+        "field": "positive_pct_ko",
+        "type": "int16",
+        "optional": true
+      },
+      {
+        "field": "review_score_ko",
+        "type": "int16",
+        "optional": true
+      },
+      {
+        "field": "review_label_ko",
+        "type": "string",
+        "optional": true
+      },
+      {
+        "field": "review_count_all",
+        "type": "int32",
+        "optional": true
+      },
+      {
+        "field": "positive_pct_all",
+        "type": "int16",
+        "optional": true
+      },
+      {
+        "field": "review_label_all",
+        "type": "string",
+        "optional": true
+      },
+      {
+        "field": "updated_at",
+        "type": "string",
+        "optional": false
+      }
+    ]
+  },
+  "payload": {
+    "game_id": 1877,
+    "review_count_ko": 24096,
+    "positive_pct_ko": 79,
+    "review_score_ko": 6,
+    "review_label_ko": "대체로 긍정적",
+    "review_count_all": 909213,
+    "positive_pct_all": 87,
+    "review_label_all": "매우 긍정적",
+    "updated_at": "2026-11-19T02:30:00Z"
+  }
+}

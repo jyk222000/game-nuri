@@ -20,6 +20,8 @@
 --   7) games: aggregated_rating, aggregated_rating_count (IGDB 평론 점수, A3 평론 vs 유저)
 --   8) game_platforms: release_date (플랫폼별 출시일, A6 콘솔→PC 지연, A8 경과 기간)
 --   이미 적용된 서버는 erd_alter_1122.sql로 바꾼다
+-- 11/23 추가
+--   9) game_review_stats: Steam 리뷰 수·긍정률 (GetItems). review_summaries와 따로 둔다 (29개)
 --
 -- 규칙 (구축 문서 4장)
 --   - 모든 테이블에 PRIMARY KEY
@@ -175,6 +177,18 @@ CREATE TABLE review_summaries (                  -- ES 키워드 + AI 요약 (�
   cons_keywords    VARCHAR(512),
   summary          VARCHAR(1000),
   generated_by     VARCHAR(16) NOT NULL,          -- ai | fallback
+  updated_at       DATETIME NOT NULL
+);
+
+CREATE TABLE game_review_stats (                 -- Steam 스토어 리뷰 수·긍정률 (⑤ 화면, A3, Kafka Connect: refined.review_stats)
+  game_id          BIGINT PRIMARY KEY,            -- review_summaries(AI 배치)와 나눈 이유: 한 테이블은 한 프로그램만 쓴다
+  review_count_ko  INT,                           -- GetItems summary_language_specific (한국어 리뷰, 스토어 표시값)
+  positive_pct_ko  SMALLINT,                      -- 0~100
+  review_score_ko  SMALLINT,                      -- Steam 등급 1~9
+  review_label_ko  VARCHAR(32),                   -- 예: 대체로 긍정적
+  review_count_all INT,                           -- GetItems summary_filtered (전체 언어)
+  positive_pct_all SMALLINT,
+  review_label_all VARCHAR(32),
   updated_at       DATETIME NOT NULL
 );
 

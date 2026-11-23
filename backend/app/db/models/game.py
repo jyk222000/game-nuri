@@ -202,3 +202,19 @@ class ReviewSummary(Base):
     summary: Mapped[str | None] = mapped_column(String(1000))
     generated_by: Mapped[str] = mapped_column(String(16))  # ai | fallback
     updated_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class GameReviewStats(Base):
+    """Steam 스토어 리뷰 수·긍정률 (GetItems). review_summaries(AI 요약)와 game_id로 붙인다."""
+
+    __tablename__ = "game_review_stats"
+
+    game_id: Mapped[int] = mapped_column(BigIntPk, primary_key=True, autoincrement=False)
+    review_count_ko: Mapped[int | None] = mapped_column(Integer)
+    positive_pct_ko: Mapped[int | None] = mapped_column(SmallInteger)
+    review_score_ko: Mapped[int | None] = mapped_column(SmallInteger)
+    review_label_ko: Mapped[str | None] = mapped_column(String(32))
+    review_count_all: Mapped[int | None] = mapped_column(Integer)
+    positive_pct_all: Mapped[int | None] = mapped_column(SmallInteger)
+    review_label_all: Mapped[str | None] = mapped_column(String(32))
+    updated_at: Mapped[datetime] = mapped_column(DateTime)

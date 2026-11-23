@@ -12,6 +12,7 @@
 | `refined.games_steam` | refiner (raw.steam app_details) | JDBC Sink → `games`의 `age_rating`·`korean_supported`·`is_online` (insert.mode=update, pk `game_id`) | `game_id` | 3 | 3 | 3일 |
 | `refined.requirements` | refiner | JDBC Sink → `game_requirements` | `game_id` | 3 | 3 | 3일 |
 | `refined.review_summary` | review-summarizer (하루 1회) | JDBC Sink → `review_summaries` | `game_id` | 3 | 3 | 3일 |
+| `refined.review_stats` | refiner (raw.steam review_summary = GetItems) | JDBC Sink → `game_review_stats` (upsert) | `game_id` | 3 | 3 | 3일 |
 | `refined.genres` · `refined.companies` · `refined.tags` · `refined.game_series` | refiner (raw.igdb) | JDBC Sink → 같은 이름 테이블 (upsert) | 테이블 PK | 3 | 3 | 3일 |
 | `refined.game_genres` · `refined.game_companies` · `refined.game_tags` · `refined.game_series_map` | refiner (raw.igdb) | JDBC Sink `jdbc-sink-game-links` → 같은 이름 테이블 (upsert) | 테이블 PK | 3 | 3 | 3일 |
 | `refined.game_platforms` · `refined.game_aliases` · `refined.game_store_ids` | refiner (raw.igdb, 가격 매칭) | JDBC Sink → 같은 이름 테이블 (upsert) | 테이블 PK | 3 | 3 | 3일 |
