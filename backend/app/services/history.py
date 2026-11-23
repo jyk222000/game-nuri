@@ -55,6 +55,8 @@ def get_history(
             HistoryItem(
                 store=r.store,
                 edition=r.edition,
+                platform=r.platform,
+                item_condition=r.item_condition,
                 collected_at=r.collected_at,
                 price_krw=r.price_krw,
                 regular_krw=r.regular_krw,

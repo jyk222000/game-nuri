@@ -35,6 +35,8 @@ class PricesOut(BaseModel):
 class HistoryItem(BaseModel):
     store: str
     edition: str
+    platform: str
+    item_condition: str
     collected_at: UtcDatetime
     price_krw: int
     regular_krw: int | None

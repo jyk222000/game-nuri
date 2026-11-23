@@ -35,6 +35,8 @@ def test_history_defaults_and_period(env) -> None:
     assert set(body["items"][0]) == {
         "store",
         "edition",
+        "platform",
+        "item_condition",
         "collected_at",
         "price_krw",
         "regular_krw",
@@ -57,10 +59,18 @@ def test_history_filters(env) -> None:
             ]
         )
     body = client.get("/api/games/119133/history?platform=PS5&item_condition=used").json()
+    assert (body["items"][0]["platform"], body["items"][0]["item_condition"]) == ("PS5", "used")
     assert body["platform"] == "PS5" and body["item_condition"] == "used"
     assert [i["price_krw"] for i in body["items"]] == [30000]
     both = client.get("/api/games/119133/history?platform=PS5").json()
     assert [i["price_krw"] for i in both["items"]] == [30000, 60000]
+    assert [i["item_condition"] for i in both["items"]] == ["used", "new"]  # 항목마다 구분 가능
+    mixed = client.get("/api/games/119133/history").json()["items"]  # 필터 없이도 플랫폼 구분
+    assert {(i["platform"], i["item_condition"]) for i in mixed} == {
+        ("PC", "new"),
+        ("PS5", "used"),
+        ("PS5", "new"),
+    }
 
 
 def test_history_dedup_keeps_latest_row(env) -> None:
