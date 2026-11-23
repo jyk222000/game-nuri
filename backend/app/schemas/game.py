@@ -54,3 +54,13 @@ class GameDetail(Card):
     steam_app_id: int | None  # game_store_ids(store='steam')
     lowest_krw: int | None  # 새 상품 역대 최저가 (이력·현재가 중 최저)
     insights: list[dict]  # analysis가 만드는 태그. 모양이 정해질 때까지 항상 빈 목록
+
+
+class WarningCard(Card):
+    """접속자 적은 온라인 게임(#33) 카드: 카드 + 경고 문구."""
+
+    warning: str
+
+
+class WarningCardsOut(BaseModel):
+    items: list[WarningCard]

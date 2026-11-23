@@ -11,9 +11,16 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_read_db
-from app.schemas.game import AutocompleteOut, GameDetail, NameListOut, SearchOut
+from app.schemas.game import (
+    AutocompleteOut,
+    CardsOut,
+    GameDetail,
+    NameListOut,
+    SearchOut,
+    WarningCardsOut,
+)
 from app.schemas.profile import RequirementsOut
-from app.services import catalog, detail, requirements, search
+from app.services import catalog, detail, rankings, requirements, search
 
 router = APIRouter(prefix="/api")
 
@@ -53,6 +60,30 @@ def autocomplete(
     limit: Annotated[int, Query(ge=1, le=20)] = 10,
 ) -> AutocompleteOut:
     return AutocompleteOut(items=search.autocomplete(db, q.strip(), limit))
+
+
+# ---- #9 인기, #25 짧게 끝낼 게임, #32·#33 동접자 ----
+Size = Annotated[int, Query(ge=1, le=100)]
+
+
+@router.get("/games/popular", response_model=CardsOut)
+def popular_games(db: Db, size: Size = 20) -> CardsOut:
+    return CardsOut(items=rankings.popular(db, size))
+
+
+@router.get("/games/short", response_model=CardsOut)
+def short_games(db: Db, size: Size = 20) -> CardsOut:
+    return CardsOut(items=rankings.short_games(db, size))
+
+
+@router.get("/games/players/top", response_model=CardsOut)
+def top_players(db: Db, size: Size = 20) -> CardsOut:
+    return CardsOut(items=rankings.top_players(db, size))
+
+
+@router.get("/games/players/low", response_model=WarningCardsOut)
+def low_players(db: Db, size: Size = 20) -> WarningCardsOut:
+    return WarningCardsOut(items=rankings.low_players(db, size))
 
 
 # ---- (고정 경로 라우트는 이 줄 위에 추가한다) ----
