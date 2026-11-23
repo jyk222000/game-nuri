@@ -6,6 +6,7 @@ from app.db.models.game import (
     GameGenre,
     GamePlatform,
     GameRequirement,
+    GameReviewStats,
     GameSeries,
     GameSeriesMap,
     GameStoreId,
@@ -40,7 +41,7 @@ WRITABLE_MODELS = (
     AlertLog,
 )
 
-# Backend가 조회만 하는 테이블 (21개). 코드에서 add·update·delete 하지 않는다.
+# Backend가 조회만 하는 테이블 (22개). 코드에서 add·update·delete 하지 않는다.
 READ_ONLY_MODELS = (
     Game,
     Platform,
@@ -60,6 +61,7 @@ READ_ONLY_MODELS = (
     GameRequirement,
     PlayerCount,
     ReviewSummary,
+    GameReviewStats,
     PriceCurrent,
     PriceHistory,
     ExchangeRate,
@@ -78,6 +80,7 @@ __all__ = [
     "GameGenre",
     "GamePlatform",
     "GameRequirement",
+    "GameReviewStats",
     "GameSeries",
     "GameSeriesMap",
     "GameStoreId",
