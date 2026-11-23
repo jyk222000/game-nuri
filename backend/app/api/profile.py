@@ -2,13 +2,15 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser, get_current_user
 from app.db.session import get_write_db
+from app.schemas.game import RecommendationsOut
+from app.schemas.me import TasteOut
 from app.schemas.profile import MeOut, MePatch, SpecsBody, SpecsOut, SteamBody, SteamOut
-from app.services import profile
+from app.services import profile, taste
 
 router = APIRouter(prefix="/api/me")
 
@@ -43,3 +45,15 @@ def get_specs(user: User, db: Db) -> SpecsOut:
 @router.put("/specs", response_model=SpecsOut)
 def put_specs(body: SpecsBody, user: User, db: Db) -> SpecsOut:
     return profile.put_specs(db, user.user_id, body)
+
+
+@router.get("/taste", response_model=TasteOut)
+def get_taste(user: User, db: Db) -> TasteOut:
+    return taste.get_taste(db, user.user_id)
+
+
+@router.get("/recommendations", response_model=RecommendationsOut)
+def get_recommendations(
+    user: User, db: Db, size: Annotated[int, Query(ge=1, le=50)] = 10
+) -> RecommendationsOut:
+    return RecommendationsOut(items=taste.recommend(db, user.user_id, size))

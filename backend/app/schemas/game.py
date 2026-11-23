@@ -64,3 +64,13 @@ class WarningCard(Card):
 
 class WarningCardsOut(BaseModel):
     items: list[WarningCard]
+
+
+class RecommendationCard(Card):
+    """추천(#23) 카드: 카드 + 추천 이유."""
+
+    reason: str
+
+
+class RecommendationsOut(BaseModel):
+    items: list[RecommendationCard]
