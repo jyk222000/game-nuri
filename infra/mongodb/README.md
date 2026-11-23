@@ -94,8 +94,8 @@ mongosh "mongodb://mongodb-pr:27017,mongo-se1:27017,mongo-se2:27017/gamenuri_raw
 - **현재 건너뛰는 항목 (2026-11-22 기준 추정, 실행 결과로 확인 필요)**
   - `raw` TTL: Sink가 `JsonConverter`(스키마 없음)로 저장하면 `collected_at`은 ISO 문자열(`"2026-11-19T02:30:00Z"`)이라 TTL이 동작하지 않는다.
     Connect에서 `TimestampConverter` 같은 변환으로 Date로 저장되는지 테스트가 필요하다(pipeline 담당, 미확인).
-  - `reviews` 고유 인덱스: Sink가 `raw.steam` 봉투 전체를 저장하고 리뷰는 `payload.reviews[]` 배열 안에 있다. 최상위 `recommendationid`가 없는 문서가 있으면 고유 인덱스가 `null` 중복으로 쓰기를 막는다.
-    refiner가 리뷰를 한 건씩 펼치기로 확정되면 그때 만든다.
+  - `reviews` 고유 인덱스: 리뷰는 1건 단위 봉투(kind=review)로 오고 Steam 리뷰 객체가 `payload` 안에 있어, 키는 `payload.recommendationid`다(2026-11-23 스크립트 수정, 인덱스 이름 `uq_payload_recommendationid`).
+    Sink가 `raw.steam` 전체(사양·동접자 포함)를 저장하는 동안은 `payload.recommendationid`가 없는 문서가 섞여 있어 건너뛴다. `kind=review`만 `reviews`에 넣고 `_id`를 `payload.recommendationid`로 쓰도록 Connect 설정이 바뀐 뒤(pipeline/connect, 남현식) 다시 실행한다.
   - `raw.steam`은 `raw`와 `reviews` 두 컬렉션에 중복 저장된다(Sink 2개). 용량 면에서 확정 필요(pipeline 담당).
 
 ## 계정 권한 (최소 권한 정리, 비밀번호 없음)
