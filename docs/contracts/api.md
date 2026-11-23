@@ -13,7 +13,7 @@
 | 2 | 인증 | 토큰 갱신·로그아웃 | `POST /api/auth/refresh, /api/auth/logout` | ⑧ | ✓ |
 | 3 | 인증 | 내 프로필 | `GET·PATCH /api/me` | ⑧ | ✓ |
 | 4 | 인증 | Steam ID 연동 | `PUT /api/me/steam` | ④ | ✓ |
-| 5 | 게임 | 검색 (한글 부분·오타) | `GET /api/games?q=&platform=&genre=` | 공통 |  |
+| 5 | 게임 | 검색 (한글 부분 일치, 오타 허용은 ES 연동 후) | `GET /api/games?q=&platform=&genre=` | 공통 |  |
 | 6 | 게임 | 자동완성 | `GET /api/games/autocomplete?q=` | 공통 |  |
 | 7 | 게임 | 상세 | `GET /api/games/{game_id}` | 공통 |  |
 | 8 | 게임 | 장르·태그 필터 | `GET /api/genres, /api/tags` | 공통 |  |
@@ -71,9 +71,17 @@
 | `INVALID_PRICE` | 400 | 목표가가 0 이하 |
 | `INVALID_STEAM_ID` | 400 | Steam ID가 17자리 숫자가 아님 |
 | `SPEC_REQUIRED` | 400 | PC 사양 미입력 상태에서 spec-check |
+| `STEAM_PROFILE_PRIVATE` | 400 | Steam 프로필·게임 세부 정보가 비공개라 보유 게임을 못 가져옴 |
 | `STEAM_REQUIRED` | 400 | Steam ID 미연동 상태에서 recommendations·taste |
 | `UNAVAILABLE` | 503 | Valkey(세션) 등 의존 서비스 장애 |
 | `INTERNAL` | 500 | 서버 오류 |
+
+### 서버 정의 (구현 기준, 2026-11-23)
+- `GET /api/games/{id}`의 `insights`는 **항상 `[]`** 이다(analysis 태그 형식 확정 전). `online_only` = `games.is_online`.
+- **인기(`popular`)**: 찜한 사용자 수가 많은 순, 같으면 최근 동접자 많은 순. 찜도 동접자도 있는 게임이 하나도 없어 결과가 비면 **최근 할인 중인 게임**(할인율 큰 순)으로 채운다.
+- **짧게 끝낼 게임(`short`)**: 보통 플레이 시간(`normally_sec`)이 10시간 이하인 게임, 짧은 순.
+- **접속자 적은 온라인 게임(`players/low`)**: `is_online`이고 최근 동접자가 1000 미만인 게임, 적은 순.
+- 공개 목록(`popular`·`short`·`players/*`·검색)은 로그인 없이 보는 목록이라 카드의 `wished`는 항상 `false`.
 
 ## 응답 예시
 ### 가격 키: `platform`, `item_condition` 추가 (목업 대비 변경)
@@ -116,7 +124,9 @@
 ```json
 { "user_id": 1, "email": "gamer@example.com", "name": "겜누리 사용자", "steam_id": "76561198000000000" }
 ```
-`PUT /api/me/steam` 본문 `{ "steam_id": "76561198000000000" }` → `{ "steam_id": "76561198000000000" }`
+`PUT /api/me/steam` 본문 `{ "steam_id": "76561198000000000" }` → `{ "steam_id": "76561198000000000", "owned_games": 126 }`
+- **Backend가 Steam `GetOwnedGames`를 직접 호출**해 `user_owned_games`에 `appid`·플레이 시간(분)만 저장한다(collector·pipeline은 관여하지 않음). 같은 ID로 다시 부르면 보유 게임을 새로 고친다(그 사용자의 기존 행을 교체). Steam 조회가 실패하면 Steam ID도 저장하지 않는다.
+- 프로필·게임 세부 정보가 **비공개**(Steam이 빈 응답)이면 400 `STEAM_PROFILE_PRIVATE`(메시지로 공개 설정을 안내). Steam 장애·키 미설정은 503 `UNAVAILABLE`.
 
 ### 게임
 카드 (`GET /api/games`, `popular`, `deals`, `short`, `players/top`, `players/low`, 찜 목록, 추천에 공통). `platforms`는 ERD 코드이고 **표시 이름은 프런트가 바꾼다.**
@@ -144,15 +154,22 @@
 ### 구매 타이밍
 `GET /api/games/119133/timing`
 ```json
-{ "game_id": 119133, "verdict": "buy_now", "reason": "역대 최저가에 가까운 가격이에요.", "current_krw": 47900,
-  "lowest_krw": 38900, "lowest_date": "2025-12-05", "vs_lowest_pct": 23, "sale_count_2y": 9 }
+{ "game_id": 119133, "verdict": "buy_now", "reason": "역대 최저가에 가까운 가격이에요. 지금 사도 손해가 적어요.", "current_krw": 40500,
+  "lowest_krw": 38900, "lowest_date": "2025-12-05", "vs_lowest_pct": 4, "sale_count_2y": 9 }
 ```
-`verdict`: `buy_now` | `neutral` | `wait` | (콘솔·이력 3건 미만) `insufficient_data` ← 마지막 값은 목업에 없는 값(확정)
+`verdict`: `buy_now` | `neutral` | `wait` | `insufficient_data` ← 마지막 값은 목업에 없는 값(확정)
+- **기준 이력은 PC·새 상품(`item_condition='new'`)** 이다. 하루에 여러 건이면 그날 최저가 한 줄만 쓴다. 따라서 **`current_krw`는 이 이력의 최신 값**이며, 카드의 현재가(플랫폼 무관 새 상품 최저가)와 **다를 수 있다.**
+- **`insufficient_data` 조건**: PC·새 상품 이력이 없거나(콘솔 전용 포함), **이력 일수가 3 미만**(하루 한 줄로 합친 뒤 날짜 수)일 때. 이때 `current_krw`, `lowest_krw`, `lowest_date`, `vs_lowest_pct`, `sale_count_2y`는 `null`이고 `reason`에 이유를 쓴다.
+- 판정 규칙(임시, analysis A1 확정 전 — 프런트 목업과 같음): 할인율 ≥ 30이고 가격이 역대 최저가의 105% 이하면 `buy_now`, 할인율 ≥ 10이면 `neutral`, 그 외 `wait`.
+- `reason` 문구는 프런트 목업(`router.js`)과 같다: `buy_now` "역대 최저가에 가까운 가격이에요. 지금 사도 손해가 적어요." / `neutral` "할인 중이지만 역대 최저가(N원)보다는 높아요. 급하지 않다면 더 기다려도 좋아요." / `wait` "정가에 가까워요." (다음 할인 예상일이 있으면 " 다음 할인은 YYYY-MM-DD 전후로 예상돼요." 추가). 예시 숫자(40,500 / 38,900)는 규칙(105% 이하)에 맞춘 값이다.
+
 `GET /api/games/119133/prediction`
 ```json
 { "game_id": 119133, "avg_sale_interval_days": 62, "next_sale_expected": "2026-12-21",
   "expected_discount_pct": 40, "confidence": "medium", "basis": "최근 2년 할인 9회 기준" }
 ```
+- **이력이 부족하거나 최근 2년 할인이 2회 미만이면** `confidence`는 `"insufficient_data"`이고 `avg_sale_interval_days`, `next_sale_expected`, `expected_discount_pct`는 `null`이다(`basis`에 이유). `confidence`: `high`(할인 8회 이상) | `medium`(4회 이상) | `low` | `insufficient_data`.
+- **예상일이 이미 지났으면** 오늘 + 14일로 계산한다.
 
 ### 찜·알림 (모두 ✓)
 `GET /api/me/wishlist` → `{ "items": [카드], "total": 1 }`
@@ -175,7 +192,7 @@
 
 ### 추천 (✓)
 `GET /api/me/taste` → `{ "total_playtime_hours": 1840, "owned_games": 126, "top_genres": [ { "genre": "액션", "pct": 38 } ], "style": "긴 호흡의 액션·RPG를 즐기는 탐험가형" }`
-`GET /api/me/recommendations` → `{ "items": [카드 + "reason": "RPG를 많이 플레이했어요"] }`
+`GET /api/me/recommendations` → `{ "items": [카드 + "reason": "RPG 장르를 많이 플레이했어요"] }` (`reason`은 `"<장르> 장르를 많이 플레이했어요"` 형식)
 
 ### 리뷰 — **미확정**
 리뷰 저장 구조(MongoDB `reviews`·ES, 팀 결정 대기)가 정해진 뒤 필드를 확정한다. 아래는 목업의 모양이고 확정이 아니다.
@@ -195,8 +212,8 @@
 ### 검색·운영
 `GET /api/search/trending` → `{ "window": "1h", "items": [ { "rank": 1, "query": "엘든 링", "count": 132, "change": "up" } ] }` (`change`: `up` | `down` | `same` | `new`)
 `GET /api/search/recent` → `{ "items": ["엘든 링", "하데스"] }`
-`POST /api/events` 본문 `{ "type": "search", "query": "...", "at": "...Z", ... }` → `{ "accepted": true }` (Kafka `clickstream`, 형식 `messages/clickstream.json`)
-`GET /api/stats/api-ranking` → `{ "items": [ { "rank": 1, "api": "GET /api/games", "calls": 18240 } ] }`
+`POST /api/events` 본문 `{ "type": "search", "query": "...", "at": "...Z", ... }` → `{ "accepted": true }`. **요청은 `type`/`at`, Kafka 메시지는 `messages/clickstream.json`(`event`/`occurred_at`)으로 변환해 `clickstream` 토픽에 보낸다.** `at`(브라우저 시각)은 받기만 하고 `occurred_at`은 서버 시각(UTC)으로 기록한다. `session_id`(선택)는 브라우저가 만든 익명 UUID이며 로그인 세션 쿠키 값과 무관하다. Kafka가 안 되면 200 `{"accepted": false}`.
+`GET /api/stats/api-ranking?size=10` → `{ "items": [ { "rank": 1, "api": "GET /api/games", "calls": 18240 } ], "status": "ok" }`. Backend가 Prometheus HTTP API(`PROMETHEUS_URL`)에서 `http_requests_total{handler,method}`의 최근 24시간 호출 수(`increase`)를 서버 1·2 합쳐 조회한다(`/api/health`·순위 API 자신은 제외). Prometheus 조회가 실패하면 200 `{ "items": [], "status": "degraded" }`.
 `GET /api/health` → `{ "status": "ok", "server": "backend1", "db_write": "ok", "db_read": "ok", "valkey": "ok", "es": "ok" }`. Replica·Valkey·ES가 안 되면 200 `"status": "degraded"`, Primary가 안 되면 503 `"status": "down"`
 
 ## 목업과 ERD가 달랐던 곳 (2026-11-23 결정 상태)
