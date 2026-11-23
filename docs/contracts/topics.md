@@ -7,8 +7,9 @@
 | `raw.steam` | collector (Steam 리뷰(**1건 = 메시지 1개**)·리뷰 요약(GetItems)·사양(appdetails)·동접자·보유 게임) | refiner, Mongo Sink | `steam_appid` | 3 | 3 | 7일 |
 | `raw.igdb` | collector (IGDB 게임 정보·클리어 시간) | refiner, Mongo Sink | `igdb_id` | 3 | 3 | 7일 |
 | `refined.games` | refiner | JDBC Sink → `games` / Mongo Sink → `games` 컬렉션(→ Monstache → ES) | `game_id` | 3 | 3 | 3일 |
-| `refined.prices` | refiner | JDBC Sink → `prices_current`(upsert), `price_history`(insert) | `game_id:store:edition:platform:item_condition` | 3 | 3 | 3일 |
-| `refined.price_history` | refiner (ITAD history/v2) | JDBC Sink → `price_history` (insert. 같은 줄이 여러 번 들어와도 Backend가 키 6개로 합친다) | `game_id:store:edition:platform:item_condition:collected_at` | 3 | 3 | 3일 |
+| `refined.prices` | refiner | JDBC Sink → `prices_current`(upsert) (이력은 `refined.price_history`로 따로 보낸다) | `game_id:store:edition:platform:item_condition` | 3 | 3 | 3일 |
+| `refined.price_history` | refiner (ITAD history/v2 + 지금 가격이 바뀐 때만) | JDBC Sink → `price_history` (insert, 이 토픽만 읽음. 같은 줄이 여러 번 들어와도 Backend가 키 6개로 합친다) | `game_id:store:edition:platform:item_condition:collected_at` | 3 | 3 | 3일 |
+| `refined.games_steam` | refiner (raw.steam app_details) | JDBC Sink → `games`의 `age_rating`·`korean_supported`·`is_online` (insert.mode=update, pk `game_id`) | `game_id` | 3 | 3 | 3일 |
 | `refined.requirements` | refiner | JDBC Sink → `game_requirements` | `game_id` | 3 | 3 | 3일 |
 | `refined.review_summary` | review-summarizer (하루 1회) | JDBC Sink → `review_summaries` | `game_id` | 3 | 3 | 3일 |
 | `refined.genres` · `refined.companies` · `refined.tags` · `refined.game_series` | refiner (raw.igdb) | JDBC Sink → 같은 이름 테이블 (upsert) | 테이블 PK | 3 | 3 | 3일 |
