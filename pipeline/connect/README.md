@@ -54,7 +54,7 @@ curl -s http://kafka1:8083/connectors/<이름>/status          # 상태 (FAILED�
 ## 설정 값의 이유
 
 - `dialect.name: MySqlDatabaseDialect` — JDBC 커넥터는 `jdbc:mariadb://` 주소로 DB 종류를 알아내지 못한다. 지정하지 않으면 upsert가 동작하지 않는다.
-- 시간 형식 — `refined.*`의 DATETIME 값은 UTC `2026-11-19T02:30:00Z` 문자열로 온다(refiner README). `TimestampConverter`(`transforms.ts`)가 DATETIME으로 바꿔 넣는다. 한 커넥터에 시간 필드가 하나씩이라 변환도 하나씩이다.
+- 시간 형식 — `refined.*`의 DATETIME 값은 UTC ISO 문자열로 온다. `TimestampConverter`(`transforms.ts`) 패턴은 `yyyy-MM-dd'T'HH:mm:ss`이고 **끝에 `X`를 붙이지 않는다.** Java `SimpleDateFormat`은 패턴 뒤에 남는 글자를 무시하고 TimestampConverter는 UTC로 읽어서, `2026-11-19T02:30:00Z`와 소수 초가 붙은 `2026-11-23T10:19:27.029971Z`(수집기 기본값)를 둘 다 받는다. 소수 초는 버려진다(DATETIME도 초 단위). UTC가 아닌 시간대(`+09:00`)로 오면 틀리게 저장되니 UTC로만 보낸다.
 - `jdbc-sink-game-links` — 연결 테이블 네 개는 모든 컬럼이 기본 키라 설정이 같다. `RegexRouter`로 토픽 이름(`refined.game_genres`)을 테이블 이름(`game_genres`)으로 바꾸고, `pk.fields`를 비워 모든 필드를 키로 쓴다.
 - `topic.override.<토픽>.collection` — 원본은 출처별 컬렉션에 나눠 담는다(MongoDB 구축 문서 4장 안). 목록에 없는 토픽이 오면 `raw_unknown`에 들어간다.
 - `ingested_at` (InsertField) — 저장 시각을 BSON Date로 넣는다. 원본의 `collected_at`은 문자열이라 TTL 인덱스가 동작하지 않기 때문이다. TTL을 쓸지는 컬렉션 확정 때 정한다.
