@@ -198,6 +198,7 @@ def test_router_routes_by_kind_and_ignores_unknown():
         "exchange_rates",
         "exchange_rates",
         "exchange_rates",
+        "stores",  # 이번 실행에서 처음 본 판매처
         "price_history",  # 처음 본 가격 = 이력의 첫 점
     ]
 

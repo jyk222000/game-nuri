@@ -48,6 +48,7 @@ def _contracts() -> dict[str, dict]:
         "refined.games_steam": ("games", ["game_id"]),
         "refined.price_history": ("price_history", []),
         "refined.review_stats": ("game_review_stats", ["game_id"]),
+        "refined.stores": ("stores", ["store"]),
     }
     for topic, spec in optional.items():
         if (MSG / f"{topic}.json").exists():
