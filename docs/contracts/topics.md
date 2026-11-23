@@ -4,7 +4,7 @@
 |---|---|---|---|---|---|---|
 | `raw.price` | collector (ITAD) | refiner, Mongo Sink | `itad_id` | 3 | 3 | 7일 |
 | `raw.console` | collector (다나와) | refiner, Mongo Sink | `danawa_pcode` | 3 | 3 | 7일 |
-| `raw.steam` | collector (Steam 리뷰·사양(appdetails)·동접자·보유 게임) | refiner, Mongo Sink | `steam_appid` | 3 | 3 | 7일 |
+| `raw.steam` | collector (Steam 리뷰(**1건 = 메시지 1개**)·리뷰 요약(GetItems)·사양(appdetails)·동접자·보유 게임) | refiner, Mongo Sink | `steam_appid` | 3 | 3 | 7일 |
 | `raw.igdb` | collector (IGDB 게임 정보·클리어 시간) | refiner, Mongo Sink | `igdb_id` | 3 | 3 | 7일 |
 | `refined.games` | refiner | JDBC Sink → `games` / Mongo Sink → `games` 컬렉션(→ Monstache → ES) | `game_id` | 3 | 3 | 3일 |
 | `refined.prices` | refiner | JDBC Sink → `prices_current`(upsert), `price_history`(insert) | `game_id:store:edition:platform:item_condition` | 3 | 3 | 3일 |
@@ -31,7 +31,7 @@
 {
   "schema_version": 1,
   "source": "itad | danawa | steam | igdb",
-  "kind": "price | price_history | console_price | review | owned_games | game_info | app_details | player_count | time_to_beat",
+  "kind": "price | price_history | console_price | review | review_summary | owned_games | game_info | app_details | player_count | time_to_beat",
   "collected_at": "2026-11-19T02:30:00Z",
   "request": { "url": "...", "params": {} },
   "payload": { "...API 응답 원본 그대로..." }

@@ -1,12 +1,31 @@
 {
+  "_comment": "kind=review: 리뷰 1건 = 메시지 1개 (Kafka 키 steam_appid). payload는 Steam 리뷰 객체 그대로 + steam_appid. 페이지 단위 필드(query_summary, total_matching, cursor)는 담지 않는다. 다른 kind(app_details, player_count, review_summary)의 예시는 raw.steam.review_summary.json 등 참고",
   "schema_version": 1,
   "source": "steam",
   "kind": "review",
   "collected_at": "2026-11-19T02:30:00Z",
-  "request": { "url": "https://store.steampowered.com/appreviews/1245620", "params": { "language": "koreana" } },
+  "request": {
+    "url": "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/",
+    "params": {
+      "appid": 1245620,
+      "input": { "appid": 1245620, "languages": ["koreana"], "filter": 1, "purchase_type": 1, "review_type": 0, "num_per_page": 100, "cursor": "*" }
+    }
+  },
   "payload": {
     "steam_appid": 1245620,
-    "query_summary": { "review_score_desc": "매우 긍정적", "total_positive": 0, "total_negative": 0 },
-    "reviews": [{ "recommendationid": "1", "review": "...", "voted_up": true, "timestamp_created": 1700000000 }]
+    "recommendationid": "240779675",
+    "language": "koreana",
+    "review": "...",
+    "voted_up": true,
+    "votes_up": 3,
+    "votes_funny": 0,
+    "weighted_vote_score": 0.52,
+    "timestamp_created": 1700000000,
+    "timestamp_updated": 1700000000,
+    "steam_purchase": true,
+    "received_for_free": false,
+    "refunded": false,
+    "written_during_early_access": false,
+    "author": { "playtime_forever": 3600, "playtime_at_review": 1800 }
   }
 }

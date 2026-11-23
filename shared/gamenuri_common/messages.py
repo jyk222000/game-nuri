@@ -16,6 +16,7 @@ Kind = Literal[
     "app_details",
     "player_count",
     "time_to_beat",
+    "review_summary",
 ]
 
 TOPIC_RAW = {"itad": "raw.price", "danawa": "raw.console", "steam": "raw.steam", "igdb": "raw.igdb"}
