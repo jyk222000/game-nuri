@@ -1,7 +1,7 @@
 {
   "name": "es-sink-clickstream",
   "config": {
-    "_comment": "Confluent Elasticsearch Sink 16.x (ES 8.x·9.x). 날짜별 인덱스 clickstream-YYYY.MM.dd. ES 계정은 .env의 ES_USER/ES_PASSWORD",
+    "_comment": "Confluent Elasticsearch Sink 16.x (ES 8.x·9.x). 날짜별 인덱스 clickstream-YYYY.MM.dd (TimestampRouter). 토픽 이름을 바꾸는 SMT는 flush.synchronously=true일 때만 된다(아니면 첫 메시지에서 작업 FAILED). ES 계정은 .env의 ES_USER/ES_PASSWORD",
     "connector.class": "io.confluent.connect.elasticsearch.ElasticsearchSinkConnector",
     "topics": "clickstream",
     "connection.url": "http://elk:9200",
@@ -16,6 +16,7 @@
     "transforms.daily.topic.format": "${topic}-${timestamp}",
     "transforms.daily.timestamp.format": "yyyy.MM.dd",
     "behavior.on.malformed.documents": "warn",
+    "flush.synchronously": "true",
     "max.retries": "5",
     "retry.backoff.ms": "1000",
     "tasks.max": "1"
