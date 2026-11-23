@@ -142,7 +142,7 @@ def test_console_price_new_only_and_filters():
     assert rows[0]["currency_original"] == "KRW" and rows[0]["edition"] == "physical"
     assert (
         refine_console_price(con(product_name="[호환] 닌텐도 엘든 링"), {}.get)[1][0]["reason"]
-        == "해외판·호환판 표기"
+        == "해외판"
     )
     assert rows[0]["platform"] == "PS5" and rows[0]["item_condition"] == "new"
     used, _ = refine_console_price(con(condition="used"), {"엘든 링": 1}.get)

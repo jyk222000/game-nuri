@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from refiner.rules import console, game, links, price_history, requirements
+from refiner.rules import console, danawa_match, game, links, price_history, requirements
 from refiner.rules import price as price_rules
 from refiner.rules.normalize_title import normalize_title
 from refiner.rules.rates import RateBook
@@ -147,7 +147,9 @@ def route(envelope: dict[str, Any], maps: Maps) -> dict[str, Any]:
             if rows:
                 out += rate_messages(maps, day, ("USD", "EUR", "GBP"))
         else:
-            rows, unmatched = console.refine_console_price(envelope, maps.alias.get)
+            rows, unmatched = console.refine_console_price(
+                envelope, maps.alias.get, danawa_match.maps_matcher(maps)
+            )
             pcode = (envelope.get("payload") or {}).get("pcode")
             if rows and pcode:
                 out.append(
