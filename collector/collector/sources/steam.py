@@ -1,4 +1,4 @@
-"""Steam: 사양(appdetails)·동접자·리뷰 → raw.steam  (키 불필요)
+"""Steam: 사양(appdetails)·동접자·리뷰·리뷰 요약 → raw.steam  (키 불필요)
 
 수집 대상은 `analysis/game_list/games_1000.csv`의 `steam_appid`.
 응답은 가공하지 않고 봉투(payload)에 그대로 담는다.
@@ -8,6 +8,7 @@
 | app_details | store.steampowered.com/api/appdetails (cc=kr, l=koreana) | 게임 1건 | 매일 |
 | player_count | ISteamUserStats/GetNumberOfCurrentPlayers | 게임 1건 | 1시간 |
 | review | IUserReviewsService/GetAppReviews (한국어, 최신순, 증분) | 리뷰 1건 | 매일 |
+| review_summary | IStoreBrowseService/GetItems (한국어, KR) | 게임 1건 | 매일 |
 
 모든 봉투의 `request.params.appid`에 appid를 넣는다 (정제기가 게임을 찾는 힌트).
 보유 게임(owned_games)은 사용자 요청에 따라 도는 흐름이라 아직 만들지 않았다.
@@ -33,14 +34,17 @@ USER_AGENT = "game-nuri-collector/0.1"
 APPDETAILS_URL = "https://store.steampowered.com/api/appdetails"
 PLAYERS_URL = "https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/"
 REVIEWS_URL = "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/"
+ITEMS_URL = "https://api.steampowered.com/IStoreBrowseService/GetItems/v1/"
 
 # 호출 종류별 (최소 간격 초, 429·5xx 때 첫 대기 초). appdetails는 5분 200회 정도가 한도라 느리게.
 LIMITS: dict[str, tuple[float, float]] = {
     "appdetails": (1.6, 30.0),
     "players": (0.3, 2.0),
     "reviews": (0.5, 5.0),
+    "items": (1.0, 5.0),
 }
 MAX_RETRIES = 3
+ITEMS_BATCH = 50  # GetItems 한 번에 보내는 게임 수
 REVIEWS_PER_PAGE = 100
 DEFAULT_MAX_REVIEWS = 500  # 게임당 한 번에 받는 새 리뷰 상한 (⑤ 요약에 필요한 양은 팀 결정 전)
 DEFAULT_GAMES_FILE = (
@@ -169,6 +173,58 @@ def collect_player_counts(
             ),
         )
     log.info("Steam 동접자 수집 완료: 성공 %d, 실패 %d", ok, failed)
+
+
+# ---------------------------------------------------------------- 리뷰 요약 (review_summary)
+def collect_review_summaries(
+    appids: list[int], client: SteamClient | None = None
+) -> Iterator[tuple[str, RawEnvelope]]:
+    """GetItems 응답의 `store_items[]` 원소를 게임 1건당 봉투 1개로 담는다 (가공 없음).
+
+    `reviews.summary_language_specific`(한국어, Steam 구매 기준)이 화면의 리뷰 수·긍정 비율·
+    평가 문구의 출처다. 한 번에 ITEMS_BATCH개씩 부르고, 한 묶음이 실패해도 계속한다.
+    """
+    client = client or SteamClient()
+    ok = missing = failed = 0
+    for i in range(0, len(appids), ITEMS_BATCH):
+        chunk = appids[i : i + ITEMS_BATCH]
+        request = {
+            "ids": [{"appid": a} for a in chunk],
+            "context": {"language": "koreana", "country_code": "KR"},
+            "data_request": {"include_reviews": True},
+        }
+        try:
+            body = client.get(
+                "items", ITEMS_URL, {"input_json": json.dumps(request, separators=(",", ":"))}
+            )
+        except SteamError as e:
+            failed += len(chunk)
+            log.warning("GetItems %d건 실패: %s", len(chunk), e)
+            continue
+        items = ((body or {}).get("response") or {}).get("store_items") or []
+        got: set[int] = set()
+        for item in items:
+            appid = item.get("appid")
+            if appid not in chunk or not (item.get("reviews") or {}).get(
+                "summary_language_specific"
+            ):
+                continue  # 응답에 없거나 리뷰 요약이 없는 게임 (출시 전·판매 중단)
+            got.add(appid)
+            ok += 1
+            yield (
+                str(appid),
+                RawEnvelope(
+                    source="steam",
+                    kind="review_summary",
+                    request={
+                        "url": ITEMS_URL,
+                        "params": {"appid": appid, "language": "koreana", "country_code": "KR"},
+                    },
+                    payload=item,
+                ),
+            )
+        missing += len(chunk) - len(got)
+    log.info("Steam 리뷰 요약 수집 완료: 성공 %d, 요약 없음 %d, 실패 %d", ok, missing, failed)
 
 
 # ---------------------------------------------------------------- 리뷰 (review, 증분)

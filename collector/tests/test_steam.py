@@ -194,3 +194,42 @@ def test_load_appids_from_real_list() -> None:
     assert len(ids) > 900
     assert ids[0] == 1091500
     assert steam.load_appids(limit=3) == ids[:3]
+
+
+# ---- review_summary (GetItems)
+def store_item(appid: int, ko: bool = True) -> dict[str, Any]:
+    reviews: dict[str, Any] = {"summary_filtered": {"review_count": 9}}
+    if ko:
+        reviews["summary_language_specific"] = {"review_count": 5, "percent_positive": 79}
+    return {"id": appid, "appid": appid, "name": "G", "reviews": reviews}
+
+
+def test_review_summary_one_envelope_per_game() -> None:
+    body = {"response": {"store_items": [store_item(10), store_item(20)]}}
+    c, s, _ = make_client([FakeResp(200, body)])
+    out = list(steam.collect_review_summaries([10, 20], client=c))
+    assert [k for k, _ in out] == ["10", "20"]
+    key, env = out[0]
+    assert (env.source, env.kind) == ("steam", "review_summary")
+    assert env.payload == store_item(10)  # 가공 없음
+    assert env.request["params"] == {"appid": 10, "language": "koreana", "country_code": "KR"}
+    sent = json.loads(s.calls[0]["params"]["input_json"])
+    assert sent["ids"] == [{"appid": 10}, {"appid": 20}]
+    assert sent["data_request"] == {"include_reviews": True}
+
+
+def test_review_summary_skips_missing_and_failed_batches() -> None:
+    body = {"response": {"store_items": [store_item(10), store_item(20, ko=False)]}}
+    c, _, _ = make_client([FakeResp(200, body)])
+    assert [k for k, _ in steam.collect_review_summaries([10, 20, 30], client=c)] == ["10"]
+
+
+def test_review_summary_batches_and_continues_after_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(steam, "ITEMS_BATCH", 2)
+    ok = {"response": {"store_items": [store_item(3)]}}
+    c, s, _ = make_client([FakeResp(404), FakeResp(200, ok)])
+    out = list(steam.collect_review_summaries([1, 2, 3], client=c))
+    assert [k for k, _ in out] == ["3"]
+    assert len(s.calls) == 2

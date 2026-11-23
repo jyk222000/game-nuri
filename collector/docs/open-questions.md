@@ -12,7 +12,7 @@
 | 7 | **보유 게임(`owned_games`) 요청 방식** | 사용자 요청 때 도는 흐름이라 주기 수집기가 아니다 | ④ 플레이 성향 | Backend(김준영)와 방식 결정 |
 | 8 | **다나와 별칭 보강 시점** | 상품→게임 연결과 본체 번들·DLC·에디션·해외판 거르기는 정제기(PR #50)에 구현되어 `main`에 합쳐졌다. 별칭 보강(AI·자모 변환)은 정하지 않았다 | ① 콘솔 가격 비교의 정확도 | 파이프라인을 한 번 끝까지 돌려 `refined.unmatched`를 본 뒤, 매칭에 실패한 판매자 표기만 보강한다. 검색어에는 별칭을 쓰지 않는다(IGDB 한국어 별칭이 한글 이름 없는 게임 339건 중 3건뿐, `danawa.md` 참고) |
 | 9 | **다나와 빈 플랫폼 보강 검색 · 개별 판매처 상품** | 요청이 약 3배(≈7시간)로 늘어 6시간 주기를 넘긴다 | 콘솔 중고·일부 플랫폼 가격 누락 | 주기를 늘리거나 게임 수를 줄이거나 보강만 하루 1회로 분리할지 결정 |
-| 10 | **화면용 리뷰 수·긍정 비율 수집** | 페이지 단위 `query_summary`를 더 이상 보내지 않는다. `GetItems`(`reviews.summary_language_specific`)는 아직 수집기에 없다 | ⑤ 화면의 `review_count_ko`·`positive_pct`, `refined.review_summary` | PR B(`review_summary` kind)가 합쳐진 뒤 수집기에 `GetItems` 호출을 추가한다(후속 PR). 값을 `refined.review_summary`에 넣는 방법은 이고은 결정 필요(upsert가 AI 요약 칼럼을 null로 덮어쓸 수 있음) |
+| 10 | **화면용 리뷰 수·긍정 비율 수집** | 페이지 단위 `query_summary`를 더 이상 보내지 않는다. 수집기는 `GetItems`(`reviews.summary_language_specific`)를 `kind=review_summary`로 보낸다 (구현됨) | ⑤ 화면의 `review_count_ko`·`positive_pct`, `refined.review_summary` | 수집 코드는 완료. 정제기는 아직 이 kind를 건너뛴다. 값을 `refined.review_summary`에 넣는 방법은 이고은 결정 필요(upsert가 AI 요약 칼럼을 null로 덮어쓸 수 있음) |
 
 ## 해결됨
 | # | 내용 | 결과 |
