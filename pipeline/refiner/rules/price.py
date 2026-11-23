@@ -17,8 +17,18 @@ from typing import Any
 # 환율 (KRW per 1 unit). 팀 결정 전 임시값 — 확정되면 exchange_rates 테이블/설정으로 교체.
 DEFAULT_RATES: dict[str, float] = {"KRW": 1.0, "USD": 1400.0, "EUR": 1500.0, "GBP": 1800.0}
 
-# ITAD shop id → 내부 store 코드. 목록에 없으면 이름을 slug로 만든다.
+# ITAD shop → 내부 store 코드 (stores 테이블 8곳과 같은 이름). 번호로 먼저, 다음은 이름으로 찾고,
+# 그래도 없으면 이름을 소문자 영숫자로 붙인다 (Humble Store → humblestore).
 KNOWN_SHOPS: dict[int, str] = {61: "steam"}
+SHOP_NAME_RULES: list[tuple[str, str]] = [
+    (r"^steam$", "steam"),
+    (r"epic", "epic"),
+    (r"^gog", "gog"),
+    (r"microsoft", "msstore"),
+    (r"blizzard|battle\.?net", "blizzard"),
+    (r"^ea\b|origin", "ea"),
+    (r"ubisoft|uplay", "ubisoft"),
+]
 
 REFINED_PRICE_SCHEMA: dict[str, Any] = {
     "type": "struct",
@@ -45,6 +55,10 @@ def store_code(shop: dict[str, Any]) -> str:
     sid = shop.get("id")
     if sid in KNOWN_SHOPS:
         return KNOWN_SHOPS[sid]
+    name = str(shop.get("name") or "").strip().lower()
+    for pattern, code in SHOP_NAME_RULES:
+        if re.search(pattern, name):
+            return code
     return re.sub(r"[^a-z0-9]+", "", str(shop.get("name", "")).lower()) or f"shop{sid}"
 
 

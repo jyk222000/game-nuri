@@ -104,6 +104,20 @@ def test_idempotent_same_input_same_output():
 def test_store_code_and_key_and_message_shape():
     assert store_code({"id": 61, "name": "Steam"}) == "steam"
     assert store_code({"id": 20, "name": "Game Billet!"}) == "gamebillet"
+    # stores 테이블 8곳과 같은 코드
+    for name, code in [
+        ("Epic Game Store", "epic"),
+        ("GOG", "gog"),
+        ("Microsoft Store", "msstore"),
+        ("Battle.net", "blizzard"),
+        ("Blizzard Shop", "blizzard"),
+        ("EA Store", "ea"),
+        ("EA app", "ea"),
+        ("Ubisoft Store", "ubisoft"),
+        ("Humble Store", "humblestore"),  # 8곳 밖은 이름 그대로
+        ("GreenManGaming", "greenmangaming"),
+    ]:
+        assert store_code({"id": 999, "name": name}) == code, name
     rows, _ = refine_price(envelope([deal(61, "Steam", 1000)]), resolver({ITAD_ID: 7}))
     assert message_key(rows[0]) == "7:steam:digital:PC:new"
     assert rows[0]["platform"] == "PC" and rows[0]["item_condition"] == "new"
