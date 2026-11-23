@@ -28,6 +28,23 @@ PYTHONPATH=.:../shared python -m refiner.main --dry-run --input raw.jsonl --id-m
 cd .. && python -m pytest pipeline/tests
 ```
 
+## 한 게임이 여러 행이 되는 토픽 14개 (`rules/links.py`)
+`raw.igdb` 게임 정보 하나에서 장르·회사·태그·시리즈·플랫폼별 출시일·별칭·스토어 번호를 각각의 토픽으로 보낸다.
+형식은 `docs/contracts/messages/refined.links.json` (필드 = erd.sql 컬럼).
+
+| 토픽 | 테이블 | 출처 |
+|---|---|---|
+| `refined.genres`, `refined.game_genres` | `genres`, `game_genres` | IGDB genres |
+| `refined.companies`, `refined.game_companies` | `companies`, `game_companies` | IGDB involved_companies (개발·배급) |
+| `refined.tags`, `refined.game_tags` | `tags`, `game_tags` | IGDB themes, keywords (keyword tag_id = 10,000,000 + id) |
+| `refined.game_series`, `refined.game_series_map` | `game_series`, `game_series_map` | IGDB collections, franchises (수집 필드에 있어야 함) |
+| `refined.game_platforms` | `game_platforms` | IGDB platforms + release_dates |
+| `refined.game_aliases` | `game_aliases` | 이름, 한글 이름, alternative_names |
+| `refined.game_store_ids` | `game_store_ids` | Steam appid, 처음 연결된 ITAD id, 매칭된 다나와 pcode |
+| `refined.time_to_beat` | `game_time_to_beat` | `raw.igdb` kind `time_to_beat` |
+| `refined.player_counts` | `player_counts` | `raw.steam` kind `player_count` (appid는 `request.params.appid`) |
+| `refined.exchange_rates` | `exchange_rates` | 가격 정제에 쓴 환율, 하루 1번 |
+
 ## 서버(kafka1~3)에서 켜기 (남현식)
 1. `cd /opt/game-nuri/repo && git pull`
 2. `/etc/game-nuri/refiner.env`에 넣는다 (비밀번호 없음, Kafka는 인증 없음).

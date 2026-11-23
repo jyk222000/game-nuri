@@ -172,7 +172,8 @@ def test_router_routes_by_kind_and_ignores_unknown():
     maps = Maps({"itad": {"abc": 7}, "steam": {5: 7}, "alias": {"엘든 링": 7}})
     assert route(env("review", {}), maps)["ignored"] is True
     r = route(env("game_info", igdb_payload()), maps)
-    assert [o[0] for o in r["out"]] == ["games"] and r["extras"]["platforms"]
+    names = [o[0] for o in r["out"]]
+    assert names[0] == "games" and "game_platforms" in names and r["extras"]["platforms"]
     r = route(
         env("app_details", {"steam_appid": 5, "data": {"pc_requirements": {"minimum": HTML}}}), maps
     )
@@ -192,7 +193,12 @@ def test_router_routes_by_kind_and_ignores_unknown():
         ),
         maps,
     )
-    assert [o[0] for o in r["out"]] == ["prices"]
+    assert [o[0] for o in r["out"]] == [
+        "prices",
+        "exchange_rates",
+        "exchange_rates",
+        "exchange_rates",
+    ]
 
 
 def test_maps_accepts_old_flat_shape():
