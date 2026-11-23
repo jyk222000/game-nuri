@@ -4,7 +4,8 @@
 
 CSV 열 (첫 줄은 머리글, 빈 칸 허용):
     igdb_id, steam_appid, itad_id, name, name_ko, aliases
-    - igdb_id 는 필수 (게임 기준 ID)
+    - igdb_id 는 필수 (게임 기준 ID). 열 이름이 game_id 여도 된다
+      (analysis/game_list/games_1000.csv)
     - aliases 는 다나와 상품명 매칭용 별칭을 | 로 구분 (예: 엘든링|엘든 링 PS5)
 --base 를 주면 그 대응표에 덧붙인다 (이미 있는 값은 바꾸지 않는다).
 """
@@ -35,7 +36,7 @@ def rows_to_maps(rows: list[dict[str, str]]) -> tuple[Maps, list[str]]:
         table[key] = gid
 
     for i, r in enumerate(rows, start=2):
-        raw_id = (r.get("igdb_id") or "").strip()
+        raw_id = (r.get("igdb_id") or r.get("game_id") or "").strip()
         if not raw_id.isdigit():
             warnings.append(f"{i}행: igdb_id 없음 → 건너뜀")
             continue
