@@ -17,6 +17,7 @@ Monstache는 `infra/monstache/README.md`.
 | 접속 범위 | `network.host: ["_local_", "_site_"]` (localhost + 10.0.2.103) |
 | 계정 | `elastic`(관리자, 프로그램도 이 계정), `kibana_system`(Kibana 전용, 키스토어에만) — `docs/decisions.md` 11/23 |
 | Kibana | **8.19.25**, `server.host: "elk"`, 포트 5601, Node 힙 1GB (`/etc/kibana/node.options`) |
+| node_exporter | 1.13.1, 포트 9100, 서비스 `node-exporter` (6장) |
 
 ## 2. 설치 순서 (elk, adminb)
 
@@ -109,6 +110,15 @@ elk는 내부망이라 PC 브라우저에서 바로 열 수 없다. PC-2 게이�
 
 데이터가 들어오면 Data View를 만든다: `clickstream-*` (시간 필드 `occurred_at`), `games`, `reviews`.
 
-## 6. 계정 비밀번호를 바꿀 때
+## 6. node_exporter (모니터링)
+
+`infra/monitoring/node-exporter.service`와 같은 방식(1.13.1, 계정 `node_exporter`, 포트 9100). elk만 감시 서비스를 바꿨다.
+```
+--collector.systemd.unit-include=(elasticsearch|kibana|monstache)\.service
+```
+설치 11/24. 확인: `curl -s localhost:9100/metrics | grep '^node_systemd_unit_state{.*state="active"'` → 세 서비스 값 1,
+monitoring에서 `curl -s http://elk:9100/metrics | grep -c '^node_'` (534). Prometheus `prometheus.yml`의 `elk:9100`으로 수집된다.
+
+## 7. 계정 비밀번호를 바꿀 때
 `elastic` 비밀번호를 바꾸면 함께 바꾼다: kafka1 `/opt/game-nuri/repo/.env`(`ES_PASSWORD`) 후 `apply.sh es-sink-clickstream`,
 elk `/etc/monstache/monstache.env` 후 `systemctl restart monstache`, backend `.env`(Backend가 ES를 쓸 때).
