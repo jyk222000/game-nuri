@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from refiner.rules import console, game, requirements
+from refiner.rules import console, game, links, requirements
 from refiner.rules import price as price_rules
 from refiner.rules.normalize_title import normalize_title
 
@@ -14,6 +14,8 @@ OUT_TOPICS = {
     "games": "refined.games",
     "requirements": "refined.requirements",
     "unmatched": "refined.unmatched",
+    # 한 게임이 여러 행이 되는 테이블 (rules/links.py, 토픽 이름 = refined.<이름>)
+    **{name: f"refined.{name}" for name in links.LINK_FIELDS},
 }
 
 
@@ -38,6 +40,7 @@ class Maps:
         self.steam = {int(k): int(v) for k, v in (data.get("steam") or {}).items()}
         self.alias = {k: int(v) for k, v in (data.get("alias") or {}).items()}
         self.changed = False
+        self.sent_rates: set[str] = set()  # 이번 실행에서 이미 보낸 환율 날짜 (저장 안 함)
 
     def size(self) -> str:
         return f"itad {len(self.itad)}, steam {len(self.steam)}, alias {len(self.alias)}"
@@ -108,25 +111,58 @@ def route(envelope: dict[str, Any], maps: Maps) -> dict[str, Any]:
     if kind in ("price", "console_price"):
         if kind == "price":
             hint = steam_hint(envelope)
+            itad_id = (envelope.get("payload") or {}).get("id")
+            known = itad_id in maps.itad
             rows, unmatched = price_rules.refine_price(
-                envelope, lambda itad_id: maps.resolve_itad(itad_id, hint)
+                envelope, lambda i: maps.resolve_itad(i, hint)
             )
+            if rows and itad_id and not known:  # 새로 배운 ITAD id → game_store_ids
+                out.append(
+                    links.message(
+                        "game_store_ids",
+                        {"game_id": rows[0]["game_id"], "store": "itad", "external_id": itad_id},
+                    )
+                )
+            day = (envelope.get("collected_at") or "")[:10]
+            if rows and day and day not in maps.sent_rates:
+                maps.sent_rates.add(day)
+                out += links.exchange_rate_rows(
+                    envelope.get("collected_at"), price_rules.DEFAULT_RATES
+                )
         else:
             rows, unmatched = console.refine_console_price(envelope, maps.alias.get)
+            pcode = (envelope.get("payload") or {}).get("pcode")
+            if rows and pcode:
+                out.append(
+                    links.message(
+                        "game_store_ids",
+                        {
+                            "game_id": rows[0]["game_id"],
+                            "store": "danawa",
+                            "external_id": str(pcode),
+                        },
+                    )
+                )
         out = [
             ("prices", price_rules.message_key(r), price_rules.to_connect_message(r)) for r in rows
-        ]
+        ] + out
     elif kind == "game_info":
         rows, extras, unmatched = game.refine_game(envelope)
+        payload = envelope.get("payload") or {}
         for r in rows:
             maps.learn_from_game(r, extras)
-        out = [("games", game.message_key(r), game.to_connect_message(r)) for r in rows]
+            out.append(("games", game.message_key(r), game.to_connect_message(r)))
+            out += links.game_links(r, extras, payload)
     elif kind == "app_details":
         rows, unmatched = requirements.refine_requirements(envelope, maps.steam.get)
         out = [
             ("requirements", requirements.message_key(r), requirements.to_connect_message(r))
             for r in rows
         ]
-    else:  # review, owned_games, player_count, time_to_beat 등: 아직 정제 규칙이 없다
+    elif kind == "time_to_beat":
+        out, unmatched = links.refine_time_to_beat(envelope)
+    elif kind == "player_count":
+        out, unmatched = links.refine_player_count(envelope, steam_hint(envelope), maps.steam.get)
+    else:  # review, owned_games 등: 아직 정제 규칙이 없다
         return {"out": [], "unmatched": [], "extras": {}, "ignored": True}
     return {"out": out, "unmatched": unmatched, "extras": extras, "ignored": False}
