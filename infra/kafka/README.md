@@ -31,6 +31,8 @@
 | `systemd/refiner.service`, `refiner.env.example` | 같음, `/etc/game-nuri/refiner.env` | kafka1~3 (코드 전까지 enable 안 함) |
 | `../monitoring/node-exporter.service` | 같음 | 모든 VM |
 | `create-topics.sh` | – | kafka1에서 한 번 |
+| `connect-status-exporter.sh`, `systemd/connect-status-exporter.service`·`.timer` | `/usr/local/bin/`, `/etc/systemd/system/` | kafka1 (Connect 작업 상태 → node_exporter textfile) |
+| `../monitoring/rules/kafka.rules.yml` | Prometheus `rules/` | monitoring (경보 규칙 9개) |
 
 ## 3. 설치 순서 (Rocky Linux 10)
 

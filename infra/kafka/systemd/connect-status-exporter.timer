@@ -1,0 +1,11 @@
+# /etc/systemd/system/connect-status-exporter.timer  (kafka1만, 1분마다)
+[Unit]
+Description=Export Kafka Connect task status every minute
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target

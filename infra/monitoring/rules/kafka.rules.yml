@@ -1,0 +1,82 @@
+# Kafka · Kafka Connect 경보 규칙 (Prometheus). prometheus.yml의 rule_files에 이 파일을 넣는다.
+# 지표 출처: job=kafka (kafka_exporter, kafka1:9308), job=node (node_exporter :9100)
+#           kafka_connect_* 는 infra/kafka/connect-status-exporter.sh 가 node_exporter textfile로 내보낸다.
+# severity: critical = 데이터가 멈추거나 잃을 수 있음 → Slack 즉시 / warning = 징후, 지켜보기
+groups:
+  - name: kafka-cluster
+    rules:
+      - alert: KafkaBrokerDown
+        expr: kafka_brokers < 3
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: "Kafka 브로커 {{ $value }}대만 살아 있음 (정상 3대)"
+          description: "1대 장애까지는 서비스가 계속된다. 2대 장애면 쓰기가 멈춘다(min.insync.replicas=2). infra/kafka/README.md 6장"
+
+      - alert: KafkaUnderReplicatedPartitions
+        expr: sum(kafka_topic_partition_under_replicated_partition) > 0
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: "복사본이 부족한 파티션 {{ $value }}개"
+          description: "브로커 하나가 죽었거나 따라잡는 중이다. 재시작 직후 몇 분은 정상일 수 있다(일시적). 계속되면 kafka-topics.sh --describe로 Isr 확인"
+
+      - alert: KafkaWritesBlocked
+        expr: min by (topic, partition) (kafka_topic_partition_in_sync_replica{topic!~"__.*|test\\..*"}) < 2
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: "{{ $labels.topic }}-{{ $labels.partition }} 동기화 복사본 {{ $value }}개 → 쓰기 거부 중"
+          description: "min.insync.replicas=2 미만이라 Producer가 NOT_ENOUGH_REPLICAS를 받는다. 브로커 복구가 먼저, 급하면 README 6장의 1대 운영 절차"
+
+      - alert: KafkaExporterDown
+        expr: up{job="kafka"} == 0
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: "kafka_exporter(kafka1:9308) 응답 없음"
+          description: "kafka1이 죽었거나 kafka-exporter 서비스가 멈췄다. 이 동안 Kafka 지표가 비어 다른 경보가 울리지 않는다"
+
+      - alert: KafkaServiceNotActive
+        expr: node_systemd_unit_state{name=~"kafka(-connect|-exporter)?\\.service", state="active"} == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: "{{ $labels.instance }}의 {{ $labels.name }} 꺼짐"
+          description: "계획 중단이면 inactive, 사고면 failed로 보인다(SuccessExitStatus=143). journalctl -u {{ $labels.name }}"
+
+      - alert: KafkaHostDiskLow
+        expr: |
+          node_filesystem_avail_bytes{job="node", instance=~"(kafka1|kafka2|kafka3|backup|monitoring):9100", mountpoint=~"/|/DATA"}
+            / node_filesystem_size_bytes{job="node", instance=~"(kafka1|kafka2|kafka3|backup|monitoring):9100", mountpoint=~"/|/DATA"} < 0.15
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.instance }} {{ $labels.mountpoint }} 남은 공간 15% 미만"
+          description: "Kafka 데이터는 토픽 보관 기간(raw 7일, refined 3일)이 지나야 지워진다. 앱 로그는 kafka-log-cleanup.timer가 7일 지난 것을 지운다"
+
+  - name: kafka-pipeline
+    rules:
+      - alert: KafkaConsumerLagHigh
+        expr: sum by (consumergroup) (kafka_consumergroup_lag_sum{consumergroup=~"connect-.*|refiner"}) > 10000
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.consumergroup }} 밀린 메시지 {{ $value }}건"
+          description: "수집 직후 잠깐 쌓였다 줄어들면 일시적이다. 10분 넘게 줄지 않으면 Connect 작업 실패·DB 응답 지연을 의심"
+
+      - alert: KafkaConnectTaskFailed
+        expr: kafka_connect_task_failed > 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: "Connect {{ $labels.connector }} 작업 실패"
+          description: "이 커넥터의 토픽이 DB에 들어가지 않는다. curl -s http://kafka1:8083/connectors/{{ $labels.connector }}/status 의 trace 확인 후 원인 해결, POST .../restart"
+
+      - alert: KafkaConnectStatusStale
+        expr: time() - kafka_connect_status_last_success_timestamp_seconds > 300
+        for: 1m
+        labels: {severity: warning}
+        annotations:
+          summary: "Connect 상태 수집이 5분 넘게 멈춤"
+          description: "connect-status-exporter.timer가 멈췄거나 Connect REST(8083)가 응답하지 않는다"
