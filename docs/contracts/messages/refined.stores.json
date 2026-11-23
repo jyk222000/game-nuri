@@ -1,0 +1,35 @@
+{
+  "_comment": "refined.stores: 판매처 기준표 stores 한 줄. 정제기가 ITAD 가격·가격 이력에서 판매처(shop: {id, name})를 볼 때, 실행마다 판매처별로 한 번 보낸다. 키 store. JDBC Sink → stores (upsert, pk store). store 코드는 rules/price.py store_code()와 같다(8곳은 steam·epic·gog·msstore·blizzard·ea·ubisoft, 나머지는 이름을 소문자 영숫자로). display_name은 8곳은 정해 둔 이름, 나머지는 ITAD 이름. platform은 ITAD 판매처라 항상 pc. itad_shop_id = ITAD shop id. 다나와(console)는 ITAD가 아니라 erd.sql 시드로만 들어간다.",
+  "schema": {
+    "type": "struct",
+    "name": "refined_store",
+    "fields": [
+      {
+        "field": "store",
+        "type": "string",
+        "optional": false
+      },
+      {
+        "field": "display_name",
+        "type": "string",
+        "optional": false
+      },
+      {
+        "field": "platform",
+        "type": "string",
+        "optional": false
+      },
+      {
+        "field": "itad_shop_id",
+        "type": "int32",
+        "optional": true
+      }
+    ]
+  },
+  "payload": {
+    "store": "steam",
+    "display_name": "Steam",
+    "platform": "pc",
+    "itad_shop_id": 61
+  }
+}
