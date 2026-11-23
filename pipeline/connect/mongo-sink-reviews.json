@@ -9,6 +9,8 @@
     "value.converter": "org.apache.kafka.connect.json.JsonConverter",
     "value.converter.schemas.enable": "false",
     "_comment": "kind=review 메시지만 남기도록 refiner가 리뷰를 한 건씩 펼쳐 넣는 방식으로 바꿀 수 있음 (테스트 후 확정)",
-    "tasks.max": "1"
+    "tasks.max": "1",
+    "max.num.retries": "3",
+    "retries.defer.timeout": "5000"
   }
 }
