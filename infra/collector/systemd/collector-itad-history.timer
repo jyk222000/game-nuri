@@ -1,0 +1,10 @@
+# /etc/systemd/system/collector-itad-history.timer  (proxy, 주 1회: 최근 14일 이력만. 최초 전체 수집은 손으로)
+[Unit]
+Description=ITAD 가격 이력 수집 (주 1회, 최근 14일)
+
+[Timer]
+OnCalendar=Sun *-*-* 02:00:00
+Unit=collector@itad-history.service
+
+[Install]
+WantedBy=timers.target

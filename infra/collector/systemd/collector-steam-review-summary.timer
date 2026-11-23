@@ -1,0 +1,11 @@
+# /etc/systemd/system/collector-steam-review-summary.timer  (proxy, 매일: GetItems 한국어 리뷰 요약)
+# 주기는 임시(매일). collector 담당(한예찬)이 정하면 바꾼다.
+[Unit]
+Description=Steam GetItems 리뷰 요약 수집 (매일)
+
+[Timer]
+OnCalendar=*-*-* 04:30:00
+Unit=collector@steam-review-summary.service
+
+[Install]
+WantedBy=timers.target

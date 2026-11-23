@@ -42,21 +42,24 @@ function ensureIndex(coll, keys, options) {
 // 2) games: game_id 고유 (TTL 없음)
 ensureIndex("games", { game_id: 1 }, { name: "uq_game_id", unique: true });
 
-// 3) reviews: recommendationid 고유 (TTL 없음)
-//    문서마다 최상위 recommendationid가 있어야 한다. 없는 문서가 둘 이상이면 고유 인덱스가
-//    null 중복으로 Sink 쓰기를 막으므로, 전부 있을 때만 만든다.
+// 3) reviews: payload.recommendationid 고유 (TTL 없음)
+//    raw.steam 리뷰는 1건 단위 봉투(kind=review)로 오고, Steam 리뷰 객체는 payload 안에 있다
+//    (docs/contracts/messages/raw.steam.json). 그래서 키는 최상위가 아니라 payload.recommendationid다.
+//    없는 문서가 둘 이상이면 고유 인덱스가 null 중복으로 Sink 쓰기를 막으므로, 전부 있을 때만 만든다.
+//    (Connect가 kind=review만 reviews에 넣도록 바뀌기 전에는 사양·동접자 문서가 섞여 건너뛴다)
+const REVIEW_KEY = "payload.recommendationid";
 {
   const c = d.reviews;
   const total = c.countDocuments({});
-  const missing = c.countDocuments({ recommendationid: { $exists: false } });
+  const missing = c.countDocuments({ [REVIEW_KEY]: { $exists: false } });
   if (total === 0) {
     print("건너뜀 reviews 고유 인덱스: 컬렉션이 비어 있어 문서 모양을 확인할 수 없음");
   } else if (missing > 0) {
-    print(`건너뜀 reviews 고유 인덱스: 최상위 recommendationid가 없는 문서 ${missing}/${total}건`);
-    print("        → 현재 Sink는 raw.steam 봉투 전체를 저장하고 리뷰는 payload.reviews[] 안에 있음.");
-    print("        → refiner가 리뷰를 한 건씩 펼치기로 확정된 뒤 다시 실행");
+    print(`건너뜀 reviews 고유 인덱스: ${REVIEW_KEY}가 없는 문서 ${missing}/${total}건`);
+    print("        → Sink가 raw.steam 전체(사양·동접자 포함)를 저장 중이면 정상. 리뷰(kind=review)만");
+    print("          저장하도록 Connect 설정이 바뀐 뒤(pipeline/connect, 남현식), 비운 컬렉션에서 다시 실행");
   } else {
-    ensureIndex("reviews", { recommendationid: 1 }, { name: "uq_recommendationid", unique: true });
+    ensureIndex("reviews", { [REVIEW_KEY]: 1 }, { name: "uq_payload_recommendationid", unique: true });
   }
 }
 
