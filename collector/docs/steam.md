@@ -11,6 +11,7 @@
 | `app_details` | `store.steampowered.com/api/appdetails` (`cc=kr`, `l=koreana`) | 게임 1건. payload = 응답 `{"<appid>": {success, data}}` 그대로 | 매일 | 1.6초 | 약 30분 |
 | `player_count` | `ISteamUserStats/GetNumberOfCurrentPlayers/v1` | 게임 1건. payload = `{"response": {player_count, result}}` 그대로 | 1시간 | 0.3초 | 약 10분 |
 | `review` | `IUserReviewsService/GetAppReviews/v1` (한국어, 최신순, `purchase_type=1`, 100건씩) | **리뷰 1건**. payload = 리뷰 객체 그대로 + `steam_appid`. Kafka 키는 `steam_appid` | 매일 | 0.5초 | 최초 약 1시간, 이후 수 분 |
+| `review_summary` | `IStoreBrowseService/GetItems/v1` (`language=koreana`, `country_code=KR`, `include_reviews`) 50게임씩 | 게임 1건. payload = 응답 `store_items[]` 원소 그대로. Kafka 키는 `steam_appid` | 매일 | 1초 (호출 20번) | 약 1분 |
 
 ## 리뷰 증분 수집
 - 최신순으로 받다가 **이미 받은 리뷰를 만나면 그 페이지에서 멈춘다.** 이미 받은 리뷰는 보내지 않는다(중복 방지).
@@ -28,6 +29,7 @@
 PYTHONPATH=collector python -m collector.main --source steam --kind app_details --dry-run --limit 3
 PYTHONPATH=collector python -m collector.main --source steam --kind player_count
 PYTHONPATH=collector python -m collector.main --source steam --kind review --max-reviews 500
+PYTHONPATH=collector python -m collector.main --source steam --kind review_summary
 ```
 `--dry-run` 샘플: `samples/raw.steam.<kind>.<appid>.json` (리뷰는 `raw.steam.review.<appid>.<recommendationid>.json`으로 한 건에 파일 하나라, `--limit`과 `--max-reviews`를 작게 줘야 한다).
 **리뷰를 `--dry-run`으로 시험할 때는 `--state-file <임시경로>`를 주자.** 안 주면 시험한 만큼 "받았다"고 기록돼 진짜 첫 수집에서 그 리뷰들이 빠진다.
@@ -41,4 +43,4 @@ PYTHONPATH=collector python -m collector.main --source steam --kind review --max
 - **`owned_games`(사용자 보유 게임·업적, ④).** 사용자가 연동할 때 Backend가 요청하는 흐름이라 수집기 단독으로 만들 수 없다. 요청을 받는 방식(Backend → Kafka 요청 토픽? 직접 호출?)부터 정해야 한다.
 - 리뷰 상한 · 수정·삭제 리뷰 처리 (위 참고), Kafka 실제 전송 시험·전송 실패 감지·스케줄 (`igdb.md`와 같다).
 - **계약 문서와 어긋난다.** `docs/contracts/messages/raw.steam.json`의 review 예시는 페이지 단위(`reviews[]`)다. 수집기를 한 건 단위로 바꿨으므로 계약 예시도 바꿔야 한다 (`shared/`·`docs/contracts/` 변경은 별도 PR, `open-questions.md` 5번).
-- **리뷰 수·긍정 비율을 어디서 받을지.** 페이지 단위의 `query_summary`를 더 이상 보내지 않는다. 화면용 `review_count_ko`·`positive_pct`는 원래 `GetItems` 요약을 쓰기로 했는데(`steam-notes.md` 2·3절) 이 수집기는 아직 `GetItems`를 호출하지 않는다 (`open-questions.md` 10번).
+- **리뷰 요약(`review_summary`)을 받아 쓰는 쪽이 아직 없다.** 수집기는 `GetItems`로 화면용 한국어 리뷰 수·긍정 비율·평가 문구(`reviews.summary_language_specific`, Steam 구매 기준)를 보낸다. 정제기는 이 kind를 건너뛰고, `refined.review_summary`에 넣는 방법은 이고은 결정 필요 (`open-questions.md` 10번). 판매 전·중단 게임처럼 한국어 요약이 없는 게임은 보내지 않고 로그에 건수만 남긴다.

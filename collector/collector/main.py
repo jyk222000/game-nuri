@@ -11,7 +11,7 @@ from collector import producer
 
 log = get_logger("collector")
 
-STEAM_KINDS = ["app_details", "player_count", "review"]
+STEAM_KINDS = ["app_details", "player_count", "review", "review_summary"]
 ITAD_KINDS = ["price", "price_history"]
 KINDS_OF = {"steam": STEAM_KINDS, "itad": ITAD_KINDS}
 
@@ -60,6 +60,8 @@ def run_steam(args: argparse.Namespace) -> int:
         items = steam.collect_app_details(appids)
     elif args.kind == "player_count":
         items = steam.collect_player_counts(appids)
+    elif args.kind == "review_summary":
+        items = steam.collect_review_summaries(appids)
     else:
         state = steam.ReviewState(args.state_file or steam.DEFAULT_STATE_FILE)
         items = steam.collect_reviews(appids, state=state, max_reviews=args.max_reviews)
@@ -86,7 +88,8 @@ def main() -> None:
     ap.add_argument(
         "--kind",
         choices=sorted({k for ks in KINDS_OF.values() for k in ks}),
-        help="steam(app_details|player_count|review), itad(price|price_history, 기본 price)",
+        help="steam(app_details|player_count|review|review_summary), "
+        "itad(price|price_history, 기본 price)",
     )
     ap.add_argument(
         "--since-days",
@@ -102,7 +105,9 @@ def main() -> None:
     ap.add_argument("--state-file", type=Path, help="steam review: 수집 위치 파일")
     args = ap.parse_args()
     if args.source == "steam" and not args.kind:
-        ap.error("--source steam 은 --kind (app_details|player_count|review) 가 필요하다")
+        ap.error(
+            "--source steam 은 --kind (app_details|player_count|review|review_summary) 가 필요하다"
+        )
     if args.kind and args.kind not in KINDS_OF.get(args.source, []):
         ap.error(f"--kind {args.kind} 는 --source {args.source} 에서 쓸 수 없다")
     log.info("collect start source=%s kind=%s dry_run=%s", args.source, args.kind, args.dry_run)
