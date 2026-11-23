@@ -29,3 +29,20 @@ class PricesOut(BaseModel):
     game_id: int
     items: list[PriceItem]
     lowest: LowestNow | None  # 새 상품 최저가(현재가 정의). 새 상품이 없으면 null
+
+
+class HistoryItem(BaseModel):
+    store: str
+    edition: str
+    collected_at: UtcDatetime
+    price_krw: int
+    regular_krw: int | None
+    discount_pct: int | None
+
+
+class HistoryOut(BaseModel):
+    game_id: int
+    days: int
+    platform: str | None  # 요청한 필터. 없으면 null
+    item_condition: str | None
+    items: list[HistoryItem]
