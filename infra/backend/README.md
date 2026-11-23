@@ -19,7 +19,11 @@ python3.12 -m venv .venv && .venv/bin/pip install -e shared -r backend/requireme
 # 1) 실행 계정 (없으면)
 sudo useradd --system --home-dir /opt/game-nuri --shell /sbin/nologin backend
 
+#    레포를 홈 등에서 옮겼다면 SELinux 라벨 복원이 필수다(없으면 서비스가 203/EXEC Permission denied, 아래 문제 해결)
+sudo restorecon -Rv /opt/game-nuri
+
 # 2) 환경 파일 — 값은 직접 채운다 (커밋 금지)
+sudo mkdir -p /etc/game-nuri                 # 이미 있으면 그대로 둔다
 sudo install -m 0640 -o root -g backend /opt/game-nuri/repo/infra/backend/systemd/backend.env.example /etc/game-nuri/backend.env
 sudoedit /etc/game-nuri/backend.env        # SERVER_NAME은 서버에 맞게 backend1 / backend2
 

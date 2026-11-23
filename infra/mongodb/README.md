@@ -79,6 +79,7 @@ rs.status().members.map(m => `${m.name} ${m.stateStr} health=${m.health}`)
 | `raw_itad` · `raw_danawa` · `raw_steam` · `raw_igdb` (· `raw_unknown`) | `raw.price` · `raw.console` · `raw.steam` · `raw.igdb` (목록에 없는 토픽) | API 원본(공통 봉투) | `ingested_at` TTL | **14일** | 안 함(재수집 가능) |
 | `reviews` | `raw.steam`(`kind=review`만) | 리뷰 (분석에 사용) | `payload.recommendationid` 고유 | 없음 | **함** |
 | `games` | `refined.games` | 게임 정보 (Monstache → ES) | `game_id` 고유 | 없음 | 함 |
+| `unmatched` | `refined.unmatched` | 정제 매칭 실패 기록 | 없음(필요하면 추가) | 없음 | 안 함(로그용) |
 
 - 컬렉션 이름은 `pipeline/connect/mongo-sink-raw.json`의 `topic.override.*`가 정한다(예전 문서의 `raw` 한 컬렉션이 아니다, 2026-11-23 실제 설정에 맞춤).
 - TTL은 `raw_*`에만 건다. `reviews`·`games`는 분석과 백업 대상이라 지우지 않는다.
