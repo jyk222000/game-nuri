@@ -46,3 +46,19 @@ class HistoryOut(BaseModel):
     platform: str | None  # 요청한 필터. 없으면 null
     item_condition: str | None
     items: list[HistoryItem]
+
+
+class LowestItem(BaseModel):
+    platform: str
+    item_condition: str
+    store: str
+    edition: str
+    price_krw: int
+    regular_krw: int | None
+    discount_pct: int | None
+    date: str  # 최저가를 처음 수집한 날 YYYY-MM-DD (UTC)
+
+
+class LowestOut(BaseModel):
+    game_id: int
+    items: list[LowestItem]

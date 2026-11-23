@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_read_db
-from app.schemas.price import HistoryOut, PricesOut
-from app.services import history, prices
+from app.schemas.price import HistoryOut, LowestOut, PricesOut
+from app.services import history, lowest, prices
 
 router = APIRouter(prefix="/api")
 
@@ -28,3 +28,8 @@ def game_history(
     item_condition: Literal["new", "used"] | None = None,
 ) -> HistoryOut:
     return history.get_history(db, game_id, days, platform, item_condition)
+
+
+@router.get("/games/{game_id}/lowest", response_model=LowestOut)
+def game_lowest(game_id: int, db: Db) -> LowestOut:
+    return lowest.get_lowest(db, game_id)
