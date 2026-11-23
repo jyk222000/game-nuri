@@ -1,5 +1,5 @@
 {
-  "_comment": "JDBC Sink용 JSON+schema. games 테이블 컬럼과 1:1. 날짜(release_date)는 'YYYY-MM-DD', 시각(updated_at)은 UTC ISO 문자열(Connect TimestampConverter가 DATETIME으로 변환). 장르·플랫폼·개발사·별칭·외부 번호(game_store_ids)는 한 메시지가 여러 행이 되므로 이 토픽에 넣지 않는다 (토픽을 나눌지는 팀 결정 필요: docs/contracts 변경 제안 4번)",
+  "_comment": "JDBC Sink용 JSON+schema. games 테이블 컬럼 중 IGDB에서 오는 것만 담는다. Steam에서 오는 age_rating·korean_supported·is_online은 refined.games_steam이 채운다 (여기 넣으면 upsert 때 null로 덮어쓴다). 날짜(release_date)는 'YYYY-MM-DD', 시각(updated_at)은 UTC ISO 문자열(Connect TimestampConverter가 DATETIME으로 변환). 장르·플랫폼·개발사·별칭·외부 번호(game_store_ids)는 한 메시지가 여러 행이 되므로 이 토픽에 넣지 않는다 (토픽을 나눌지는 팀 결정 필요: docs/contracts 변경 제안 4번)",
   "schema": {
     "type": "struct",
     "name": "refined_game",
@@ -19,9 +19,6 @@
       { "field": "rating_count", "type": "int32", "optional": true },
       { "field": "aggregated_rating", "type": "double", "optional": true },
       { "field": "aggregated_rating_count", "type": "int32", "optional": true },
-      { "field": "age_rating", "type": "int16", "optional": true },
-      { "field": "korean_supported", "type": "boolean", "optional": true },
-      { "field": "is_online", "type": "boolean", "optional": true },
       { "field": "updated_at", "type": "string", "optional": false }
     ]
   },
@@ -41,9 +38,6 @@
     "rating_count": 3200,
     "aggregated_rating": 94.5,
     "aggregated_rating_count": 80,
-    "age_rating": 18,
-    "korean_supported": true,
-    "is_online": true,
     "updated_at": "2026-11-19T02:30:00Z"
   }
 }

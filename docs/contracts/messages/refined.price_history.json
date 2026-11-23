@@ -1,5 +1,5 @@
 {
-  "_comment": "refined.price_history: ITAD 가격 이력 한 항목 = price_history 한 행. 필드는 refined.prices와 같다(PC·new·digital). collected_at은 가격이 바뀐 시각(UTC Z), price_krw는 그 달 월평균 환율로 환산, price_original·currency_original은 원본. 키 = game_id:store:edition:platform:item_condition:collected_at. price_history에는 유니크 키가 없어(insert) 같은 이력을 다시 받으면 줄이 겹칠 수 있고, Backend가 (game_id, store, edition, platform, item_condition, collected_at)으로 합친다 (backend/app/services/history.py).",
+  "_comment": "refined.price_history: price_history 한 행. 두 곳에서 온다 ① ITAD 가격 이력(history/v2) 한 항목 ② 지금 가격(refined.prices)이 지난번과 달라졌을 때(처음 본 가격 포함) 그 줄. 가격이 그대로면 보내지 않는다 → price_history에는 '가격이 바뀐 때'만 쌓인다. jdbc-sink-price-history는 이 토픽만 읽는다(refined.prices는 읽지 않는다). 필드는 refined.prices와 같다(ITAD 이력은 PC·new·digital). collected_at은 가격이 바뀐 시각(UTC Z), price_krw는 그 달 월평균 환율로 환산, price_original·currency_original은 원본. 키 = game_id:store:edition:platform:item_condition:collected_at. price_history에는 유니크 키가 없어(insert) 같은 이력을 다시 받으면 줄이 겹칠 수 있고, Backend가 (game_id, store, edition, platform, item_condition, collected_at)으로 합친다 (backend/app/services/history.py).",
   "schema": {
     "type": "struct",
     "name": "refined_price",

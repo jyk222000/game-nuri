@@ -3,8 +3,8 @@
 입력 payload = IGDB /games 응답 한 건 (id, name, first_release_date, slug, summary, game_type,
 parent_game, version_parent, cover, total_rating, total_rating_count, aggregated_rating,
 aggregated_rating_count, platforms, release_dates, external_games, localizations).
-games 테이블 컬럼 중 Steam 에서 오는 age_rating·korean_supported·is_online 은 이 메시지에 없으므로
-None 이다 (Steam 쪽 메시지와 합치는 방법은 팀 결정 필요: README 참고).
+games 테이블 컬럼 중 Steam 에서 오는 age_rating·korean_supported·is_online 은 넣지 않는다
+(넣으면 upsert 때 null 로 덮어쓴다). 그 3개는 refined.games_steam 이 채운다 (rules/steam_info.py).
 """
 
 from __future__ import annotations
@@ -40,9 +40,6 @@ REFINED_GAME_FIELDS = [
     ("rating_count", "int32", True),
     ("aggregated_rating", "double", True),
     ("aggregated_rating_count", "int32", True),
-    ("age_rating", "int16", True),
-    ("korean_supported", "boolean", True),
-    ("is_online", "boolean", True),
     ("updated_at", "string", False),
 ]
 REFINED_GAME_SCHEMA: dict[str, Any] = {
@@ -124,9 +121,6 @@ def refine_game(
         "rating_count": p.get("total_rating_count"),
         "aggregated_rating": round(agg, 2) if agg is not None else None,
         "aggregated_rating_count": p.get("aggregated_rating_count"),
-        "age_rating": None,
-        "korean_supported": None,
-        "is_online": None,
         "updated_at": envelope.get("collected_at"),
     }
     platforms, skipped = [], []

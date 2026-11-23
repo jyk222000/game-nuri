@@ -1,0 +1,41 @@
+{
+  "_comment": "refined.games_steam: Steam appdetails(raw.steam kind=app_details)에서 뽑은 games 칼럼 3개. 키 game_id. JDBC Sink는 games 테이블에 insert.mode=update(pk game_id)로 쓴다 = 이미 있는 게임 줄의 이 칼럼만 바꾼다. 게임 줄이 아직 없으면(IGDB보다 먼저 옴) 아무것도 바뀌지 않으므로, 정제기는 같은 게임의 refined.games를 보낼 때 마지막 Steam 값을 한 번 더 보낸다. age_rating = Steam required_age 정수(0 = 제한 없음), korean_supported = supported_languages에 한국어(Korean) 포함 여부, is_online = categories에 온라인 멀티(1 멀티플레이어, 20 MMO, 27 크로스플랫폼 멀티, 36 온라인 PvP, 38 온라인 협동)가 있는지. 원본에 항목이 없으면 null.",
+  "schema": {
+    "type": "struct",
+    "name": "refined_game_steam",
+    "fields": [
+      {
+        "field": "game_id",
+        "type": "int64",
+        "optional": false
+      },
+      {
+        "field": "age_rating",
+        "type": "int16",
+        "optional": true
+      },
+      {
+        "field": "korean_supported",
+        "type": "boolean",
+        "optional": true
+      },
+      {
+        "field": "is_online",
+        "type": "boolean",
+        "optional": true
+      },
+      {
+        "field": "updated_at",
+        "type": "string",
+        "optional": false
+      }
+    ]
+  },
+  "payload": {
+    "game_id": 119133,
+    "age_rating": 18,
+    "korean_supported": true,
+    "is_online": true,
+    "updated_at": "2026-11-19T02:30:00Z"
+  }
+}

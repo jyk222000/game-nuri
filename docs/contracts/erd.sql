@@ -49,9 +49,9 @@ CREATE TABLE games (
   rating_count     INT,
   aggregated_rating DECIMAL(5,2),                 -- IGDB aggregated_rating (평론 점수)
   aggregated_rating_count INT,                    -- IGDB aggregated_rating_count
-  age_rating       SMALLINT,                      -- Steam required_age (문자·숫자 섞여 옴 → 정제에서 정수)
-  korean_supported BOOLEAN,                       -- Steam supported_languages 파싱
-  is_online        BOOLEAN,                       -- Steam categories(멀티플레이어 등)에서 파생 (⑦ 경고)
+  age_rating       SMALLINT,                      -- Steam required_age (정수, 0=제한 없음) ← refined.games_steam (update)
+  korean_supported BOOLEAN,                       -- Steam supported_languages에 한국어 ← refined.games_steam
+  is_online        BOOLEAN,                       -- Steam categories 온라인 멀티 (⑦ 경고) ← refined.games_steam
   updated_at       DATETIME NOT NULL,
   INDEX idx_games_name (name),
   INDEX idx_games_parent (parent_game_id)
@@ -199,7 +199,7 @@ CREATE TABLE prices_current (                    -- JDBC Sink upsert (pk.fields 
   PRIMARY KEY (game_id, store, edition, platform, item_condition)
 );
 
-CREATE TABLE price_history (                     -- JDBC Sink insert
+CREATE TABLE price_history (                     -- JDBC Sink insert (refined.price_history: ITAD 이력 + 가격이 바뀐 때만)
   id               BIGINT AUTO_INCREMENT PRIMARY KEY,
   game_id          BIGINT NOT NULL,
   store            VARCHAR(32) NOT NULL,

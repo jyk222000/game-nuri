@@ -61,7 +61,7 @@ def test_game_row_columns_dates_and_korean_name():
         0,
     )
     assert r["cover_url"].endswith("/co4jni.jpg") and r["updated_at"] == AT
-    assert r["age_rating"] is None  # Steam 쪽 값은 이 메시지에 없다
+    assert "age_rating" not in r  # Steam 쪽 값은 refined.games_steam 으로 따로 보낸다
 
 
 def test_game_platforms_mapped_and_unserved_skipped_and_steam_id():
@@ -198,6 +198,7 @@ def test_router_routes_by_kind_and_ignores_unknown():
         "exchange_rates",
         "exchange_rates",
         "exchange_rates",
+        "price_history",  # 처음 본 가격 = 이력의 첫 점
     ]
 
 
