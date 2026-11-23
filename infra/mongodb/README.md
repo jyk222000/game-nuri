@@ -76,13 +76,14 @@ rs.status().members.map(m => `${m.name} ${m.stateStr} health=${m.health}`)
 ## 컬렉션·인덱스 (DB `gamenuri_raw`, 기준: `pipeline/connect/mongo-sink-*.json`)
 | 컬렉션 | 들어오는 토픽 | 성격 | 인덱스 | TTL | 백업 |
 |---|---|---|---|---|---|
-| `raw` | `raw.price`, `raw.console`, `raw.steam`, `raw.igdb` | API 원본(공통 봉투) | `collected_at` TTL | **14일** | 안 함(재수집 가능) |
-| `reviews` | `raw.steam` | 리뷰 (분석에 사용) | `recommendationid` 고유 | 없음 | **함** |
+| `raw_itad` · `raw_danawa` · `raw_steam` · `raw_igdb` (· `raw_unknown`) | `raw.price` · `raw.console` · `raw.steam` · `raw.igdb` (목록에 없는 토픽) | API 원본(공통 봉투) | `ingested_at` TTL | **14일** | 안 함(재수집 가능) |
+| `reviews` | `raw.steam`(`kind=review`만) | 리뷰 (분석에 사용) | `payload.recommendationid` 고유 | 없음 | **함** |
 | `games` | `refined.games` | 게임 정보 (Monstache → ES) | `game_id` 고유 | 없음 | 함 |
 
-- TTL은 `raw`에만 건다. `reviews`·`games`는 분석과 백업 대상이라 지우지 않는다.
-- TTL 기준 필드는 **BSON Date 타입의 수집 시각(`collected_at`)**만 쓴다. 문자열이면 TTL이 동작하지 않는다.
-- `contracts/topics.md`는 `games` 컬렉션만 적고 `raw`·`reviews`는 Sink 설정에만 있다. contracts에 컬렉션 이름을 추가하는 것이 좋다(제안만, 수정하지 않음).
+- 컬렉션 이름은 `pipeline/connect/mongo-sink-raw.json`의 `topic.override.*`가 정한다(예전 문서의 `raw` 한 컬렉션이 아니다, 2026-11-23 실제 설정에 맞춤).
+- TTL은 `raw_*`에만 건다. `reviews`·`games`는 분석과 백업 대상이라 지우지 않는다.
+- TTL 기준 필드는 Sink가 저장 시각으로 붙이는 **`ingested_at`(BSON Date)**이다. 원본의 `collected_at`은 문자열이라 TTL에 쓸 수 없다.
+- `contracts/topics.md`는 `games` 컬렉션만 적고 `raw_*`·`reviews`는 Sink 설정에만 있다. contracts에 컬렉션 이름을 추가하는 것이 좋다(제안만, 수정하지 않음).
 
 ### 인덱스 생성: `init-collections.js` (멱등)
 ```bash
@@ -92,8 +93,7 @@ mongosh "mongodb://mongodb-pr:27017,mongo-se1:27017,mongo-se2:27017/gamenuri_raw
 ```
 - 조건이 맞을 때만 만들고, 아니면 `건너뜀 …` 이유를 출력한다. 여러 번 실행해도 같은 결과다.
 - **현재 건너뛰는 항목 (2026-11-22 기준 추정, 실행 결과로 확인 필요)**
-  - `raw` TTL: Sink가 `JsonConverter`(스키마 없음)로 저장하면 `collected_at`은 ISO 문자열(`"2026-11-19T02:30:00Z"`)이라 TTL이 동작하지 않는다.
-    Connect에서 `TimestampConverter` 같은 변환으로 Date로 저장되는지 테스트가 필요하다(pipeline 담당, 미확인).
+  - `raw_*` TTL: `ingested_at`이 BSON Date가 아닌(없는) 문서가 있으면 그 컬렉션은 건너뛴다. 컬렉션이 아직 없어도 건너뛴다. 인덱스를 만든 뒤에는 `ingested_at`이 14일보다 오래된 문서가 자동으로 지워진다(지금 쌓인 문서는 모두 새것이라 만들 때 지워지는 것은 없을 것으로 예상, 실행 전 `db.raw_steam.countDocuments({ingested_at:{$lt:new Date(Date.now()-14*86400000)}})`로 확인).
   - `reviews` 고유 인덱스: 리뷰는 1건 단위 봉투(kind=review)로 오고 Steam 리뷰 객체가 `payload` 안에 있어, 키는 `payload.recommendationid`다(2026-11-23 스크립트 수정, 인덱스 이름 `uq_payload_recommendationid`).
     Sink가 `raw.steam` 전체(사양·동접자 포함)를 저장하는 동안은 `payload.recommendationid`가 없는 문서가 섞여 있어 건너뛴다. `kind=review`만 `reviews`에 넣고 `_id`를 `payload.recommendationid`로 쓰도록 Connect 설정이 바뀐 뒤(pipeline/connect, 남현식) 다시 실행한다.
   - `raw.steam`은 `raw`와 `reviews` 두 컬렉션에 중복 저장된다(Sink 2개). 용량 면에서 확정 필요(pipeline 담당).
