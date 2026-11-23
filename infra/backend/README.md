@@ -47,6 +47,17 @@ cd /opt/game-nuri/repo && git pull
 sudo systemctl restart backend && journalctl -u backend -n 30 --no-pager
 ```
 
+## 문제 해결
+**`status=203/EXEC`, `Unable to locate executable '…/.venv/bin/…': Permission denied`**
+- 원인: SELinux(Rocky 기본 Enforcing)가 `systemd`(`init_t`)의 실행을 막는다. 레포를 홈 디렉터리에서 `mv`로 `/opt`에 옮기면 파일 라벨이 `user_home_t`로 남는다(`ls -lZ`로 확인, `ausearch -m avc`에 `denied { execute } … user_home_t`).
+- 해결: `sudo systemctl stop backend && sudo restorecon -Rv /opt/game-nuri && sudo systemctl start backend` (라벨만 기본값으로 되돌리고 파일 내용은 바꾸지 않는다. 기본값에서 `.venv/bin`은 `bin_t`가 된다).
+- 예방: 레포는 `/opt/game-nuri`에서 직접 `git clone` 하거나, 옮긴 뒤에는 항상 `restorecon -Rv /opt/game-nuri`를 한다. SELinux를 끄지 않는다.
+- 같은 이유로 수집 서버(proxy)·kafka1~3의 서비스도 시작이 막힐 수 있다.
+
+**`/api/health`가 `degraded`**
+- `es: down`은 ES 설치 전에는 정상이다. `db_write`·`db_read`·`valkey`가 `ok`면 서비스는 정상이다.
+- `db_read`가 `down`이면 Replica 접속(계정·`10.0.1.%` 허용 범위)을 확인한다. 앱은 Primary로 대신 읽는다.
+
 ## 알아둘 것
 - **로그인(#1·#2)이 아직 없다.** 찜·알림·내 정보·Steam 연동 같은 로그인 API는 `AUTH_FAKE_USER=true`일 때만 시험할 수 있다. 켜면 시작 로그에 경고가 남는다. **시험 후 반드시 `false`로 되돌리고 `sudo systemctl restart backend`.**
 - 프로세스를 1개로 띄운다(`--workers` 없음). `/metrics`가 워커별로 갈라져 API 사용 순위(#37)가 틀어지는 것을 피하려는 것이다.
