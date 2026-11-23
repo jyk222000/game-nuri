@@ -67,3 +67,9 @@ class LowestOut(BaseModel):
 
 class DealsOut(BaseModel):
     items: list[Card]
+
+
+class ExchangeRatesOut(BaseModel):
+    base: str = "KRW"
+    rates: dict[str, float]  # USD·EUR·GBP, 1단위당 원
+    updated_at: UtcDatetime | None  # 가장 최근 환율 기준일 00:00 UTC. 환율이 없으면 null

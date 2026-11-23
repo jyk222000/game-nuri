@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_read_db
-from app.schemas.price import DealsOut, HistoryOut, LowestOut, PricesOut
-from app.services import deals, history, lowest, prices
+from app.schemas.price import DealsOut, ExchangeRatesOut, HistoryOut, LowestOut, PricesOut
+from app.services import deals, history, lowest, prices, rates
 
 router = APIRouter(prefix="/api")
 
@@ -38,3 +38,8 @@ def game_lowest(game_id: int, db: Db) -> LowestOut:
 @router.get("/games/deals", response_model=DealsOut)
 def game_deals(db: Db, size: Annotated[int, Query(ge=1, le=100)] = 20) -> DealsOut:
     return DealsOut(items=deals.get_deals(db, size))
+
+
+@router.get("/exchange-rates", response_model=ExchangeRatesOut)
+def exchange_rates(db: Db) -> ExchangeRatesOut:
+    return rates.get_rates(db)
