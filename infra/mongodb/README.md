@@ -93,8 +93,10 @@ mongosh "mongodb://mongodb-pr:27017,mongo-se1:27017,mongo-se2:27017/gamenuri_raw
   --username gamenuri --file init-collections.js      # 비밀번호는 프롬프트로 입력
 ```
 - 조건이 맞을 때만 만들고, 아니면 `건너뜀 …` 이유를 출력한다. 여러 번 실행해도 같은 결과다.
-- **현재 건너뛰는 항목 (2026-11-22 기준 추정, 실행 결과로 확인 필요)**
-  - `raw_*` TTL: `ingested_at`이 BSON Date가 아닌(없는) 문서가 있으면 그 컬렉션은 건너뛴다. 컬렉션이 아직 없어도 건너뛴다. 인덱스를 만든 뒤에는 `ingested_at`이 14일보다 오래된 문서가 자동으로 지워진다(지금 쌓인 문서는 모두 새것이라 만들 때 지워지는 것은 없을 것으로 예상, 실행 전 `db.raw_steam.countDocuments({ingested_at:{$lt:new Date(Date.now()-14*86400000)}})`로 확인).
+- **현재 건너뛰는 항목 (2026-11-23 mongosh로 확인)**
+  - **`raw_*` TTL은 아직 걸리지 않는다.** 실제 문서의 `ingested_at`이 BSON Date가 아니라 **Long(밀리초 숫자)**로 저장되어 있다(`raw_steam` 예: `ingested_at: Long('1795429167082')`). 스키마 없는 JSON으로 저장하면 InsertField가 넣은 시각이 숫자로 들어간다. TTL은 Date 타입에만 동작하므로 스크립트가 `건너뜀`으로 처리한다.
+    해결은 Connect 쪽(Date로 저장되게 하는 변환, pipeline 담당) 또는 날짜 기준 정리 작업이 필요하다. 그때까지 `raw_*`는 계속 늘어난다(2026-11-23 `raw_steam` 455,368건).
+  - (참고) `raw_*` TTL 스크립트 동작: `ingested_at`이 BSON Date가 아닌(없는) 문서가 있으면 그 컬렉션은 건너뛴다. 컬렉션이 아직 없어도 건너뛴다. 인덱스를 만든 뒤에는 `ingested_at`이 14일보다 오래된 문서가 자동으로 지워진다(지금 쌓인 문서는 모두 새것이라 만들 때 지워지는 것은 없을 것으로 예상, 실행 전 `db.raw_steam.countDocuments({ingested_at:{$lt:new Date(Date.now()-14*86400000)}})`로 확인).
   - `reviews` 고유 인덱스: 리뷰는 1건 단위 봉투(kind=review)로 오고 Steam 리뷰 객체가 `payload` 안에 있어, 키는 `payload.recommendationid`다(2026-11-23 스크립트 수정, 인덱스 이름 `uq_payload_recommendationid`).
     Sink가 `raw.steam` 전체(사양·동접자 포함)를 저장하는 동안은 `payload.recommendationid`가 없는 문서가 섞여 있어 건너뛴다. `kind=review`만 `reviews`에 넣고 `_id`를 `payload.recommendationid`로 쓰도록 Connect 설정이 바뀐 뒤(pipeline/connect, 남현식) 다시 실행한다.
   - `raw.steam`은 `raw`와 `reviews` 두 컬렉션에 중복 저장된다(Sink 2개). 용량 면에서 확정 필요(pipeline 담당).
