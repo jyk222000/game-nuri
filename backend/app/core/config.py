@@ -12,6 +12,8 @@ class BackendSettings(Settings):
     # 로그인 구현 전 개발용 가짜 사용자. 기본 꺼짐. 배포 .env에는 반드시 false.
     auth_fake_user: bool = False
     auth_fake_user_id: int = 1  # users 테이블에 실제로 있는 user_id여야 한다 (FK)
+    # API 사용 순위(#37)용 Prometheus 주소 (예: http://monitoring:9090). 비면 degraded.
+    prometheus_url: str = ""
 
 
 @lru_cache

@@ -88,3 +88,16 @@ class NotificationBody(BaseModel):
 
 class NotificationOut(BaseModel):
     email_enabled: bool
+
+
+# ---- 내 취향 (#24) ----
+class TasteGenre(BaseModel):
+    genre: str
+    pct: int
+
+
+class TasteOut(BaseModel):
+    total_playtime_hours: int
+    owned_games: int
+    top_genres: list[TasteGenre]
+    style: str
