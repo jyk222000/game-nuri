@@ -1,0 +1,487 @@
+{
+  "_comment": "한 게임이 여러 행이 되는 테이블용 refined 토픽 14개. 토픽 이름 = refined.<이름>, 메시지 1개 = 테이블 1행, 필드 = erd.sql 컬럼(AUTO_INCREMENT 제외)과 같은 이름·순서. JSON+schema 형식이며 날짜는 'YYYY-MM-DD', 시각은 UTC ISO 문자열(Connect TimestampConverter). 키 = 테이블 PK를 ':'로 이은 값. JDBC Sink는 모두 upsert.",
+  "topics": {
+    "genres": {
+      "topic": "refined.genres",
+      "table": "genres",
+      "key": "genre_id",
+      "pk.fields": "genre_id",
+      "from": "raw.igdb game_info genres",
+      "schema": {
+        "type": "struct",
+        "name": "refined.genres",
+        "optional": false,
+        "fields": [
+          {
+            "field": "genre_id",
+            "type": "int32",
+            "optional": false
+          },
+          {
+            "field": "name",
+            "type": "string",
+            "optional": false
+          }
+        ]
+      },
+      "example": {
+        "genre_id": 12,
+        "name": "Role-playing (RPG)"
+      }
+    },
+    "companies": {
+      "topic": "refined.companies",
+      "table": "companies",
+      "key": "company_id",
+      "pk.fields": "company_id",
+      "from": "raw.igdb game_info involved_companies.company (developer/publisher 역할이 있는 회사만)",
+      "schema": {
+        "type": "struct",
+        "name": "refined.companies",
+        "optional": false,
+        "fields": [
+          {
+            "field": "company_id",
+            "type": "int32",
+            "optional": false
+          },
+          {
+            "field": "name",
+            "type": "string",
+            "optional": false
+          }
+        ]
+      },
+      "example": {
+        "company_id": 248,
+        "name": "Bandai Namco"
+      }
+    },
+    "tags": {
+      "topic": "refined.tags",
+      "table": "tags",
+      "key": "tag_id",
+      "pk.fields": "tag_id",
+      "from": "raw.igdb game_info themes(tag_id = theme id), keywords(tag_id = 10,000,000 + keyword id)",
+      "schema": {
+        "type": "struct",
+        "name": "refined.tags",
+        "optional": false,
+        "fields": [
+          {
+            "field": "tag_id",
+            "type": "int32",
+            "optional": false
+          },
+          {
+            "field": "name",
+            "type": "string",
+            "optional": false
+          },
+          {
+            "field": "source",
+            "type": "string",
+            "optional": false
+          },
+          {
+            "field": "name_ko",
+            "type": "string",
+            "optional": true
+          }
+        ]
+      },
+      "example": {
+        "tag_id": 17,
+        "name": "Fantasy",
+        "source": "igdb_theme",
+        "name_ko": null
+      }
+    },
+    "game_series": {
+      "topic": "refined.game_series",
+      "table": "game_series",
+      "key": "series_id:kind",
+      "pk.fields": "series_id,kind",
+      "from": "raw.igdb game_info collections·franchises (kind = collection | franchise)",
+      "schema": {
+        "type": "struct",
+        "name": "refined.game_series",
+        "optional": false,
+        "fields": [
+          {
+            "field": "series_id",
+            "type": "int64",
+            "optional": false
+          },
+          {
+            "field": "kind",
+            "type": "string",
+            "optional": false
+          },
+          {
+            "field": "name",
+            "type": "string",
+            "optional": false
+          }
+        ]
+      },
+      "example": {
+        "series_id": 3045,
+        "kind": "collection",
+        "name": "Elden Ring"
+      }
+    },
+    "game_genres": {
+      "topic": "refined.game_genres",
+      "table": "game_genres",
+      "key": "game_id:genre_id",
+      "pk.fields": "game_id,genre_id",
+      "from": "raw.igdb game_info genres",
+      "schema": {
+        "type": "struct",
+        "name": "refined.game_genres",
+        "optional": false,
+        "fields": [
+          {
+            "field": "game_id",
+            "type": "int64",
+            "optional": false
+          },
+          {
+            "field": "genre_id",
+            "type": "int32",
+            "optional": false
+          }
+        ]
+      },
+      "example": {
+        "game_id": 119133,
+        "genre_id": 12
+      }
+    },
+    "game_companies": {
+      "topic": "refined.game_companies",
+      "table": "game_companies",
+      "key": "game_id:company_id:role",
+      "pk.fields": "game_id,company_id,role",
+      "from": "raw.igdb game_info involved_companies (역할마다 한 행)",
+      "schema": {
+        "type": "struct",
+        "name": "refined.game_companies",
+        "optional": false,
+        "fields": [
+          {
+            "field": "game_id",
+            "type": "int64",
+            "optional": false
+          },
+          {
+            "field": "company_id",
+            "type": "int32",
+            "optional": false
+          },
+          {
+            "field": "role",
+            "type": "string",
+            "optional": false
+          }
+        ]
+      },
+      "example": {
+        "game_id": 119133,
+        "company_id": 248,
+        "role": "publisher"
+      }
+    },
+    "game_tags": {
+      "topic": "refined.game_tags",
+      "table": "game_tags",
+      "key": "game_id:tag_id",
+      "pk.fields": "game_id,tag_id",
+      "from": "raw.igdb game_info themes·keywords",
+      "schema": {
+        "type": "struct",
+        "name": "refined.game_tags",
+        "optional": false,
+        "fields": [
+          {
+            "field": "game_id",
+            "type": "int64",
+            "optional": false
+          },
+          {
+            "field": "tag_id",
+            "type": "int32",
+            "optional": false
+          }
+        ]
+      },
+      "example": {
+        "game_id": 119133,
+        "tag_id": 17
+      }
+    },
+    "game_series_map": {
+      "topic": "refined.game_series_map",
+      "table": "game_series_map",
+      "key": "game_id:series_id:kind",
+      "pk.fields": "game_id,series_id,kind",
+      "from": "raw.igdb game_info collections·franchises",
+      "schema": {
+        "type": "struct",
+        "name": "refined.game_series_map",
+        "optional": false,
+        "fields": [
+          {
+            "field": "game_id",
+            "type": "int64",
+            "optional": false
+          },
+          {
+            "field": "series_id",
+            "type": "int64",
+            "optional": false
+          },
+          {
+            "field": "kind",
+            "type": "string",
+            "optional": false
+          }
+        ]
+      },
+      "example": {
+        "game_id": 119133,
+        "series_id": 3045,
+        "kind": "collection"
+      }
+    },
+    "game_platforms": {
+      "topic": "refined.game_platforms",
+      "table": "game_platforms",
+      "key": "game_id:platform",
+      "pk.fields": "game_id,platform",
+      "from": "raw.igdb game_info platforms (서비스 플랫폼 7개만) + release_dates (플랫폼별 가장 빠른 날짜)",
+      "schema": {
+        "type": "struct",
+        "name": "refined.game_platforms",
+        "optional": false,
+        "fields": [
+          {
+            "field": "game_id",
+            "type": "int64",
+            "optional": false
+          },
+          {
+            "field": "platform",
+            "type": "string",
+            "optional": false
+          },
+          {
+            "field": "release_date",
+            "type": "string",
+            "optional": true
+          }
+        ]
+      },
+      "example": {
+        "game_id": 119133,
+        "platform": "PC",
+        "release_date": "2022-02-25"
+      }
+    },
+    "game_aliases": {
+      "topic": "refined.game_aliases",
+      "table": "game_aliases",
+      "key": "game_id:alias",
+      "pk.fields": "game_id,alias",
+      "from": "raw.igdb game_info name, 한국 localizations, alternative_names (영문·숫자 2글자 이하 제외, source=igdb, reviewed=false)",
+      "schema": {
+        "type": "struct",
+        "name": "refined.game_aliases",
+        "optional": false,
+        "fields": [
+          {
+            "field": "game_id",
+            "type": "int64",
+            "optional": false
+          },
+          {
+            "field": "alias",
+            "type": "string",
+            "optional": false
+          },
+          {
+            "field": "source",
+            "type": "string",
+            "optional": false
+          },
+          {
+            "field": "reviewed",
+            "type": "boolean",
+            "optional": false
+          }
+        ]
+      },
+      "example": {
+        "game_id": 119133,
+        "alias": "Elden Ring",
+        "source": "igdb",
+        "reviewed": false
+      }
+    },
+    "game_store_ids": {
+      "topic": "refined.game_store_ids",
+      "table": "game_store_ids",
+      "key": "store:external_id",
+      "pk.fields": "store,external_id",
+      "from": "raw.igdb external_games(Steam), ITAD id(처음 연결될 때), 다나와 pcode(매칭될 때)",
+      "schema": {
+        "type": "struct",
+        "name": "refined.game_store_ids",
+        "optional": false,
+        "fields": [
+          {
+            "field": "game_id",
+            "type": "int64",
+            "optional": false
+          },
+          {
+            "field": "store",
+            "type": "string",
+            "optional": false
+          },
+          {
+            "field": "external_id",
+            "type": "string",
+            "optional": false
+          }
+        ]
+      },
+      "example": {
+        "game_id": 119133,
+        "store": "steam",
+        "external_id": "1245620"
+      }
+    },
+    "time_to_beat": {
+      "topic": "refined.time_to_beat",
+      "table": "game_time_to_beat",
+      "key": "game_id",
+      "pk.fields": "game_id",
+      "from": "raw.igdb time_to_beat (IGDB game_time_to_beats, 초 단위)",
+      "schema": {
+        "type": "struct",
+        "name": "refined.time_to_beat",
+        "optional": false,
+        "fields": [
+          {
+            "field": "game_id",
+            "type": "int64",
+            "optional": false
+          },
+          {
+            "field": "hastily_sec",
+            "type": "int32",
+            "optional": true
+          },
+          {
+            "field": "normally_sec",
+            "type": "int32",
+            "optional": true
+          },
+          {
+            "field": "completely_sec",
+            "type": "int32",
+            "optional": true
+          },
+          {
+            "field": "ttb_count",
+            "type": "int32",
+            "optional": true
+          },
+          {
+            "field": "updated_at",
+            "type": "string",
+            "optional": false
+          }
+        ]
+      },
+      "example": {
+        "game_id": 119133,
+        "hastily_sec": 180000,
+        "normally_sec": 324000,
+        "completely_sec": 747900,
+        "ttb_count": 11,
+        "updated_at": "2026-11-23T03:00:00Z"
+      }
+    },
+    "player_counts": {
+      "topic": "refined.player_counts",
+      "table": "player_counts",
+      "key": "game_id:collected_at",
+      "pk.fields": "game_id,collected_at",
+      "from": "raw.steam player_count (GetNumberOfCurrentPlayers)",
+      "schema": {
+        "type": "struct",
+        "name": "refined.player_counts",
+        "optional": false,
+        "fields": [
+          {
+            "field": "game_id",
+            "type": "int64",
+            "optional": false
+          },
+          {
+            "field": "player_count",
+            "type": "int32",
+            "optional": false
+          },
+          {
+            "field": "collected_at",
+            "type": "string",
+            "optional": false
+          }
+        ]
+      },
+      "example": {
+        "game_id": 119133,
+        "player_count": 23405,
+        "collected_at": "2026-11-23T03:00:00Z"
+      }
+    },
+    "exchange_rates": {
+      "topic": "refined.exchange_rates",
+      "table": "exchange_rates",
+      "key": "rate_date:currency",
+      "pk.fields": "rate_date,currency",
+      "from": "가격 정제에 쓴 환율 (원화 제외, 날짜 = 수집 시각 UTC 날짜, 하루 1번)",
+      "schema": {
+        "type": "struct",
+        "name": "refined.exchange_rates",
+        "optional": false,
+        "fields": [
+          {
+            "field": "rate_date",
+            "type": "string",
+            "optional": false
+          },
+          {
+            "field": "currency",
+            "type": "string",
+            "optional": false
+          },
+          {
+            "field": "krw_per_unit",
+            "type": "double",
+            "optional": false
+          }
+        ]
+      },
+      "example": {
+        "rate_date": "2026-11-23",
+        "currency": "EUR",
+        "krw_per_unit": 1500.0
+      }
+    }
+  }
+}
