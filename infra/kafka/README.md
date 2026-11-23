@@ -103,6 +103,8 @@ curl -s http://kafka1:9100/metrics | grep 'node_systemd_unit_state{name="kafka.s
 - 5대의 Kafka 버전과 `controller.quorum.voters`를 같게 유지한다.
 - Connect 설정은 `pipeline/connect/*.json` + `apply.sh`로만 바꾼다.
 
+- JMX는 쓰지 않는다. `kafka-run-class.sh`는 `KAFKA_JMX_OPTS`가 비어 있으면 인증 없는 JMX를 켜고 `0.0.0.0`의 임의 포트를 연다(11/23 확인: 5대 모두). 서비스 파일에서 `KAFKA_JMX_OPTS`를 채워 막는다. 지표는 kafka_exporter와 Connect 상태 스크립트로 모은다.
+
 ## 6. 장애 시험 결과 (11/20~21)
 
 | 시나리오 | 결과 |

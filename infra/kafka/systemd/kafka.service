@@ -14,6 +14,9 @@ Group=kafka
 Environment="KAFKA_HEAP_OPTS=-Xms1g -Xmx1g"
 # 자기 호스트 이름이 IPv6 링크 로컬(fe80::)로 먼저 해석되는 것을 막는다
 Environment="KAFKA_OPTS=-Djava.net.preferIPv4Stack=true"
+# kafka-run-class.sh는 KAFKA_JMX_OPTS가 비어 있으면 인증 없는 JMX를 켜고 0.0.0.0 임의 포트를 연다.
+# 지표는 kafka_exporter·Connect 상태 스크립트로 모으므로 JMX를 쓰지 않는다. 값을 채워 기본값을 막는다.
+Environment="KAFKA_JMX_OPTS=-Djava.rmi.server.hostname=127.0.0.1"
 Environment="LOG_DIR=/DATA/kafka-applog"
 ExecStart=/opt/kafka/bin/kafka-server-start.sh /etc/kafka/server.properties
 ExecStop=/opt/kafka/bin/kafka-server-stop.sh

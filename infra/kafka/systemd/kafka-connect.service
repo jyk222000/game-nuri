@@ -9,6 +9,9 @@ User=kafka
 Group=kafka
 Environment="KAFKA_HEAP_OPTS=-Xms512m -Xmx512m"
 Environment="KAFKA_OPTS=-Djava.net.preferIPv4Stack=true"
+# kafka-run-class.sh는 KAFKA_JMX_OPTS가 비어 있으면 인증 없는 JMX를 켜고 0.0.0.0 임의 포트를 연다.
+# 지표는 kafka_exporter·Connect 상태 스크립트로 모으므로 JMX를 쓰지 않는다. 값을 채워 기본값을 막는다.
+Environment="KAFKA_JMX_OPTS=-Djava.rmi.server.hostname=127.0.0.1"
 Environment="LOG_DIR=/DATA/connect-applog"
 ExecStart=/opt/kafka/bin/connect-distributed.sh /etc/kafka/connect-distributed.properties
 SuccessExitStatus=143
