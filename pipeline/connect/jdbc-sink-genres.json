@@ -1,0 +1,19 @@
+{
+  "name": "jdbc-sink-genres",
+  "config": {
+    "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
+    "connection.url": "jdbc:mariadb://mariadb-pr:3306/gamenuri",
+    "dialect.name": "MySqlDatabaseDialect",
+    "connection.user": "${MARIADB_USER}",
+    "connection.password": "${MARIADB_PASSWORD}",
+    "auto.create": "false",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "true",
+    "topics": "refined.genres",
+    "table.name.format": "genres",
+    "insert.mode": "upsert",
+    "pk.mode": "record_value",
+    "pk.fields": "genre_id",
+    "tasks.max": "1"
+  }
+}

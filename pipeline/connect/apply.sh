@@ -4,15 +4,15 @@
 #   ./apply.sh                                            # 이 폴더의 커넥터 전부
 #   ./apply.sh jdbc-sink-prices-current mongo-sink-raw    # 고른 것만 (파일 이름에서 .json을 뺀 이름)
 # 접속 주소: CONNECT_URL 또는 .env의 KAFKA_CONNECT_URL
-# 치환: .env의 MARIADB_USER, MARIADB_PASSWORD, MONGO_URI 세 개만 바꾼다.
-#       TimestampConverter$Value 같은 클래스 이름의 '$'가 빈 값으로 지워지지 않게 하려는 것이다.
+# 치환: .env의 MARIADB_USER, MARIADB_PASSWORD, MONGO_URI, ES_USER, ES_PASSWORD만 바꾼다.
+#       TimestampConverter$Value의 '$', TimestampRouter의 ${topic}·${timestamp}가 지워지지 않게 하려는 것이다.
 # 하나가 실패해도 나머지는 계속 등록하고, 끝에 상태를 보여 준다. 실패가 있으면 종료 코드 1.
 set -euo pipefail
 cd "$(dirname "$0")"
 command -v envsubst >/dev/null || { echo "envsubst가 없습니다: sudo dnf install -y gettext"; exit 1; }
 set -a; source ../../.env; set +a
 URL="${CONNECT_URL:-${KAFKA_CONNECT_URL}}"
-VARS='${MARIADB_USER} ${MARIADB_PASSWORD} ${MONGO_URI}'
+VARS='${MARIADB_USER} ${MARIADB_PASSWORD} ${MONGO_URI} ${ES_USER} ${ES_PASSWORD}'
 
 if [ $# -gt 0 ]; then
   files=(); for n in "$@"; do files+=("${n%.json}.json"); done
@@ -33,9 +33,9 @@ for f in "${files[@]}"; do
   if [ -n "$missing" ]; then echo "✗ $name .env에 값이 없음:$missing"; fail=1; continue; fi
   # 설정 내용(비밀번호 포함)은 명령 인자가 아니라 표준 입력으로 넘긴다 (ps에 보이지 않게)
   if ! cfg=$(envsubst "$VARS" < "$f" | python3 -c '
-import json, sys
+import json, re, sys
 c = json.load(sys.stdin)["config"]
-left = [k for k, v in c.items() if "${" in str(v)]
+left = [k for k, v in c.items() if re.search(r"\$\{[A-Z_]+\}", str(v))]
 if left:
     sys.exit("치환되지 않은 값: " + ", ".join(left) + " (.env 확인)")
 print(json.dumps({k: v for k, v in c.items() if not k.startswith("_")}))'); then

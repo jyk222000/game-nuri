@@ -1,0 +1,19 @@
+{
+  "name": "jdbc-sink-game-store-ids",
+  "config": {
+    "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
+    "connection.url": "jdbc:mariadb://mariadb-pr:3306/gamenuri",
+    "dialect.name": "MySqlDatabaseDialect",
+    "connection.user": "${MARIADB_USER}",
+    "connection.password": "${MARIADB_PASSWORD}",
+    "auto.create": "false",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "true",
+    "topics": "refined.game_store_ids",
+    "table.name.format": "game_store_ids",
+    "insert.mode": "upsert",
+    "pk.mode": "record_value",
+    "pk.fields": "store,external_id",
+    "tasks.max": "1"
+  }
+}

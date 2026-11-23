@@ -1,0 +1,22 @@
+{
+  "name": "jdbc-sink-game-links",
+  "config": {
+    "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
+    "connection.url": "jdbc:mariadb://mariadb-pr:3306/gamenuri",
+    "dialect.name": "MySqlDatabaseDialect",
+    "connection.user": "${MARIADB_USER}",
+    "connection.password": "${MARIADB_PASSWORD}",
+    "auto.create": "false",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "true",
+    "topics": "refined.game_genres,refined.game_companies,refined.game_tags,refined.game_series_map",
+    "insert.mode": "upsert",
+    "pk.mode": "record_value",
+    "pk.fields": "",
+    "transforms": "route",
+    "transforms.route.type": "org.apache.kafka.connect.transforms.RegexRouter",
+    "transforms.route.regex": "refined\\.(.*)",
+    "transforms.route.replacement": "$1",
+    "tasks.max": "1"
+  }
+}

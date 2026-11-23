@@ -1,13 +1,23 @@
 {
   "name": "es-sink-clickstream",
   "config": {
+    "_comment": "Confluent Elasticsearch Sink 16.x (ES 8.x·9.x). 날짜별 인덱스 clickstream-YYYY.MM.dd. ES 계정은 .env의 ES_USER/ES_PASSWORD",
     "connector.class": "io.confluent.connect.elasticsearch.ElasticsearchSinkConnector",
     "topics": "clickstream",
     "connection.url": "http://elk:9200",
+    "connection.username": "${ES_USER}",
+    "connection.password": "${ES_PASSWORD}",
     "key.ignore": "true",
     "schema.ignore": "true",
     "value.converter": "org.apache.kafka.connect.json.JsonConverter",
     "value.converter.schemas.enable": "false",
+    "transforms": "daily",
+    "transforms.daily.type": "org.apache.kafka.connect.transforms.TimestampRouter",
+    "transforms.daily.topic.format": "${topic}-${timestamp}",
+    "transforms.daily.timestamp.format": "yyyy.MM.dd",
+    "behavior.on.malformed.documents": "warn",
+    "max.retries": "5",
+    "retry.backoff.ms": "1000",
     "tasks.max": "1"
   }
 }
