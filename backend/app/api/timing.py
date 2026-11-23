@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.db.session import get_read_db
-from app.schemas.timing import TimingOut
+from app.schemas.timing import PredictionOut, TimingOut
 from app.services import timing
 
 router = APIRouter(prefix="/api")
@@ -17,3 +17,8 @@ Db = Annotated[Session, Depends(get_read_db)]
 @router.get("/games/{game_id}/timing", response_model=TimingOut)
 def game_timing(game_id: int, db: Db) -> TimingOut:
     return timing.get_timing(db, game_id)
+
+
+@router.get("/games/{game_id}/prediction", response_model=PredictionOut)
+def game_prediction(game_id: int, db: Db) -> PredictionOut:
+    return timing.get_prediction(db, game_id)
