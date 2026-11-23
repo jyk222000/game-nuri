@@ -125,3 +125,13 @@ def test_connector_json_is_valid_and_named():
     for f in CONNECT.glob("*.json"):
         d = json.loads(f.read_text(encoding="utf-8"))
         assert d["name"] == f.stem
+
+
+def test_mongo_sink_reviews_only_reviews_once():
+    c = json.loads((CONNECT / "mongo-sink-reviews.json").read_text(encoding="utf-8"))["config"]
+    assert c["topics"] == "raw.steam"
+    assert c["transforms"].split(",")[0] == "onlyReview"  # 거른 뒤에 필드 추가
+    assert c["transforms.onlyReview.filter.condition"] == "$[?(@.kind == 'review')]"
+    assert c["transforms.onlyReview.filter.type"] == "include"
+    assert c["document.id.strategy.partial.value.projection.list"] == "payload.recommendationid"
+    assert c["writemodel.strategy"].endswith("ReplaceOneBusinessKeyStrategy")
