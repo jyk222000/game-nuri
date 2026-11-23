@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from app.api import health, me
+from app.api import health, me, prices
 from app.core.config import get_backend_settings
 from app.core.errors import register_error_handlers
 
@@ -25,6 +25,7 @@ app = FastAPI(title="겜누리 API", lifespan=lifespan)
 register_error_handlers(app)
 app.include_router(health.router)
 app.include_router(me.router)
+app.include_router(prices.router)
 
 # /metrics — Prometheus가 수집한다 (⑩ API 순위).
 Instrumentator().instrument(app).expose(app, include_in_schema=False)

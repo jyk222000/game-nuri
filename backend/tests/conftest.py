@@ -9,7 +9,7 @@ from app.api.deps import CurrentUser, get_current_user
 from app.db.base import Base
 from app.db.guard import ALLOW_READONLY_WRITE
 from app.db.models import Game, User
-from app.db.session import get_write_db
+from app.db.session import get_read_db, get_write_db
 from app.main import app
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -52,6 +52,7 @@ def env():
 
     current = {"id": 1}
     app.dependency_overrides[get_write_db] = db
+    app.dependency_overrides[get_read_db] = db  # 테스트에서는 읽기·쓰기가 같은 DB
     app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id=current["id"])
     yield TestClient(app), engine, current
     app.dependency_overrides.clear()
