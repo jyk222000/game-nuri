@@ -1,4 +1,4 @@
-"""모델 28개가 docs/contracts/erd.sql과 같은지 검사한다. erd.sql을 직접 읽어 비교한다.
+"""모델 29개가 docs/contracts/erd.sql과 같은지 검사한다. erd.sql을 직접 읽어 비교한다.
 
 비교 항목: 테이블 목록, 컬럼 이름·순서, 컬럼 타입(MariaDB 방언으로 컴파일),
 NOT NULL 여부, 기본키, 인덱스·고유 키 이름.
@@ -58,11 +58,11 @@ def _norm_type(col) -> str:  # noqa: ANN001
     return TYPE_ALIASES.get(text, text)
 
 
-def test_28_tables_match() -> None:
-    assert len(ERD_TABLES) == 28
+def test_29_tables_match() -> None:
+    assert len(ERD_TABLES) == 29
     assert {m.__tablename__ for m in ALL_MODELS} == set(ERD_TABLES)
-    assert len(ALL_MODELS) == 28
-    assert len(WRITABLE_MODELS) == 7 and len(READ_ONLY_MODELS) == 21
+    assert len(ALL_MODELS) == 29
+    assert len(WRITABLE_MODELS) == 7 and len(READ_ONLY_MODELS) == 22
     assert set(Base.metadata.tables) == set(ERD_TABLES)
 
 
