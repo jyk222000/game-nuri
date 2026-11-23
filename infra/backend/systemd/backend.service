@@ -1,0 +1,27 @@
+# /etc/systemd/system/backend.service  (backend1, backend2 공통 — 서버마다 다른 값은 .env의 SERVER_NAME뿐)
+# 환경 변수: /etc/game-nuri/backend.env (root:backend, 640) — 예시는 backend.env.example
+# 레포는 /opt/game-nuri/repo, venv는 /opt/game-nuri/repo/.venv (pip install -e shared -r backend/requirements.txt)
+#
+# 프로세스를 1개(--workers 없음)로 둔다: /metrics(prometheus-fastapi-instrumentator)가 프로세스별로 따로 세어져
+# 여러 워커면 Prometheus가 읽을 때마다 값이 들쭉날쭉해진다(API 사용 순위 #37). 처리량이 모자라면 그때 다시 정한다.
+[Unit]
+Description=game-nuri backend (FastAPI)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=backend
+Group=backend
+WorkingDirectory=/opt/game-nuri/repo/backend
+EnvironmentFile=/etc/game-nuri/backend.env
+ExecStart=/opt/game-nuri/repo/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+Restart=on-failure
+RestartSec=5
+# 종료할 때 아직 안 나간 clickstream 메시지를 Kafka로 보낸다(최대 5초). 그보다 여유 있게 기다린다.
+TimeoutStopSec=15
+LimitNOFILE=65535
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
