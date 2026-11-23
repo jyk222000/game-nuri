@@ -1,9 +1,11 @@
-# Monstache: MongoDB games 컬렉션 → Elasticsearch games 인덱스
-# ELK VM에서 실행. 비밀번호는 환경 변수 MONSTACHE_MONGO_URL 로 전달 (파일에 쓰지 않음)
+# Monstache: MongoDB gamenuri_raw.games·reviews → Elasticsearch games·reviews
+# elk VM에서 systemd로 실행한다 (monstache.service). 설치 위치 /etc/monstache/monstache.toml
+# 접속 정보·비밀번호는 이 파일에 쓰지 않는다. /etc/monstache/monstache.env(600)의 환경 변수로 받는다
+#   MONSTACHE_MONGO_URL, MONSTACHE_ES_USER, MONSTACHE_ES_PASS (monstache.env.example)
 elasticsearch-urls = ["http://elk:9200"]
 direct-read-namespaces = ["gamenuri_raw.games", "gamenuri_raw.reviews"]   # 시작 시 기존 데이터 한 번 복사
 change-stream-namespaces = ["gamenuri_raw.games", "gamenuri_raw.reviews"] # 이후 변경 실시간 반영 (복제 세트 필요)
-resume = true
+resume = true      # 진행 위치를 MongoDB monstache DB에 기록 (monstache 계정에 readWrite 필요)
 verbose = false
 
 [[mapping]]
@@ -13,3 +15,28 @@ index = "games"
 [[mapping]]
 namespace = "gamenuri_raw.reviews"
 index = "reviews"
+
+# reviews: MongoDB에는 raw.steam 봉투 그대로(payload 안에 리뷰) 저장된다 (mongo-sink-reviews).
+# ES에는 필요한 필드만 최상위로 펼쳐 보낸다 (reviews-index.json과 같은 필드).
+# IGDB game_id는 원본에 없어서 steam_appid로 둔다. game_id가 필요하면 MariaDB game_store_ids로 바꾼다.
+[[script]]
+namespace = "gamenuri_raw.reviews"
+script = """
+module.exports = function(doc) {
+  var p = doc.payload;
+  if (!p) { return doc; }
+  return {
+    steam_appid: p.steam_appid,
+    recommendationid: p.recommendationid,
+    language: p.language,
+    review: p.review,
+    voted_up: p.voted_up,
+    votes_up: p.votes_up,
+    weighted_vote_score: p.weighted_vote_score,
+    playtime_at_review: p.author ? p.author.playtime_at_review : null,
+    created_at: p.timestamp_created,
+    source: doc.source,
+    collected_at: doc.collected_at
+  };
+}
+"""

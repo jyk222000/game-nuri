@@ -79,7 +79,8 @@ MobaXterm MultiExec으로 여러 대에 같은 명령을 넣을 때는 Exclude�
 | MariaDB 드라이버 | 3.5.11 | Maven Central `org.mariadb.jdbc:mariadb-java-client` | 위 JDBC 폴더의 `lib/` |
 | MongoDB connector | 3.1.3 (`-all.jar`) | Maven Central `org.mongodb.kafka:mongo-kafka-connect` | `/opt/kafka-plugins/mongo-kafka-connect/` |
 | File connector (시험용) | 3.8.0 | `/opt/kafka/libs/connect-file-3.8.0.jar` | `/opt/kafka-plugins/file-connector/` |
-| Elasticsearch | 미정 | ES 버전이 정해진 뒤 | – |
+| Elasticsearch Sink | 16.0.1 (ES 8.x·9.x) | `api.hub.confluent.io` (archive URL) | `/opt/kafka-plugins/confluentinc-kafka-connect-elasticsearch-16.0.1/` (`es-sink-clickstream`, ES 8.19.25와 연결 확인 11/23) |
+| Confluent connect-transforms | 1.6.2 | `api.hub.confluent.io` (archive URL) | `/opt/kafka-plugins/confluentinc-connect-transforms-1.6.2/` (`Filter$Value` — `mongo-sink-reviews`의 `kind=review` 거르기, 3대 인식 확인 11/23) |
 
 12. **운영 도구** 로그 정리 타이머(5대), kafka_exporter(kafka1), node_exporter(5대), refiner 환경(kafka1~3: `/opt/game-nuri/repo/.venv`, `pip install -r pipeline/requirements.txt -e shared`)
 
