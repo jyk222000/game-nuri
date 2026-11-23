@@ -15,6 +15,7 @@
 | `jdbc-sink-requirements.json` | refined.requirements | `game_requirements` | upsert | 바로 (시간 변환 추가) |
 | `jdbc-sink-player-counts.json` | refined.player_counts | `player_counts` | upsert | 바로 |
 | `jdbc-sink-review-summary.json` | refined.review_summary | `review_summaries` | upsert | 바로 (시간 변환 추가) |
+| `jdbc-sink-review-stats.json` | refined.review_stats | `game_review_stats` (Steam 스토어 리뷰 수·긍정률) | upsert (game_id) | `erd_alter_1123.sql`(#59) 적용 후 |
 | `jdbc-sink-prices-current.json` | refined.prices | `prices_current` | upsert (game_id, store, edition, platform, item_condition) | `erd_alter_1122.sql` 적용 후 |
 | `jdbc-sink-price-history.json` | refined.price_history | `price_history` | insert. 정제기가 ITAD 이력과 "가격이 바뀐 때"만 보낸다 | 바로 |
 | `jdbc-sink-game-platforms.json` | refined.game_platforms | `game_platforms` | upsert (game_id, platform) | 바로 |
@@ -23,7 +24,7 @@
 | `mongo-sink-raw.json` | raw.* | MongoDB `raw_itad`·`raw_danawa`·`raw_steam`·`raw_igdb` (토픽별) | 원본 그대로 + `ingested_at` | 등록됨 |
 | `mongo-sink-games.json` | refined.games | MongoDB `games` (→ Monstache → ES) | game_id 기준 교체 | 등록됨 |
 | `mongo-sink-unmatched.json` | refined.unmatched | MongoDB `unmatched` | 그대로 + `ingested_at` | 바로 |
-| `mongo-sink-reviews.json` | raw.steam | MongoDB `reviews` | 원본 그대로 | 아래 "남은 문제" 확인 후 |
+| `mongo-sink-reviews.json` | raw.steam 중 `kind=review`만 | MongoDB `reviews` (→ Monstache → ES) | 봉투 그대로 + `ingested_at`, `payload.recommendationid` 기준 upsert | `reviews`에 `payload.recommendationid` 고유 인덱스(김준영) 후. 플러그인: Confluent connect-transforms 1.6.2 (Filter SMT) |
 | `es-sink-clickstream.json` | clickstream | ES `clickstream-YYYY.MM.dd` (날짜별) | 이벤트 저장 (문서 ID = 토픽+파티션+오프셋이라 중복 없음) | ES 설치·계정 후. 플러그인: Confluent Elasticsearch Sink 16.0.1 (ES 8.x·9.x) |
 
 가격 테이블 변경: `docs/contracts/erd_alter_1122.sql` (이고은).
@@ -63,6 +64,6 @@ curl -s http://kafka1:8083/connectors/<이름>/status          # 상태 (FAILED�
 
 ## 남은 문제
 
-- `mongo-sink-reviews`는 `raw.steam` 전체(사양·동접자·보유 게임 포함)를 `reviews`에 넣는다. 리뷰만 남기는 방법(정제에서 리뷰 전용 토픽으로 펼치기 등)을 정해야 한다.
+- `raw.steam`은 `raw_steam`(mongo-sink-raw, 전체)과 `reviews`(리뷰만)에 겹쳐 저장된다. 용량 확인 필요 (#53).
 - 연결 테이블은 행을 지우지 않는다. 원본에서 빠진 장르·태그 등은 옛 행이 남는다.
 - `price_history`는 insert라 같은 메시지를 다시 받으면 줄이 겹칠 수 있다. Backend가 (game_id, store, edition, platform, item_condition, collected_at)으로 합친다 (#48).

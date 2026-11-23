@@ -1,6 +1,7 @@
 {
   "name": "mongo-sink-reviews",
   "config": {
+    "_comment": "raw.steam 중 kind=review(리뷰 1건 = 메시지 1개, #53)만 gamenuri_raw.reviews에 저장. payload.recommendationid 기준 upsert라 같은 리뷰를 다시 받아도 한 건. 필터는 Confluent connect-transforms 플러그인 필요",
     "connector.class": "com.mongodb.kafka.connect.MongoSinkConnector",
     "topics": "raw.steam",
     "connection.uri": "${MONGO_URI}",
@@ -8,7 +9,17 @@
     "collection": "reviews",
     "value.converter": "org.apache.kafka.connect.json.JsonConverter",
     "value.converter.schemas.enable": "false",
-    "_comment": "kind=review 메시지만 남기도록 refiner가 리뷰를 한 건씩 펼쳐 넣는 방식으로 바꿀 수 있음 (테스트 후 확정)",
+    "transforms": "onlyReview,ingested",
+    "transforms.onlyReview.type": "io.confluent.connect.transforms.Filter$Value",
+    "transforms.onlyReview.filter.condition": "$[?(@.kind == 'review')]",
+    "transforms.onlyReview.filter.type": "include",
+    "transforms.onlyReview.missing.or.null.behavior": "exclude",
+    "transforms.ingested.type": "org.apache.kafka.connect.transforms.InsertField$Value",
+    "transforms.ingested.timestamp.field": "ingested_at",
+    "document.id.strategy": "com.mongodb.kafka.connect.sink.processor.id.strategy.PartialValueStrategy",
+    "document.id.strategy.partial.value.projection.type": "AllowList",
+    "document.id.strategy.partial.value.projection.list": "payload.recommendationid",
+    "writemodel.strategy": "com.mongodb.kafka.connect.sink.writemodel.strategy.ReplaceOneBusinessKeyStrategy",
     "tasks.max": "1",
     "max.num.retries": "3",
     "retries.defer.timeout": "5000"

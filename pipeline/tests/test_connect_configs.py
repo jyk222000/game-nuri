@@ -47,6 +47,7 @@ def _contracts() -> dict[str, dict]:
     optional = {  # 계약 PR이 먼저 merge되지 않았을 수 있다
         "refined.games_steam": ("games", ["game_id"]),
         "refined.price_history": ("price_history", []),
+        "refined.review_stats": ("game_review_stats", ["game_id"]),
     }
     for topic, spec in optional.items():
         if (MSG / f"{topic}.json").exists():
@@ -125,3 +126,13 @@ def test_connector_json_is_valid_and_named():
     for f in CONNECT.glob("*.json"):
         d = json.loads(f.read_text(encoding="utf-8"))
         assert d["name"] == f.stem
+
+
+def test_mongo_sink_reviews_only_reviews_once():
+    c = json.loads((CONNECT / "mongo-sink-reviews.json").read_text(encoding="utf-8"))["config"]
+    assert c["topics"] == "raw.steam"
+    assert c["transforms"].split(",")[0] == "onlyReview"  # 거른 뒤에 필드 추가
+    assert c["transforms.onlyReview.filter.condition"] == "$[?(@.kind == 'review')]"
+    assert c["transforms.onlyReview.filter.type"] == "include"
+    assert c["document.id.strategy.partial.value.projection.list"] == "payload.recommendationid"
+    assert c["writemodel.strategy"].endswith("ReplaceOneBusinessKeyStrategy")
