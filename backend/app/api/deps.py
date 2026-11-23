@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from fastapi import Request
 
 from app.core.config import get_backend_settings
-from app.core.errors import unauthorized
+from app.core.errors import ApiError, unauthorized
 from app.core.keys import SESSION_COOKIE_NAME
 from app.services import session_store
 
@@ -33,3 +33,17 @@ def get_current_user(request: Request) -> CurrentUser:
     if settings.auth_fake_user:
         return CurrentUser(user_id=settings.auth_fake_user_id, is_fake=True)
     raise unauthorized()
+
+
+def get_optional_user_id(request: Request) -> int | None:
+    """로그인했으면 user_id, 아니면 None. 로그인 없이도 쓰는 API(클릭스트림 등)용.
+
+    세션이 잘못됐거나 Valkey가 안 돼도 오류를 내지 않고 익명으로 본다(fail-open).
+    """
+    session_id = request.cookies.get(SESSION_COOKIE_NAME)
+    if not session_id:
+        return None
+    try:
+        return session_store.get_user_id(session_id)
+    except ApiError:  # Valkey 장애(503): 익명으로 처리
+        return None
