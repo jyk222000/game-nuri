@@ -47,6 +47,7 @@ def _contracts() -> dict[str, dict]:
     optional = {  # 계약 PR이 먼저 merge되지 않았을 수 있다
         "refined.games_steam": ("games", ["game_id"]),
         "refined.price_history": ("price_history", []),
+        "refined.review_stats": ("game_review_stats", ["game_id"]),
     }
     for topic, spec in optional.items():
         if (MSG / f"{topic}.json").exists():

@@ -15,6 +15,7 @@
 | `jdbc-sink-requirements.json` | refined.requirements | `game_requirements` | upsert | 바로 (시간 변환 추가) |
 | `jdbc-sink-player-counts.json` | refined.player_counts | `player_counts` | upsert | 바로 |
 | `jdbc-sink-review-summary.json` | refined.review_summary | `review_summaries` | upsert | 바로 (시간 변환 추가) |
+| `jdbc-sink-review-stats.json` | refined.review_stats | `game_review_stats` (Steam 스토어 리뷰 수·긍정률) | upsert (game_id) | `erd_alter_1123.sql`(#59) 적용 후 |
 | `jdbc-sink-prices-current.json` | refined.prices | `prices_current` | upsert (game_id, store, edition, platform, item_condition) | `erd_alter_1122.sql` 적용 후 |
 | `jdbc-sink-price-history.json` | refined.price_history | `price_history` | insert. 정제기가 ITAD 이력과 "가격이 바뀐 때"만 보낸다 | 바로 |
 | `jdbc-sink-game-platforms.json` | refined.game_platforms | `game_platforms` | upsert (game_id, platform) | 바로 |
