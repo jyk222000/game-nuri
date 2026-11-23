@@ -1,0 +1,21 @@
+# kafka1~3 (브로커 + 투표자). 서버 위치: /etc/kafka/server.properties (kafka:kafka)
+# VM마다 바꾸는 값은 ${ID}(1/2/3), ${NAME}(kafka1/2/3) 두 개뿐이다.
+# 투표자 목록(controller.quorum.voters)은 5대 모두 글자 하나까지 같아야 한다.
+process.roles=broker,controller
+node.id=${ID}
+controller.quorum.voters=1@kafka1:9093,2@kafka2:9093,3@kafka3:9093,4@backup:9093,5@monitoring:9093
+listeners=PLAINTEXT://:9092,CONTROLLER://:9093
+advertised.listeners=PLAINTEXT://${NAME}:9092
+inter.broker.listener.name=PLAINTEXT
+controller.listener.names=CONTROLLER
+listener.security.protocol.map=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+log.dirs=/DATA/kafka
+num.partitions=3
+default.replication.factor=3
+# 복사본이 2개 미만이면 쓰기 거부. 장애 대응 때만 동적으로 1로 낮추고 복구 후 되돌린다 (README 6장)
+min.insync.replicas=2
+offsets.topic.replication.factor=3
+transaction.state.log.replication.factor=3
+transaction.state.log.min.isr=2
+auto.create.topics.enable=false
+log.retention.hours=168

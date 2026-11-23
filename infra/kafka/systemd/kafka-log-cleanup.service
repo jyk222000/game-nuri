@@ -1,0 +1,13 @@
+# /etc/systemd/system/kafka-log-cleanup.service  (5대 공통)
+# Kafka는 프로그램 로그(server.log 등)를 시간별 파일로 나누기만 하고 지우지 않는다.
+# 메시지 데이터(/DATA/kafka)와는 다른 폴더다. 메시지는 토픽 보관 기간에 따라 Kafka가 지운다.
+# 폴더는 VM마다 다르다:
+#   kafka1~3:   /DATA/kafka-applog /DATA/connect-applog
+#   backup:     /var/log/kafka
+#   monitoring: /DATA/kafka-applog
+[Unit]
+Description=Delete Kafka app logs older than 7 days
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/find /DATA/kafka-applog /DATA/connect-applog -type f -name '*.log.*' -mtime +7 -delete

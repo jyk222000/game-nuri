@@ -1,0 +1,19 @@
+# /etc/systemd/system/refiner.service  (kafka1~3, 정제 코드가 main에 올라오기 전까지 enable하지 않는다)
+# 환경 변수: /etc/game-nuri/refiner.env (root:refiner, 640) — 예시는 refiner.env.example
+# 3대가 같은 consumer group(refiner)으로 돌며 파티션을 나눠 맡는다.
+[Unit]
+Description=game-nuri refiner (raw.* -> refined.*)
+After=network-online.target kafka.service
+Wants=network-online.target
+
+[Service]
+User=refiner
+Group=refiner
+WorkingDirectory=/opt/game-nuri/repo/pipeline
+EnvironmentFile=/etc/game-nuri/refiner.env
+ExecStart=/opt/game-nuri/repo/.venv/bin/python -m refiner.main
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

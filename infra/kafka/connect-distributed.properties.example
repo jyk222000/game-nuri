@@ -1,0 +1,22 @@
+# kafka1~3 (Kafka Connect 분산 모드). 서버 위치: /etc/kafka/connect-distributed.properties (kafka:kafka)
+# rest.advertised.host.name만 VM마다 다르다 (kafka1/2/3).
+bootstrap.servers=kafka1:9092,kafka2:9092,kafka3:9092
+group.id=gamenuri-connect
+# 수집기의 키(itad_id 등)는 문자열이다. JSON으로 읽으면 오류가 난다
+key.converter=org.apache.kafka.connect.storage.StringConverter
+# raw.*는 schema 없는 JSON. JDBC 커넥터는 각자 설정에서 schemas.enable=true로 덮어쓴다
+value.converter=org.apache.kafka.connect.json.JsonConverter
+value.converter.schemas.enable=false
+config.storage.topic=connect-configs
+offset.storage.topic=connect-offsets
+status.storage.topic=connect-status
+config.storage.replication.factor=3
+offset.storage.replication.factor=3
+status.storage.replication.factor=3
+listeners=http://0.0.0.0:8083
+rest.advertised.host.name=${NAME}
+rest.advertised.port=8083
+plugin.path=/opt/kafka-plugins
+offset.flush.interval.ms=10000
+# 작업자가 빠지면 1분 기다렸다 작업을 다른 VM으로 옮긴다 (기본 5분)
+scheduled.rebalance.max.delay.ms=60000

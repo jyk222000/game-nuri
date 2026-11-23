@@ -1,0 +1,27 @@
+# /etc/systemd/system/kafka.service  (5대 공통)
+# VM마다 바꾸는 값: KAFKA_HEAP_OPTS, LOG_DIR
+#   kafka1~3:   -Xms1g -Xmx1g,     /DATA/kafka-applog
+#   backup:     -Xms192m -Xmx192m, /var/log/kafka
+#   monitoring: -Xms256m -Xmx256m, /DATA/kafka-applog
+[Unit]
+Description=Apache Kafka (KRaft)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=kafka
+Group=kafka
+Environment="KAFKA_HEAP_OPTS=-Xms1g -Xmx1g"
+# 자기 호스트 이름이 IPv6 링크 로컬(fe80::)로 먼저 해석되는 것을 막는다
+Environment="KAFKA_OPTS=-Djava.net.preferIPv4Stack=true"
+Environment="LOG_DIR=/DATA/kafka-applog"
+ExecStart=/opt/kafka/bin/kafka-server-start.sh /etc/kafka/server.properties
+ExecStop=/opt/kafka/bin/kafka-server-stop.sh
+# 정상 중지(SIGTERM)의 종료 코드 143을 성공으로 본다 → failed가 아니라 inactive
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=100000
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,11 @@
+# backup, monitoring (투표 전용, 메시지를 저장하지 않음). 서버 위치: /etc/kafka/server.properties (kafka:kafka)
+#   backup:     ID=4, NAME=backup,     META=/var/lib/kafka-meta  (backup에는 /DATA가 없음)
+#   monitoring: ID=5, NAME=monitoring, META=/DATA/kafka-meta
+# listeners에 호스트 이름을 써서 내부 주소에만 연다 (monitoring은 192.168.0.223이 아니라 10.0.2.1).
+process.roles=controller
+node.id=${ID}
+controller.quorum.voters=1@kafka1:9093,2@kafka2:9093,3@kafka3:9093,4@backup:9093,5@monitoring:9093
+listeners=CONTROLLER://${NAME}:9093
+controller.listener.names=CONTROLLER
+listener.security.protocol.map=CONTROLLER:PLAINTEXT
+log.dirs=${META}
