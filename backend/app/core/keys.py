@@ -16,6 +16,11 @@ def price_cache_key(game_id: int) -> str:
     return f"cache:prices:{game_id}"
 
 
+def trending_cache_key() -> str:
+    """실시간 검색어 결과 캐시 (ES 호출을 줄인다)."""
+    return "cache:search:trending"
+
+
 def alert_sent_key(alert_id: int, price_krw: int) -> str:
     """같은 알림을 같은 가격으로 두 번 보내지 않기 위한 중복 방지 키."""
     return f"alert_sent:{alert_id}:{price_krw}"
@@ -28,6 +33,7 @@ def spec_check_key(game_id: int, spec_hash: str) -> str:
 
 # ---------- TTL (초) ----------
 PRICE_CACHE_TTL_SECONDS = 10 * 60  # 확정: 가격 캐시 10분 (backend/CLAUDE.md)
+TRENDING_CACHE_TTL_SECONDS = 60  # 제안: 실시간 검색어는 1분만 저장
 SESSION_TTL_SECONDS = 7 * 24 * 60 * 60  # 제안: 7일
 ALERT_SENT_TTL_SECONDS = 24 * 60 * 60  # 제안: 24시간 (같은 가격 알림 재발송 방지 기간)
 SPEC_CHECK_TTL_SECONDS = 7 * 24 * 60 * 60  # 제안: 7일 (사양이 바뀌면 hash가 달라져 새로 판정)
