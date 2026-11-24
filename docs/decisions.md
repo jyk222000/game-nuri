@@ -1,6 +1,11 @@
 # 결정 기록
 형식: `YYYY-MM-DD | 결정 | 이유`
 
+- 2026-11-24 | 로그는 **Loki + Grafana Alloy**로 모으되 **작은 VM(proxy, mongodb-pr, mariadb-pr 등)에는 깔지 않음** (현재 mariadb-re, elk, kafka1~3, backend1·2 7대) | Promtail은 2026-03-02 지원 종료. Alloy는 메모리 약 200MB·바이너리 550MB라 RAM 600MB급·디스크가 빠듯한 VM에는 부담. 설치 스크립트가 디스크 여유 17% 미만이면 멈춘다 (`infra/monitoring/`)
+- 2026-11-24 | Kafka 꺼짐 감지는 **kafka_watch**(monitoring에서 브로커·컨트롤러에 2초마다 직접 접속)로 보강 | Prometheus 15초 수집은 몇 초 만에 끝나는 롤링 재시작을 놓쳐 대시보드가 계속 "정상"으로 보였음
+- 2026-11-24 | DB 지표는 mysqld_exporter 0.21.0·mongodb_exporter 0.53.0, **읽기 전용 계정 `exporter`**(비밀번호는 서버 파일 600, 레포 없음). MongoDB는 복제 셋 3대 모두 설치 | 복제 상태·지연 감시, mongodb-pr을 꺼도 지표가 끊기지 않게
+- 2026-11-24 | monitoring VM을 CPU 1→2개, RAM 약 1.7→2.7GB로 증설 | Loki·Alloy·kafka_watch 추가 후에도 Kafka 투표자(256M 힙)와 같이 돌릴 여유 확보
+- 2026-11-23 | 모니터링은 Prometheus 3.13.3 LTS(`10.0.2.1:9090`), Alertmanager 0.34.1 → Slack(심각 1시간·주의 4시간 재전송, 복구 알림), Grafana 10.2.6(OS 패키지, 로그인 필수), 대시보드는 파일로 등록해 화면에서 저장 불가 | 발표(11/30)까지 업그레이드 없이 운영, 설정을 레포 파일과 같게 유지. 웹훅·비밀번호는 서버 파일에만 둠 (`infra/monitoring/README.md`)
 - 2026-11-23 | Elasticsearch·Kibana **8.19.25** (공식 RPM, 노드 1대, 힙 2GB, 데이터 `/DATA/elasticsearch`, 복사본 0) | Confluent ES Sink 16.0.1이 8.x·9.x 지원, Monstache 호환 가능성이 9보다 높음, elk RAM 5.5Gi (`infra/elk/README.md`)
 - 2026-11-23 | ES 보안(로그인)은 켜고 **HTTP TLS는 끔** (`http://elk:9200`) | 내부망, Connect·Monstache·Backend 설정을 단순하게. 노드 간 TLS는 자동 설정 그대로
 - 2026-11-23 | ES 계정은 **`elastic` 하나**로 Connect·Monstache·Backend가 같이 씀 (사람용·프로그램별 계정 없음) | 학습 프로젝트·내부망, 계정마다 권한 요청·설명하는 비용이 큼. `elastic` 비밀번호를 바꾸면 kafka1·elk·backend `.env`를 같이 바꾼다. 나중에 계정을 나눠도 데이터는 그대로
