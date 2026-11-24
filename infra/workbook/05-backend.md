@@ -91,6 +91,7 @@ Backend가 지키는 규칙 (`backend/CLAUDE.md`):
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` / `SESSION_SECRET` | 구글 로그인 | 아래 7장 |
 | `GEMINI_API_KEY` / `AI_MODEL` | 사양 판정 AI | 아래 8장 |
 | `SMTP_HOST` `SMTP_PORT` `SMTP_USER` `SMTP_PASSWORD` `MAIL_FROM` `PUBLIC_BASE_URL` | 목표가 알림 메일 | 아래 9장, **backend1만** |
+| `MAIL_FROM_NAME` | 받는 사람 화면에 보이는 보낸 사람 이름 | 기본 `겜누리`, 비우면 주소만 보임. 주소는 `SMTP_USER`(Gmail)와 같음 (PR 머지 후 적용) |
 | `AUTH_FAKE_USER` / `AUTH_FAKE_USER_ID` | 개발용 가짜 로그인 | **운영에서는 반드시 `false`** |
 
 > <- **systemd 는 값 뒤의 `# 주석`을 값의 일부로 읽습니다.** 설명은 항상 **별도 줄**에 쓰고, 값 줄에는 값만 씁니다.
@@ -190,7 +191,7 @@ Backend가 지키는 규칙 (`backend/CLAUDE.md`):
 
 **준비**
 1. 발신용 구글 계정에서 **2단계 인증**을 켜고 **앱 비밀번호**를 발급합니다(공백 없이 붙여서 사용).
-2. `backend.env` 에 `SMTP_USER`(**전체 메일 주소**, 앱 이름이 아님), `SMTP_PASSWORD`, `PUBLIC_BASE_URL` 을 넣습니다.
+2. `backend.env` 에 `SMTP_USER`(**전체 메일 주소**, 앱 이름이 아님), `SMTP_PASSWORD`, `PUBLIC_BASE_URL` 을 넣습니다. 보낸 사람 이름을 바꾸려면 `MAIL_FROM_NAME` 도 넣습니다(기본 `겜누리`).
 3. 서버에서 Gmail SMTP로 나가는지 확인합니다.
 ```
 # 587 포트가 열려 있는지 (open 이 나와야 함)
