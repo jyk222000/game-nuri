@@ -552,3 +552,31 @@ def test_second_review_kept_words_still_appear() -> None:
     for word in SECOND_REVIEW_KEPT:
         d = rs.parse_digest(es_result(pros=[word], cons=[word]))
         assert d.pros == [word] and d.cons == [word], word
+
+
+# ---------- 걸러 낸 말의 변형 (세 번째 점검) ----------
+@pytest.mark.parametrize("word", ["불쾌감", "어거지", "완성도", "문제점", "플레이어", "마찬가지"])
+def test_variants_of_filtered_words_are_filtered(word: str) -> None:
+    # 정확 일치로만 거르므로 "불쾌"를 걸러도 "불쾌감"은 따로 넣어야 한다
+    d = rs.parse_digest(es_result(pros=[word, "스토리"], cons=[word, "버그"]))
+    assert d.pros == ["스토리"] and d.cons == ["버그"]
+
+
+@pytest.mark.parametrize(
+    "word",
+    [
+        "미완성",
+        "선택지",
+        "아기자기",
+        "정신력",
+        "실시간",
+        "보드게임",
+        "미니게임",
+        "게이지",
+        "게이트",
+    ],
+)
+def test_ordinary_compounds_that_contain_filtered_words_stay(word: str) -> None:
+    # 걸러 낸 말이 글자로 들어 있어도 따로 의미가 있는 말은 남긴다
+    d = rs.parse_digest(es_result(pros=[word], cons=[word]))
+    assert d.pros == [word] and d.cons == [word]
