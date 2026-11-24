@@ -14,7 +14,8 @@ User=backend
 Group=backend
 WorkingDirectory=/opt/game-nuri/repo/backend
 EnvironmentFile=/etc/game-nuri/backend.env
-ExecStart=/opt/game-nuri/repo/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+# uvicorn 스크립트를 직접 실행하지 않고 venv의 python으로 모듈 실행한다(SELinux 라벨 문제에 덜 민감, README 문제 해결 참고)
+ExecStart=/opt/game-nuri/repo/.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 Restart=on-failure
 RestartSec=5
 # 종료할 때 아직 안 나간 clickstream 메시지를 Kafka로 보낸다(최대 5초). 그보다 여유 있게 기다린다.

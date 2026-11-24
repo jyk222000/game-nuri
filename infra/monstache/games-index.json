@@ -1,5 +1,6 @@
 {
   "settings": {
+    "number_of_replicas": 0,
     "analysis": {
       "analyzer": {
         "korean": { "type": "custom", "tokenizer": "nori_tokenizer", "filter": ["lowercase"] }

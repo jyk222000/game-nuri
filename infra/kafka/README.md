@@ -79,7 +79,8 @@ MobaXterm MultiExec으로 여러 대에 같은 명령을 넣을 때는 Exclude�
 | MariaDB 드라이버 | 3.5.11 | Maven Central `org.mariadb.jdbc:mariadb-java-client` | 위 JDBC 폴더의 `lib/` |
 | MongoDB connector | 3.1.3 (`-all.jar`) | Maven Central `org.mongodb.kafka:mongo-kafka-connect` | `/opt/kafka-plugins/mongo-kafka-connect/` |
 | File connector (시험용) | 3.8.0 | `/opt/kafka/libs/connect-file-3.8.0.jar` | `/opt/kafka-plugins/file-connector/` |
-| Elasticsearch | 미정 | ES 버전이 정해진 뒤 | – |
+| Elasticsearch Sink | 16.0.1 (ES 8.x·9.x) | `api.hub.confluent.io` (archive URL) | `/opt/kafka-plugins/confluentinc-kafka-connect-elasticsearch-16.0.1/` (`es-sink-clickstream`, ES 8.19.25와 연결 확인 11/23) |
+| Confluent connect-transforms | 1.6.2 | `api.hub.confluent.io` (archive URL) | `/opt/kafka-plugins/confluentinc-connect-transforms-1.6.2/` (`Filter$Value` — `mongo-sink-reviews`의 `kind=review` 거르기, 3대 인식 확인 11/23) |
 
 12. **운영 도구** 로그 정리 타이머(5대), kafka_exporter(kafka1), node_exporter(5대), refiner 환경(kafka1~3: `/opt/game-nuri/repo/.venv`, `pip install -r pipeline/requirements.txt -e shared`)
 
@@ -102,6 +103,8 @@ curl -s http://kafka1:9100/metrics | grep 'node_systemd_unit_state{name="kafka.s
 - 점검은 한 대씩. 다음 대는 앞 대의 `Isr`이 3개로 돌아온 뒤에 끈다.
 - 5대의 Kafka 버전과 `controller.quorum.voters`를 같게 유지한다.
 - Connect 설정은 `pipeline/connect/*.json` + `apply.sh`로만 바꾼다.
+
+- JMX는 쓰지 않는다. `kafka-run-class.sh`는 `KAFKA_JMX_OPTS`가 비어 있으면 인증 없는 JMX를 켜고 `0.0.0.0`의 임의 포트를 연다(11/23 확인: 5대 모두). 서비스 파일에서 `KAFKA_JMX_OPTS`를 채워 막는다. 지표는 kafka_exporter와 Connect 상태 스크립트로 모은다.
 
 ## 6. 장애 시험 결과 (11/20~21)
 

@@ -37,6 +37,8 @@ VM에서 하는 작업은 사용자가 직접 실행한다.
 ```bash
 # 0) 스냅샷을 찍는다. 레포는 /opt/game-nuri/repo, venv는 /opt/game-nuri/repo/.venv (pip install -e shared -r collector/requirements.txt)
 sudo useradd --system --home-dir /opt/game-nuri --shell /sbin/nologin collector   # 이미 있으면 생략
+sudo restorecon -Rv /opt/game-nuri           # 레포를 홈 등에서 옮겼다면 필수(SELinux 라벨). 없으면 서비스가 203/EXEC Permission denied
+sudo mkdir -p /etc/game-nuri                 # 이미 있으면 그대로 둔다
 sudo install -m 0755 /opt/game-nuri/repo/infra/collector/run-collector.sh /usr/local/bin/run-collector.sh
 sudo install -m 0640 -o root -g collector /opt/game-nuri/repo/infra/collector/systemd/collector.env.example /etc/game-nuri/collector.env
 sudoedit /etc/game-nuri/collector.env        # 값 채우기 (커밋 금지)

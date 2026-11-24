@@ -139,3 +139,14 @@ def test_mongo_sink_reviews_only_reviews_once():
     assert c["transforms.onlyReview.filter.type"] == "include"
     assert c["document.id.strategy.partial.value.projection.list"] == "payload.recommendationid"
     assert c["writemodel.strategy"].endswith("ReplaceOneBusinessKeyStrategy")
+
+
+@pytest.mark.parametrize("name", ["mongo-sink-raw", "mongo-sink-reviews", "mongo-sink-unmatched"])
+def test_mongo_ingested_at_is_date(name):
+    """스키마 없는 값에 InsertField는 시각을 Long으로 넣는다. TTL은 Date에만 걸리므로 바꿔 준다."""
+    c = json.loads((CONNECT / f"{name}.json").read_text(encoding="utf-8"))["config"]
+    ts = c["transforms"].split(",")
+    assert ts.index("ingestedDate") == ts.index("ingested") + 1
+    assert c["transforms.ingestedDate.type"].endswith("TimestampConverter$Value")
+    assert c["transforms.ingestedDate.field"] == "ingested_at"
+    assert c["transforms.ingestedDate.target.type"] == "Timestamp"
