@@ -753,3 +753,130 @@ def test_main_logs_the_skip_value_to_resume_with(
     text = " ".join(caplog.messages)
     assert "--skip 5" in text  # 이미 건너뛴 3개 + 이번에 처리한 2개 = 다음에는 5개를 건너뛴다
     assert "AI 호출 2회 사용" in text
+
+
+# ---------- Google 과부하(503)일 때: 쉬고, 계속 안 되면 멈춘다 ----------
+def pauses_in(waits: list[float]) -> list[float]:
+    """재시도 간격(2초·4초)이나 호출 간격이 아니라 '연속 실패 휴식'만 골라낸다(60초 이상)."""
+    return [w for w in waits if w >= rs.FAILURE_PAUSE_SECONDS]
+
+
+def test_pause_grows_after_three_consecutive_failures() -> None:
+    waits: list[float] = []
+    budget = rs.AiBudget(interval=0)
+    s = FakeSession(ai=[Resp(503)])  # 계속 503
+    for _ in range(3):  # 한 번 부를 때마다 최대 3번 시도한다
+        rs.ask_ai("p", settings(), s, sleep=waits.append, budget=budget)
+    # 연속 실패 3번을 채운 뒤 다음 시도부터 60초 -> 120초 -> 240초 ... 로 늘어난다
+    assert pauses_in(waits)[:3] == [60.0, 120.0, 240.0]
+    assert budget.pauses == len(pauses_in(waits)) and budget.paused_seconds > 0
+
+
+def test_pause_is_capped_at_ten_minutes() -> None:
+    waits: list[float] = []
+    budget = rs.AiBudget(interval=0, stop_after=0)  # 멈추지 않게 해서 휴식만 본다
+    s = FakeSession(ai=[Resp(503)])
+    for _ in range(6):
+        rs.ask_ai("p", settings(), s, sleep=waits.append, budget=budget)
+    assert max(pauses_in(waits)) == rs.FAILURE_PAUSE_MAX_SECONDS == 600.0
+
+
+def test_success_resets_the_failure_count() -> None:
+    waits: list[float] = []
+    budget = rs.AiBudget(interval=0)
+    s = FakeSession(ai=[Resp(503), Resp(503), Resp(200, ai_body("됐어요."))])
+    assert rs.ask_ai("p", settings(), s, sleep=waits.append, budget=budget) == "됐어요."
+    assert budget.consecutive_failures == 0  # 2번 실패 뒤 성공하면 0으로 돌아간다
+    assert pauses_in(waits) == []  # 실패가 3번에 닿지 않았으니 쉬지 않았다
+
+
+def test_zero_failure_pause_never_rests() -> None:
+    waits: list[float] = []
+    budget = rs.AiBudget(interval=0, pause_seconds=0, stop_after=0)
+    s = FakeSession(ai=[Resp(503)])
+    for _ in range(3):
+        rs.ask_ai("p", settings(), s, sleep=waits.append, budget=budget)
+    assert pauses_in(waits) == [] and budget.pauses == 0
+
+
+def test_client_errors_count_as_failures_too() -> None:
+    # 키가 틀렸을 때(403) 계속 호출하면 한도만 태운다. 연속 실패로 세어 멈추게 한다
+    budget = rs.AiBudget(interval=0, pause_seconds=0, stop_after=2)
+    s = FakeSession(ai=[Resp(403)])
+    rs.ask_ai("p", settings(), s, sleep=no_wait, budget=budget)
+    rs.ask_ai("p", settings(), s, sleep=no_wait, budget=budget)
+    assert budget.consecutive_failures == 2 and budget.should_stop
+    calls = len(s.calls)
+    assert rs.ask_ai("p", settings(), s, sleep=no_wait, budget=budget) is None
+    assert len(s.calls) == calls  # 한계에 닿은 뒤에는 더 부르지 않는다
+
+
+def test_run_stops_after_too_many_consecutive_failures_and_resumes_at_that_game() -> None:
+    stats = rs.RunStats()
+    budget = rs.AiBudget(interval=0, pause_seconds=0, stop_after=4)
+    s = FakeSession(ai=[Resp(503)])
+    out = list(
+        rs.summarize(
+            targets(5), settings(), s, sleep=no_wait, ai_only=True, budget=budget, stats=stats
+        )
+    )
+    assert out == []  # --ai-only라서 보낸 것이 없다
+    # 1번 게임: 3번 실패(건너뜀). 2번 게임: 4번째 실패에서 한계에 닿아 멈춘다
+    assert stats.stopped_by_failures and not stats.stopped_by_budget
+    assert stats.processed == 1  # 다음에는 2번 게임부터(--skip 1) 이어서 한다
+
+
+def test_failures_in_the_middle_do_not_stop_the_run_when_a_success_follows() -> None:
+    stats = rs.RunStats()
+    budget = rs.AiBudget(interval=0, pause_seconds=0, stop_after=4)
+    s = FakeSession(ai=[Resp(503), Resp(503), Resp(200, ai_body("가")), Resp(200, ai_body("나"))])
+    out = list(
+        rs.summarize(
+            targets(2), settings(), s, sleep=no_wait, ai_only=True, budget=budget, stats=stats
+        )
+    )
+    assert [k for k, _ in out] == ["1", "2"]  # 실패 사이에 성공이 끼면 계속 간다
+    assert not stats.stopped_by_failures and stats.processed == 2
+
+
+def test_failure_options_defaults_and_rules() -> None:
+    args = rs.parse_args([])
+    assert (args.failure_pause, args.stop_after_failures) == (60.0, 12)
+    assert rs.parse_args(["--failure-pause", "0", "--stop-after-failures", "0"]).failure_pause == 0
+    for bad in (["--failure-pause", "-1"], ["--stop-after-failures", "-1"]):
+        with pytest.raises(SystemExit):
+            rs.parse_args(bad)
+
+
+def test_main_logs_the_skip_value_when_stopped_by_failures(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    sent: list[str] = []
+    argv = [
+        "review_summary",
+        "--skip",
+        "10",
+        "--ai-interval",
+        "0",
+        "--failure-pause",
+        "0",
+        "--stop-after-failures",
+        "4",
+        "--ai-only",
+    ]
+    monkeypatch.setattr(sys, "argv", argv)
+    monkeypatch.setattr(rs, "load_targets", lambda *a, **k: targets(5))
+    monkeypatch.setattr(rs, "get_settings", lambda: settings())
+    monkeypatch.setattr(rs, "BETWEEN_GAMES_SECONDS", 0)
+    monkeypatch.setattr(rs, "AI_BACKOFF_SECONDS", 0)
+    monkeypatch.setattr(rs.requests, "Session", lambda: SessionContext(ai=[Resp(503)]))  # 계속 503
+    monkeypatch.setattr(
+        rs.producer, "publish_refined", lambda t, k, m, dry_run=False: sent.append(k)
+    )
+    monkeypatch.setattr(rs.producer, "flush", lambda raise_on_failure=True: {})
+    caplog.set_level("INFO")
+    rs.main()
+    assert sent == []
+    text = " ".join(caplog.messages)
+    assert "연속 4번 실패해 멈췄다" in text
+    assert "--skip 11" in text  # 건너뛴 10개 + 이미 처리한 1개 = 다음에는 11개를 건너뛴다
