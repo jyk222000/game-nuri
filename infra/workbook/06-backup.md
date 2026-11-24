@@ -94,7 +94,8 @@ backup(10.0.1.108, PC-1) ──mariadb-dump──▶ mariadb-re(Replica)   ← P
 # (mongodb-pr, PRIMARY 에서 한 번) 백업 계정: gamenuri_raw 읽기만. 비밀번호는 입력창으로
 > db.getSiblingDB("admin").createUser({user: "backup", pwd: passwordPrompt(), roles: [{role: "read", db: "gamenuri_raw"}]})
 ```
-> <- **비밀번호를 빈 문자열(`IDENTIFIED BY ''`)로 두지 않습니다.** 11/25에 접속 오류(`Access denied ... using password: YES`)를 풀려고 비밀번호를 비운 적이 있는데, 그러면 backup 서버에서 비밀번호 없이 DB를 읽을 수 있습니다. 오류의 흔한 원인은 `backup.env` 의 비밀번호와 DB 비밀번호가 다른 것(오타, 따옴표·공백)입니다. 반드시 `ALTER USER 'backup'@'10.0.1.108' IDENTIFIED BY '<새 비밀번호>';` 로 다시 정하고 `backup.env` 와 맞춥니다.
+> <- **접속 오류(`Access denied ... using password: YES`)의 흔한 원인은 `backup.env` 의 비밀번호와 DB 비밀번호가 다른 것**입니다. 값 앞뒤의 공백·따옴표, 그리고 `$ & ; # \ "` 같은 **특수문자**가 셸(`source`)이나 스크립트가 만드는 MariaDB 옵션 파일에서 다르게 해석되기 때문입니다. **비밀번호는 영문·숫자로만** 정하면 이 문제가 없습니다.
+> <- 확인(값은 출력되지 않음): `sudo bash -c 'source /etc/game-nuri/backup.env; MYSQL_PWD="$MARIADB_PASSWORD" mariadb -h mariadb-re -u backup gamenuri -e "SELECT 1"'` 가 성공하면 env 값은 맞는 것이고, 그래도 스크립트가 실패하면 특수문자 문제입니다.
 > <- `sudo mariadb` 로 입력한 SQL(비밀번호 포함)은 root의 `.mysql_history` 에 남을 수 있습니다. 필요하면 그 줄을 지웁니다.
 > <- 복제 중이므로 MariaDB 계정은 Primary에서 만들면 Replica에도 복제됩니다. 덤프는 Replica(`mariadb-re`)에서 읽습니다.
 > <- `mongodump` 는 `find`·`listCollections`·`listIndexes` 만 필요해서 `read` 로 충분합니다. 11/25 확인: 두 계정 모두 **아직 없습니다**(MariaDB `mysql.user`, MongoDB `getUsers` 결과가 비어 있음).
