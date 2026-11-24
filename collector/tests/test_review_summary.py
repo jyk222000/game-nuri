@@ -1,6 +1,7 @@
 """리뷰 요약 배치(collector/review_summary.py). ES·Gemini·Kafka는 가짜로 시험한다."""
 
 import json
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -595,3 +596,160 @@ def test_price_word_itself_stays_because_it_can_be_a_real_pro_or_con() -> None:
     # "가격 대비 만족"·"가격이 비싸다"처럼 장점이나 단점이 될 수 있어 "가격"은 남긴다
     d = rs.parse_digest(es_result(pros=["가격"], cons=["가격"]))
     assert d.pros == ["가격"] and d.cons == ["가격"]
+
+
+# ---------- 무료 한도(분당 15회·하루 500회) 지키기: 이어서 하기·호출 수 상한·간격 ----------
+def test_load_targets_skip_then_limit(tmp_path: Path) -> None:
+    rows = "".join(f"{i},{i},g{i},,{1000 + i}\n" for i in range(1, 6))
+    csv_file = tmp_path / "g.csv"
+    csv_file.write_text("rank,game_id,name,name_ko,steam_appid\n" + rows, encoding="utf-8")
+    assert [t.game_id for t in rs.load_targets(csv_file, skip=2)] == [3, 4, 5]
+    assert [t.game_id for t in rs.load_targets(csv_file, limit=2, skip=2)] == [
+        3,
+        4,
+    ]  # 건너뛴 뒤 2개
+    assert rs.load_targets(csv_file, skip=99) == []
+
+
+def test_budget_counts_every_attempt_including_retries() -> None:
+    budget = rs.AiBudget(max_calls=10, interval=0)
+    s = FakeSession(ai=[Resp(503), Resp(200, ai_body("괜찮아요."))])
+    assert rs.ask_ai("p", settings(), s, sleep=no_wait, budget=budget) == "괜찮아요."
+    assert budget.used == 2  # 실패한 호출도 한도에 들어간다고 보고 센다
+
+
+def test_budget_stops_calling_at_the_limit_even_in_the_middle_of_retries() -> None:
+    budget = rs.AiBudget(max_calls=1, interval=0)
+    s = FakeSession(ai=[Resp(503)])
+    assert rs.ask_ai("p", settings(), s, sleep=no_wait, budget=budget) is None
+    assert len(s.calls) == 1 and budget.used == 1 and budget.exhausted
+
+
+def test_budget_enforces_minimum_interval_between_calls() -> None:
+    now = [0.0]
+    waits: list[float] = []
+
+    def clock() -> float:
+        return now[0]
+
+    def sleep(seconds: float) -> None:
+        waits.append(seconds)
+        now[0] += seconds
+
+    budget = rs.AiBudget(interval=6.0)
+    s = FakeSession(ai=[Resp(200, ai_body("가")), Resp(200, ai_body("나"))])
+    rs.ask_ai(
+        "p", settings(), s, sleep=sleep, budget=budget, clock=clock
+    )  # 첫 호출은 기다리지 않음
+    now[0] = 2.0  # 2초 뒤에 다음 호출
+    rs.ask_ai("p", settings(), s, sleep=sleep, budget=budget, clock=clock)
+    assert waits == [4.0]  # 6초 간격을 맞추려고 남은 4초만 기다린다
+
+
+def test_default_interval_keeps_room_for_spec_check_under_15_per_minute() -> None:
+    assert rs.AI_INTERVAL_SECONDS == 6.0  # 분당 최대 10회. 분당 15회 한도에서 사양 판정 몫을 남긴다
+
+
+def targets(n: int) -> list[rs.Target]:
+    return [rs.Target(i, 1000 + i, f"게임{i}") for i in range(1, n + 1)]
+
+
+def test_ai_only_does_not_send_games_whose_ai_failed() -> None:
+    stats = rs.RunStats()
+    s = FakeSession(ai=[Resp(403), Resp(200, ai_body("요약이에요."))])
+    out = list(rs.summarize(targets(2), settings(), s, sleep=no_wait, ai_only=True, stats=stats))
+    assert [k for k, _ in out] == ["2"]  # 1번 게임은 AI가 실패해서 보내지 않는다(덮어쓰기 방지)
+    assert out[0][1]["payload"]["generated_by"] == "ai"
+    assert stats.ai_failed_skipped == 1 and stats.processed == 2
+
+
+def test_without_ai_only_a_failed_ai_still_sends_keywords() -> None:
+    s = FakeSession(ai=[Resp(403)])
+    out = list(rs.summarize(targets(1), settings(), s, sleep=no_wait))
+    assert out[0][1]["payload"]["generated_by"] == "fallback"  # 기존 동작은 그대로
+
+
+def test_budget_stop_tells_where_to_resume() -> None:
+    stats = rs.RunStats()
+    budget = rs.AiBudget(max_calls=2, interval=0)
+    out = list(
+        rs.summarize(
+            targets(3), settings(), FakeSession(), sleep=no_wait, budget=budget, stats=stats
+        )
+    )
+    assert [k for k, _ in out] == ["1", "2"]  # 호출 2회로 2개를 처리하고 3번째 앞에서 멈춘다
+    assert stats.stopped_by_budget and stats.processed == 2 and budget.used == 2
+
+
+def test_budget_exhausted_mid_game_with_ai_only_resumes_at_that_game() -> None:
+    stats = rs.RunStats()
+    budget = rs.AiBudget(max_calls=1, interval=0)
+    s = FakeSession(ai=[Resp(503)])  # 유일한 호출이 503이라 재시도할 호출이 없다
+    out = list(
+        rs.summarize(
+            targets(2), settings(), s, sleep=no_wait, ai_only=True, budget=budget, stats=stats
+        )
+    )
+    assert out == []  # 1번 게임을 보내지 않고
+    assert stats.stopped_by_budget and stats.processed == 0  # 다음에는 1번 게임부터 이어서 한다
+
+
+def test_summarize_reports_full_progress_when_nothing_stops_it() -> None:
+    stats = rs.RunStats()
+    list(rs.summarize(targets(3), settings(), FakeSession(), sleep=no_wait, stats=stats))
+    assert stats.processed == 3 and not stats.stopped_by_budget
+
+
+def test_parse_args_defaults_and_rules() -> None:
+    args = rs.parse_args([])
+    assert (args.skip, args.ai_only, args.max_ai_calls, args.ai_interval) == (0, False, None, 6.0)
+    for bad in (
+        ["--no-ai", "--ai-only"],  # AI를 안 부르는데 AI 실패 처리는 의미가 없다
+        ["--no-ai", "--max-ai-calls", "5"],
+        ["--max-ai-calls", "0"],
+        ["--skip", "-1"],
+        ["--ai-interval", "-1"],
+    ):
+        with pytest.raises(SystemExit):
+            rs.parse_args(bad)
+
+
+class SessionContext(FakeSession):
+    """main()이 `with requests.Session() as session`으로 쓰는 모양을 흉내 낸다."""
+
+    def __enter__(self) -> "SessionContext":
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+
+def test_main_logs_the_skip_value_to_resume_with(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    sent: list[str] = []
+    argv = [
+        "review_summary",
+        "--skip",
+        "3",
+        "--max-ai-calls",
+        "2",
+        "--ai-interval",
+        "0",
+        "--ai-only",
+    ]
+    monkeypatch.setattr(sys, "argv", argv)
+    monkeypatch.setattr(rs, "load_targets", lambda *a, **k: targets(5))
+    monkeypatch.setattr(rs, "get_settings", lambda: settings())
+    monkeypatch.setattr(rs, "BETWEEN_GAMES_SECONDS", 0)
+    monkeypatch.setattr(rs.requests, "Session", lambda: SessionContext())
+    monkeypatch.setattr(
+        rs.producer, "publish_refined", lambda t, k, m, dry_run=False: sent.append(k)
+    )
+    monkeypatch.setattr(rs.producer, "flush", lambda raise_on_failure=True: {})
+    caplog.set_level("INFO")
+    rs.main()
+    assert sent == ["1", "2"]  # 호출 상한 2회: 2개를 보내고 멈춘다
+    text = " ".join(caplog.messages)
+    assert "--skip 5" in text  # 이미 건너뛴 3개 + 이번에 처리한 2개 = 다음에는 5개를 건너뛴다
+    assert "AI 호출 2회 사용" in text
