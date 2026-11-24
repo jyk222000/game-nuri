@@ -23,8 +23,8 @@
 |---|---|---|
 | 1 | firewalld가 남은 VM: kafka1~3, backup, valkey | 남현식과 한 대씩 끄고 Kafka 투표 5개·Connect·Valkey PING 확인 |
 | 2 | dnf update 미적용 VM (PC-2 다수, monitoring) | 발표 후로 미뤄도 됨 |
-| 3 | elk 재부팅 필요 (새 커널 미적용) | ES 설치 전 재부팅 (남현식) |
-| 4 | Kafka Connect ES Sink | ES 버전에 따라 커넥터가 달라 보류. ES 설치 후 결정 (남현식) |
+| 3 | ~~elk 재부팅 필요 (새 커널 미적용)~~ | 해결 11/23: 커널 6.12.0-264 적용, 부팅 모드 multi-user (남현식) |
+| 4 | ~~Kafka Connect ES Sink~~ | 해결 11/23: ES 8.19.25 + Confluent ES Sink 16.0.1, `es-sink-clickstream` RUNNING (남현식) |
 | 5 | 임시 `/etc/sudoers.d/admin`(NOPASSWD) 17대에 남음 | 팀장 확인 후 삭제 |
 | 6 | SSH 호스트 키·machine-id 중복 의심 (같은 이미지 복제) | 17대 점검, MongoDB 3대는 호스트 키 재생성 완료 |
 | 7 | 인증서 수동 갱신 (`--manual`) | 2027-02-18 전 재발급 (`docs/network.md`) |
@@ -41,7 +41,7 @@
 | 11/20 | 네트워크·계정, MariaDB·MongoDB, 도메인·HTTPS | 김준영, 한예찬 | 완료 |
 | 11/21 | Kafka KRaft 클러스터, 토픽, Connect | 남현식 | 완료 |
 | 11/22 | Valkey, 테이블 28개, 방화벽 정리(10대), Frontend 목업 | 김준영, 이고은, 한예찬 | 완료 |
-| 11/23 | 남은 firewalld 5대, elk 재부팅 → ES·Kibana·Monstache, 게임 100개 흐름 검증 | 남현식, 김준영 | 예정 |
+| 11/23 | 남은 firewalld 5대, elk 재부팅 → ES·Kibana·Monstache, 게임 100개 흐름 검증 | 남현식, 김준영 | ES·Kibana·Monstache 완료 (games 1000·reviews 451,368건 ES 동기화) |
 | 11/24 | Backend·Frontend 배포, 수집기 타이머, 게임 300개 | 김준영, 한예찬 | 예정 |
 | 11/25 | Prometheus·Grafana, 백업 cron·복구 시험, 게임 1,000개, 구축 동결 | 남현식, 김준영 | 예정 |
 | 11/26~27 | 분석 8개, Locust 부하, 장애 시나리오 | 전체 | 예정 |
