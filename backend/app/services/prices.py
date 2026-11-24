@@ -15,7 +15,7 @@ from app.clients.valkey import get_valkey
 from app.core import keys
 from app.db.models import PriceCurrent
 from app.schemas.price import LowestNow, PriceItem, PricesOut
-from app.services import games
+from app.services import cards, games
 
 log = logging.getLogger(__name__)
 
@@ -77,16 +77,19 @@ def get_prices(db: Session, game_id: int) -> PricesOut:
         )
         for r in rows
     ]
-    new_items = [i for i in items if i.item_condition == "new"]  # 정렬돼 있어 첫 줄이 최저가
+    new_items = [i for i in items if i.item_condition == "new"]  # 가격순으로 정렬돼 있다
+    # 현재가(lowest)는 카드·구매 타이밍과 같은 기준: PC 새 상품이 있으면 PC 안에서, 없으면 전체에서.
+    pc_items = [i for i in new_items if i.platform == cards.PRIMARY_PLATFORM]
+    pick = (pc_items or new_items)[:1]
     lowest = (
         LowestNow(
-            store=new_items[0].store,
-            edition=new_items[0].edition,
-            platform=new_items[0].platform,
+            store=pick[0].store,
+            edition=pick[0].edition,
+            platform=pick[0].platform,
             item_condition="new",
-            price_krw=new_items[0].price_krw,
+            price_krw=pick[0].price_krw,
         )
-        if new_items
+        if pick
         else None
     )
     out = PricesOut(game_id=game_id, items=items, lowest=lowest)

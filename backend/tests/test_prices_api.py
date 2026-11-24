@@ -156,3 +156,28 @@ def test_prices_broken_cache_value_ignored(priced) -> None:
     client, _, fake = priced
     fake.data[keys.price_cache_key(119133)] = "{not json"
     assert client.get("/api/games/119133/prices").status_code == 200
+
+
+def test_lowest_is_pc_first_even_when_console_is_cheaper(env, fake) -> None:
+    """items는 모든 플랫폼을 가격순으로 보이지만, 현재가(lowest)는 카드·타이밍처럼 PC 기준이다."""
+    client, engine, _ = env
+    with seed(engine) as s:
+        s.add_all(
+            [
+                _row(5, "msstore", "PC", "new", 19770, regular=65900, pct=70),
+                _row(5, "danawa", "PS4", "new", 11810),
+            ]
+        )
+    body = client.get("/api/games/5/prices").json()
+    assert [i["platform"] for i in body["items"]] == ["PS4", "PC"]  # 콘솔 값도 목록에는 그대로
+    assert body["lowest"]["platform"] == "PC" and body["lowest"]["price_krw"] == 19770
+
+
+def test_lowest_for_console_only_game_uses_console(env, fake) -> None:
+    client, engine, _ = env
+    with seed(engine) as s:
+        s.add_all(
+            [_row(5, "danawa", "PS5", "new", 42800), _row(5, "danawa", "Switch2", "new", 81800)]
+        )
+    lowest = client.get("/api/games/5/prices").json()["lowest"]
+    assert lowest["platform"] == "PS5" and lowest["price_krw"] == 42800
