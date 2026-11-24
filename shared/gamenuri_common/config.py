@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     mongo_uri: str = "mongodb://localhost:27017"
     mongo_db: str = "gamenuri_raw"
     es_url: str = "http://localhost:9200"
+    es_user: str = ""  # ES 로그인이 켜져 있으면 설정 (elk의 ES는 켜짐). 비어 있으면 계정 없이 접속
+    es_password: str = ""
     valkey_url: str = "redis://localhost:6379/0"
 
     itad_key: str = ""
