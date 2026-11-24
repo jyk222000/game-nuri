@@ -289,6 +289,12 @@ function History({ id, user, platforms }) {
       <State s={h} isEmpty={() => !mine.length} emptyMsg="아직 모인 가격 이력이 없어요.">
         {() => <PriceChart items={dailySeries(mine, days)} domain={domain} target={target} />}
       </State>
+      {/* 콘솔(다나와)은 과거 이력을 받을 곳이 없어 수집을 시작한 날부터만 기록이 있다. 첫 기록 날짜는 데이터에서 가져온다. */}
+      {platform !== 'PC' && mine.length > 0 && (
+        <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>
+          콘솔 가격은 {mine.map((r) => r.collected_at.slice(0, 10)).sort()[0].replaceAll('-', '.')}부터 수집한 기록입니다.
+        </p>
+      )}
     </Section>
   );
 }
