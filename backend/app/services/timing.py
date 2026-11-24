@@ -12,6 +12,7 @@ PC 이력이 없거나(콘솔 전용 등) 이력 일수가 MIN_HISTORY_DAYS 미�
 
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
+from typing import Literal
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -23,8 +24,8 @@ from app.services import games
 # ---------- 임시 규칙 (analysis 확정 후 교체) ----------
 TIMING_PLATFORM = "PC"
 SALE_MIN_PCT = 10  # 이 할인율 이상인 날이 이어진 구간 = 할인(세일) 1회
-BUY_NOW_MIN_PCT = 30  # buy_now: 이 할인율 이상이고 역대 최저가 근처
-NEAR_LOW_RATIO = 1.05  # 역대 최저가의 105% 이하면 '근처'
+NEAR_LOW_RATIO = 1.05  # 역대 최저가의 105% 이하면 '근처' (같은 값 포함)
+LOW_DIP_MIN_PCT = 10  # 역대 최저가가 이력 최고가보다 이 비율 이상 낮으면 '내려간 가격'으로 본다
 NEUTRAL_MIN_PCT = 10  # neutral: 이 할인율 이상 (그보다 낮으면 wait)
 MIN_HISTORY_DAYS = 3  # 이력이 이 일수 미만이면 insufficient_data
 WINDOW_DAYS = 730  # 할인 횟수·주기 계산 기간 (최근 2년)
@@ -103,7 +104,7 @@ def _recent(days: list[Day], now: datetime) -> list[Day]:
     return [d for d in days if d.day >= since]
 
 
-def _confidence(sales: int) -> str:
+def _confidence(sales: int) -> Literal["high", "medium", "low"]:
     if sales >= CONFIDENCE_HIGH_MIN_SALES:
         return "high"
     if sales >= CONFIDENCE_MEDIUM_MIN_SALES:
@@ -175,16 +176,30 @@ def get_timing(db: Session, game_id: int, now: datetime | None = None) -> Timing
     current = days[-1]
     low = min(days, key=lambda d: (d.price_krw, d.day))  # 역대(전체 이력) 최저가, 동점은 이른 날짜
     near_low = current.price_krw <= low.price_krw * NEAR_LOW_RATIO
+    # 최저가가 '내려간 가격'일 때만 사라고 한다. 가격이 한 번도 안 변한 게임은
+    # 현재가=최저가=정가라서 근처 여부만 보면 정가에도 buy_now가 된다.
+    # 스토어가 할인율을 주지 않는 행(다나와 등)은 discount_pct가 비어 있으므로,
+    # 할인율(≥10%) 또는 이력에서 가격이 실제로 내려간 흔적(최고가 대비)을 본다.
+    highest = max(d.price_krw for d in days)
+    dipped = low.price_krw <= highest * (1 - LOW_DIP_MIN_PCT / 100)
+    on_sale = current.discount_pct >= NEUTRAL_MIN_PCT or dipped
     # 최저가가 0원이면 비율을 구할 수 없다(0으로 나눔). 계속 무료면 0%, 무료였다가 유료면 None.
     if low.price_krw > 0:
         vs_lowest_pct: int | None = round((current.price_krw / low.price_krw - 1) * 100)
     else:
         vs_lowest_pct = 0 if current.price_krw == 0 else None
 
+    verdict: Literal["buy_now", "neutral", "wait"]
     if current.price_krw == 0:
         verdict, reason = "buy_now", "무료예요. 지금 받아 두면 돼요."
-    elif current.discount_pct >= BUY_NOW_MIN_PCT and near_low:
-        verdict, reason = "buy_now", "역대 최저가에 가까운 가격이에요. 지금 사도 손해가 적어요."
+    elif near_low and on_sale:
+        same = current.price_krw == low.price_krw
+        verdict = "buy_now"
+        reason = (
+            "역대 최저가와 같은 가격이에요. 지금 사도 손해가 적어요."
+            if same
+            else "역대 최저가에 가까운 가격이에요. 지금 사도 손해가 적어요."
+        )
     elif current.discount_pct >= NEUTRAL_MIN_PCT:
         verdict = "neutral"
         reason = (

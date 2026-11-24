@@ -238,3 +238,77 @@ def test_same_store_same_day_uses_last_collected_row(env) -> None:
         s.add_all([_h(100, 64800, 0), _h(60, 40000, 38), _h(1, 50000, 20), _h(1, 41200, 36)])
     # 같은 날 같은 스토어: 더 늦게 수집된 행(id가 큰 쪽)이 그날 가격
     assert _timing(client)["current_krw"] == 41200
+
+
+# ---------- #103: 현재가가 역대 최저가(근처)이면 할인율과 무관하게 buy_now ----------
+SAME_LOW = "역대 최저가와 같은 가격이에요. 지금 사도 손해가 적어요."
+NEAR_LOW = "역대 최저가에 가까운 가격이에요. 지금 사도 손해가 적어요."
+
+
+def test_current_equals_lowest_with_20pct_discount_is_buy_now(env) -> None:
+    """슬레이 더 스파이어 2: 할인율 20%(30 미만)여도 현재가=최저가면 사라고 하고, 문구는 '같은'."""
+    client, engine, _ = env
+    with seed(engine) as s:
+        s.add_all([_h(100, 64800, 0), _h(60, 21600, 20), _h(1, 21600, 20)])
+    body = _timing(client)
+    assert body["verdict"] == "buy_now" and body["reason"] == SAME_LOW
+    assert body["current_krw"] == body["lowest_krw"] == 21600 and body["vs_lowest_pct"] == 0
+
+
+def test_cheapest_store_without_discount_info_is_buy_now(env) -> None:
+    """휴먼 폴 플랫: 다나와 행은 할인율이 없다(0). 그래도 이력에서 내려간 가격이면 buy_now."""
+    client, engine, _ = env
+    with seed(engine) as s:
+        s.add_all(
+            [
+                _h(200, 14980, 0),
+                _h(100, 2490, 83),  # 예전 세일 최저가
+                _h(50, 14980, 0),
+                _h(1, 2490, 0, store="danawa"),  # 오늘 다나와가 같은 가격, 할인율 정보 없음
+            ]
+        )
+    body = _timing(client)
+    assert body["verdict"] == "buy_now" and body["reason"] == SAME_LOW
+    assert body["current_krw"] == 2490 and body["vs_lowest_pct"] == 0
+
+
+def test_within_5pct_of_lowest_without_discount_info_says_near(env) -> None:
+    client, engine, _ = env
+    with seed(engine) as s:
+        s.add_all([_h(100, 64800, 0), _h(60, 40000, 38), _h(1, 41000, 0)])  # 41,000 ≤ 40,000×1.05
+    body = _timing(client)
+    assert (
+        body["verdict"] == "buy_now" and body["reason"] == NEAR_LOW and body["vs_lowest_pct"] == 2
+    )
+
+
+def test_price_never_changed_is_not_buy_now(env) -> None:
+    """가격이 한 번도 안 변한 게임은 현재가=최저가=정가다. 최저가라는 이유만으로 사지 않는다."""
+    client, engine, _ = env
+    with seed(engine) as s:
+        s.add_all([_h(100, 64800, 0), _h(60, 64800, 0), _h(1, 64800, 0)])
+    body = _timing(client)
+    assert body["verdict"] == "wait" and body["reason"] == "정가에 가까워요."
+    assert body["vs_lowest_pct"] == 0
+
+
+def test_neutral_only_when_price_is_really_above_lowest(env) -> None:
+    """neutral은 최저가 근처가 아닐 때만 나오므로 '보다는 높아요' 문구는 항상 사실이다."""
+    client, engine, _ = env
+    with seed(engine) as s:
+        s.add_all([_h(100, 64800, 0), _h(60, 20000, 70), _h(1, 45000, 31)])
+    body = _timing(client)
+    assert (
+        body["verdict"] == "neutral"
+        and "20,000원" in body["reason"]
+        and "보다는 높아요" in body["reason"]
+    )
+    assert body["current_krw"] > body["lowest_krw"] * 1.05
+
+
+def test_small_dip_below_threshold_is_not_a_sale(env) -> None:
+    """최고가 대비 5%만 내려간 정도는 '내려간 가격'이 아니다(10% 미만, 할인율도 없음) → wait."""
+    client, engine, _ = env
+    with seed(engine) as s:
+        s.add_all([_h(100, 10000, 0), _h(60, 9500, 0), _h(1, 9500, 0)])
+    assert _timing(client)["verdict"] == "wait"
