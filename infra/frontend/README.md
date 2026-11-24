@@ -26,7 +26,7 @@
 (`hybrid` 모드는 frontend #89에서 없어졌다. 목 분석 데이터 파일도 지워졌다.)
 
 `real`에서는 Backend에 없는 API를 부르면 목으로 대신하지 않고 **그대로 오류**가 난다. 2026-11-24 기준
-Backend에 아직 없는 것: 구글 로그인(`/api/auth/*`), 리뷰·리뷰 요약(`/api/games/{id}/reviews*`),
+Backend에 아직 없는 것: 리뷰·리뷰 요약(`/api/games/{id}/reviews*`),
 사양 비교(`/spec-check`), 실시간·최근 검색어(`/api/search/*`). 이 화면들이 오류 대신 빈 상태로
 보이는지는 **미확인**이다(frontend 담당).
 
@@ -106,11 +106,14 @@ curl -s "localhost/api/games?size=2"                      # 게임 2건, total 1
 | 날짜 | VM | 내용 |
 |---|---|---|
 | 2026-11-24 | frontend1 | nginx 1.26.3 설치, **hybrid 빌드**(당시) 배포. `/` 200, `/api/health`(server=backend1, db ok·valkey ok·es down), `/api/games`(total 1000). `gamenuri.store`에서 메인·상세 화면이 실제 데이터로 표시됨 |
-| – | frontend1 | real 기본 빌드로 재배포: 한예찬이 frontend #89에서 확인했다고 적음. 서버에서 직접 확인은 **미확인** |
+| 2026-11-24 | frontend1 | **real 기본 빌드**(main 1b7d66f 기준, `assets`는 `index-DLW11KPE.css`·`index-DWheRICh.js` 2개)로 재배포. 옛 `assets`를 비운 뒤 `cp`, `restorecon`. `/` 200, `/api/health` ok(server=backend1, db·valkey·es ok), `/api/games` 응답 확인 |
+| 2026-11-24 | frontend1·backend1 | 구글 로그인 확인(backend #99·#100 배포 후): `gamenuri.store`에서 로그인 → 마이페이지에 구글 계정 이메일·닉네임 표시. `AUTH_FAKE_USER=false`로 끈 상태 |
 | – | frontend2 | **미확인** (아직 같은 절차를 하지 않음) |
 
 ## 남은 일
-- [ ] frontend1·2에 real 기본 빌드 올리기 (위 '새 빌드로 갱신할 때' 순서로 옛 `assets`·`analysis-data` 비우기)
-- [ ] frontend2 배포 (`fe2.conf` → `backend2:8000`, backend2 배포 후)
+- [x] frontend1에 real 기본 빌드 올리기 (2026-11-24)
+- [ ] frontend2에 real 기본 빌드 올리기 (`fe2.conf` → `backend2:8000`, backend2 배포 후. 위 '새 빌드로 갱신할 때' 순서)
 - [ ] Backend에 없는 API(로그인·리뷰·사양 비교·검색어)를 만들고, 그 전까지 해당 화면이 오류가 아닌 빈 상태로 보이게 하기 (frontend, 한예찬)
-- [ ] 구글 로그인(OAuth)이 붙으면 `/api/auth/google/login`이 동작하는지 확인하고, 개발용 `AUTH_FAKE_USER`를 끈다
+- [x] 구글 로그인이 동작하는지 확인하고 개발용 `AUTH_FAKE_USER`를 끈다 (backend1, 2026-11-24)
+- [ ] backend2에도 같은 `GOOGLE_*`·`SESSION_SECRET`을 넣고 `AUTH_FAKE_USER=false`인지 확인 (두 서버가 같은 `SESSION_SECRET`이어야 로그인이 서로 통한다)
+- [ ] 로그인 실패·취소 때 JSON 오류가 그대로 보이는 문제 (`/login?error=...` 방식은 프론트·백엔드 합의 필요)
