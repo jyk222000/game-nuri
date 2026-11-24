@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from app.api import events, games, health, me, prices, profile, stats, timing
+from app.api import auth, events, games, health, me, prices, profile, stats, timing
 from app.clients import kafka
 from app.core.config import get_backend_settings
 from app.core.errors import register_error_handlers
@@ -26,6 +26,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(title="겜누리 API", lifespan=lifespan)
 register_error_handlers(app)
 app.include_router(health.router)
+app.include_router(auth.router)
 app.include_router(me.router)
 app.include_router(profile.router)
 app.include_router(prices.router)
