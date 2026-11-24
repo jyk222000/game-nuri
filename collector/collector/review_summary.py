@@ -59,6 +59,12 @@ BETWEEN_GAMES_SECONDS = 1.0  # 호출 한도(429)를 피하기 위한 간격 (AI
 # 무료 등급 한도(gemini-3.5-flash-lite: 분당 15회, 하루 500회)에서 사양 판정(⑥)이 쓸 몫을 남긴다.
 # 6초 간격이면 분당 최대 10회다.
 AI_INTERVAL_SECONDS = 6.0
+# Google이 과부하(503)일 때 호출을 계속 보내면 한도만 태운다(실패한 호출도 하루 한도에 든다).
+# 연속으로 실패하면 쉬고, 그래도 계속 실패하면 이번 실행을 멈춘다.
+FAILURE_PAUSE_AFTER = 3  # 연속 실패가 이만큼이면 다음 호출 전에 쉰다
+FAILURE_PAUSE_SECONDS = 60.0  # 첫 휴식. 연속 실패가 늘 때마다 2배(최대 FAILURE_PAUSE_MAX_SECONDS)
+FAILURE_PAUSE_MAX_SECONDS = 600.0
+STOP_AFTER_FAILURES = 12  # 연속 실패가 이만큼이면 이번 실행을 멈춘다 (0이면 멈추지 않음)
 PROMPT_VERSION = 3
 
 # docs/contracts/messages/refined.review_summary.json 의 schema와 같아야 한다 (시험이 비교한다)
@@ -133,23 +139,45 @@ class AiBudget:
 
     max_calls: int | None = None  # 이 실행에서 쓸 최대 호출 수(재시도 포함). None이면 제한 없음
     interval: float = AI_INTERVAL_SECONDS  # 연속한 두 호출 사이의 최소 간격(초)
+    pause_seconds: float = FAILURE_PAUSE_SECONDS  # 연속 실패 뒤 첫 휴식(초). 0이면 쉬지 않음
+    stop_after: int = STOP_AFTER_FAILURES  # 연속 실패가 이만큼이면 멈춤. 0이면 멈추지 않음
     used: int = 0  # 지금까지 부른 횟수
     last_call_at: float | None = None
+    consecutive_failures: int = 0  # 연속으로 실패한 호출 수 (성공하면 0)
+    pauses: int = 0  # 쉰 횟수
+    paused_seconds: float = 0.0  # 쉰 시간 합계
 
     @property
     def exhausted(self) -> bool:
         return self.max_calls is not None and self.used >= self.max_calls
 
+    @property
+    def should_stop(self) -> bool:
+        """연속 실패가 한계에 닿았는가. 그러면 이번 실행을 멈추고 나중에 다시 한다."""
+        return self.stop_after > 0 and self.consecutive_failures >= self.stop_after
+
     def before_call(self, sleep: Callable[[float], None], clock: Callable[[], float]) -> None:
-        """직전 호출로부터 interval이 지나지 않았으면 남은 시간만큼 기다린다."""
+        """호출 전에 기다린다: 직전 호출과의 간격, 그리고 연속 실패했다면 휴식."""
         if self.last_call_at is not None:
             wait = self.interval - (clock() - self.last_call_at)
             if wait > 0:
                 sleep(wait)
+        if self.pause_seconds > 0 and self.consecutive_failures >= FAILURE_PAUSE_AFTER:
+            extra = self.consecutive_failures - FAILURE_PAUSE_AFTER
+            pause = min(self.pause_seconds * 2**extra, FAILURE_PAUSE_MAX_SECONDS)
+            log.warning(
+                "AI 호출이 연속 %d번 실패해서 %.0f초 쉰다 (Google 쪽 과부하일 수 있다)",
+                self.consecutive_failures,
+                pause,
+            )
+            self.pauses += 1
+            self.paused_seconds += pause
+            sleep(pause)
 
-    def after_call(self, clock: Callable[[], float]) -> None:
+    def after_call(self, clock: Callable[[], float], failed: bool = False) -> None:
         self.used += 1
         self.last_call_at = clock()
+        self.consecutive_failures = self.consecutive_failures + 1 if failed else 0
 
 
 @dataclass
@@ -159,6 +187,7 @@ class RunStats:
     processed: int = 0  # 목록 앞에서부터 끝까지 처리한 게임 수 (다음 --skip 계산용)
     ai_failed_skipped: int = 0  # --ai-only 라서 AI가 실패해 전송하지 않은 게임 수
     stopped_by_budget: bool = False  # AI 호출 상한에 닿아 멈췄는지
+    stopped_by_failures: bool = False  # AI 호출이 연속으로 계속 실패해서 멈췄는지
 
 
 # ---------- 대상 게임 ----------
@@ -618,6 +647,7 @@ def ask_ai(
     """요약 문장을 받는다. 키가 없거나 실패하면 None(호출한 쪽이 fallback으로 보낸다).
 
     `budget`이 있으면 호출 사이에 간격을 두고, 호출 수가 상한에 닿으면 더 부르지 않는다.
+    연속으로 실패하면(503·타임아웃 등) 쉬고, 실패가 한계에 닿으면 더 부르지 않는다.
     """
     if not (settings.gemini_api_key and settings.ai_model):
         log.warning("GEMINI_API_KEY·AI_MODEL이 비어 있어 요약 문장을 만들지 않는다")
@@ -635,7 +665,15 @@ def ask_ai(
             if budget.exhausted:
                 log.warning("AI 호출 상한(%d회)에 닿아 더 부르지 않는다", budget.max_calls)
                 return None
+            if budget.should_stop:
+                log.warning(
+                    "AI 호출이 연속 %d번 실패해 더 부르지 않는다", budget.consecutive_failures
+                )
+                return None
             budget.before_call(sleep, clock)
+        failed = (
+            True  # 이번 호출이 실패(과부하·네트워크·오류 응답)였는지. 성공 응답이면 아래에서 바뀐다
+        )
         try:
             res = session.post(
                 GEMINI_URL.format(model=settings.ai_model),
@@ -646,6 +684,7 @@ def ask_ai(
         except requests.RequestException as e:
             log.warning("AI 호출 실패(%d/%d): %s", attempt, AI_RETRIES, type(e).__name__)
         else:
+            failed = not res.ok
             if res.status_code in AI_RETRY_STATUSES:
                 log.warning("AI 일시 오류 %s (%d/%d)", res.status_code, attempt, AI_RETRIES)
             elif not res.ok:
@@ -655,7 +694,7 @@ def ask_ai(
                 return _parse_summary(res)
         finally:
             if budget is not None:  # 실패한 호출도 한도에 들어간다고 보고 센다
-                budget.after_call(clock)
+                budget.after_call(clock, failed=failed)
         if attempt < AI_RETRIES:
             sleep(AI_BACKOFF_SECONDS * 2 ** (attempt - 1))
     return None
@@ -753,6 +792,16 @@ def summarize(
             summary = ask_ai(
                 build_prompt(t.name, digest), settings, session, sleep=sleep, budget=budget
             )
+            if summary is None and budget is not None and budget.should_stop:
+                # Google이 계속 응답하지 못한다. 한도를 더 태우지 않고 멈춘다.
+                # 이 게임은 처리하지 않은 것으로 두어(handled = i) 나중에 이 게임부터 이어서 한다.
+                stats.stopped_by_failures = True
+                log.warning(
+                    "AI 호출이 연속 %d번 실패해 여기서 멈춘다 (game_id=%s부터 다시)",
+                    budget.consecutive_failures,
+                    t.game_id,
+                )
+                break
         if summary is not None and is_profane(summary):
             # AI가 욕설을 섞어 쓴 경우. 문장은 버리고 키워드만 보낸다(fallback)
             log.warning("game_id=%s AI 요약에 욕설이 있어 버림", t.game_id)
@@ -799,6 +848,23 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=AI_INTERVAL_SECONDS,
         help=f"AI 호출 사이의 최소 간격(초, 기본 {AI_INTERVAL_SECONDS:g})",
     )
+    ap.add_argument(
+        "--failure-pause",
+        type=float,
+        default=FAILURE_PAUSE_SECONDS,
+        help=(
+            f"AI 호출이 {FAILURE_PAUSE_AFTER}번 연속 실패하면 쉬는 첫 시간(초, 기본 "
+            f"{FAILURE_PAUSE_SECONDS:g}, 실패가 늘 때마다 2배, 최대 "
+            f"{FAILURE_PAUSE_MAX_SECONDS:g}). "
+            "0이면 쉬지 않음"
+        ),
+    )
+    ap.add_argument(
+        "--stop-after-failures",
+        type=int,
+        default=STOP_AFTER_FAILURES,
+        help=f"AI 호출이 연속 N번 실패하면 이번 실행을 멈춤(기본 {STOP_AFTER_FAILURES}, 0이면 끔)",
+    )
     args = ap.parse_args(argv)
     if args.no_ai and (args.ai_only or args.max_ai_calls is not None):
         ap.error("--no-ai 는 --ai-only, --max-ai-calls 와 함께 쓸 수 없다 (AI를 부르지 않는다)")
@@ -808,6 +874,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ap.error("--max-ai-calls 는 1 이상이어야 한다")
     if args.ai_interval < 0:
         ap.error("--ai-interval 은 0 이상이어야 한다")
+    if args.failure_pause < 0:
+        ap.error("--failure-pause 는 0 이상이어야 한다")
+    if args.stop_after_failures < 0:
+        ap.error("--stop-after-failures 는 0 이상이어야 한다")
     return args
 
 
@@ -818,7 +888,16 @@ def main() -> None:
     )
     targets = load_targets(args.games_file, ids, args.limit, args.skip)
     use_ai = not args.no_ai
-    budget = AiBudget(max_calls=args.max_ai_calls, interval=args.ai_interval) if use_ai else None
+    budget = (
+        AiBudget(
+            max_calls=args.max_ai_calls,
+            interval=args.ai_interval,
+            pause_seconds=args.failure_pause,
+            stop_after=args.stop_after_failures,
+        )
+        if use_ai
+        else None
+    )
     stats = RunStats()
     log.info(
         "리뷰 요약 대상 %d건 (skip=%d) dry_run=%s ai=%s ai_only=%s max_ai_calls=%s",
@@ -852,12 +931,21 @@ def main() -> None:
     log.info("리뷰 요약 완료: %d건 %s", sent, "저장(dry-run)" if args.dry_run else "전송")
     if budget is not None:
         log.info(
-            "AI 호출 %d회 사용, AI 실패로 전송하지 않은 게임 %d건",
+            "AI 호출 %d회 사용, AI 실패로 전송하지 않은 게임 %d건, 쉰 횟수 %d (총 %.0f초)",
             budget.used,
             stats.ai_failed_skipped,
+            budget.pauses,
+            budget.paused_seconds,
         )
     next_skip = args.skip + stats.processed
-    if stats.stopped_by_budget:
+    if stats.stopped_by_failures:
+        log.warning(
+            "AI 호출이 연속 %d번 실패해 멈췄다(Google 쪽 과부하일 수 있다). "
+            "시간을 두고 이어서 하려면 --skip %d",
+            args.stop_after_failures,
+            next_skip,
+        )
+    elif stats.stopped_by_budget:
         log.warning(
             "AI 호출 상한(%d회)에 닿아 멈췄다. 이어서 하려면 --skip %d",
             args.max_ai_calls,
