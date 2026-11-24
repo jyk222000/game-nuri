@@ -110,10 +110,12 @@ backup(10.0.1.108, PC-1) ──mariadb-dump──▶ mariadb-re(Replica)   ← P
 파일에 넣을 이름(값은 서버에만):
 ```
 > MARIADB_PASSWORD=<backup 계정 비밀번호>
-> MONGO_URI=mongodb://backup:<비밀번호>@mongodb-pr:27017,mongo-se1:27017,mongo-se2:27017/gamenuri_raw?replicaSet=rs0&authSource=admin
+> MONGO_URI='mongodb://backup:<비밀번호>@mongodb-pr:27017,mongo-se1:27017,mongo-se2:27017/gamenuri_raw?replicaSet=rs0&authSource=admin'
 > # BACKUP_ROOT=/BACKUP      # 선택. 기본값이 /BACKUP
 ```
 > <- 필수 값은 `MARIADB_PASSWORD`, `MONGO_URI` 입니다. 이 파일은 Git에 올리지 않습니다.
+> <- **`MONGO_URI` 는 반드시 작은따옴표(`'...'`)로 감쌉니다.** 이 파일은 스크립트가 bash의 `source` 로 읽는데, 값 안의 `&`(`replicaSet=rs0&authSource=admin`)가 따옴표 없이 있으면 bash가 "앞 명령을 백그라운드로 실행"으로 해석해 변수가 설정되지 않고 `MONGO_URI: unbound variable` 이 납니다(11/25 확인). 이 파일은 systemd 환경 파일이 **아니라** bash 파일이라 값에 `&`, `;`, 공백이 있으면 따옴표가 필요합니다. `MARIADB_PASSWORD` 는 영문·숫자만 쓰면 따옴표가 필요 없습니다.
+> <- 읽혔는지 확인(값은 출력되지 않음): `sudo bash -c 'source /etc/game-nuri/backup.env; echo "MONGO_URI 길이=${#MONGO_URI}"'`
 > <- `MONGO_URI` 의 비밀번호에 `@`, `:`, `/` 가 있으면 URL 인코딩합니다.
 > <- 스크립트는 DB 비밀번호를 **명령줄(`ps`)에 보이지 않게** 임시 옵션 파일로 넘기고 끝나면 지웁니다. `mongodump --uri` 는 계정 정보가 명령줄에 보이므로 backup 서버는 팀 계정만 접속하게 합니다.
 
