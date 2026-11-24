@@ -2,6 +2,9 @@
 
 현재가 규칙(제안, api.md 확정 전): prices_current에서 item_condition='new'인 행 중
 price_krw가 가장 낮은 것. 같으면 store, platform 이름순.
+**PC 가격이 있으면 PC 안에서만 고른다**(PRIMARY_PLATFORM). 콘솔(다나와)은 정가·할인율이 없어
+섞이면 카드의 할인 표시가 사라지고 구매 타이밍(PC 기준)의 현재가와 어긋난다. PC 가격이 없는
+게임(콘솔 전용)은 전체 플랫폼 최저가를 쓴다. 콘솔 가격은 /prices, /lowest의 플랫폼별 값에 남는다.
 """
 
 from collections.abc import Iterable
@@ -21,13 +24,26 @@ from app.db.models import (
 from app.schemas.game import Card
 from app.services import ratings
 
+# 카드·구매 타이밍(timing.TIMING_PLATFORM)이 현재가·역대 최저가를 보는 기준 플랫폼
+PRIMARY_PLATFORM = "PC"
+
 
 def game_name(game: Game) -> str:
     return game.name_ko or game.name
 
 
+def _keep_lowest(best: dict[int, PriceCurrent], row: PriceCurrent) -> None:
+    cur = best.get(row.game_id)
+    if cur is None or (row.price_krw, row.store, row.platform) < (
+        cur.price_krw,
+        cur.store,
+        cur.platform,
+    ):
+        best[row.game_id] = row
+
+
 def lowest_new_prices(db: Session, game_ids: Iterable[int]) -> dict[int, PriceCurrent]:
-    """게임별 현재 최저가 행 (새 상품 기준)."""
+    """게임별 현재 최저가 행 (새 상품 기준, PC 우선 — 모듈 설명 참고)."""
     ids = list(set(game_ids))
     if not ids:
         return {}
@@ -36,16 +52,13 @@ def lowest_new_prices(db: Session, game_ids: Iterable[int]) -> dict[int, PriceCu
             PriceCurrent.game_id.in_(ids), PriceCurrent.item_condition == "new"
         )
     ).all()
-    best: dict[int, PriceCurrent] = {}
+    best_any: dict[int, PriceCurrent] = {}
+    best_pc: dict[int, PriceCurrent] = {}
     for row in rows:
-        cur = best.get(row.game_id)
-        if cur is None or (row.price_krw, row.store, row.platform) < (
-            cur.price_krw,
-            cur.store,
-            cur.platform,
-        ):
-            best[row.game_id] = row
-    return best
+        _keep_lowest(best_any, row)
+        if row.platform == PRIMARY_PLATFORM:
+            _keep_lowest(best_pc, row)
+    return {**best_any, **best_pc}  # PC 가격이 있는 게임은 PC 값이 이긴다
 
 
 def games_by_id(db: Session, game_ids: Iterable[int]) -> dict[int, Game]:

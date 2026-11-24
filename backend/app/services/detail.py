@@ -9,19 +9,29 @@ from app.services import cards, games
 
 
 def _lowest_krw(db: Session, game_id: int) -> int | None:
-    """새 상품 역대 최저가(플랫폼 무관). 이력 최저와 현재가 중 낮은 쪽."""
-    hist = db.scalar(
-        select(func.min(PriceHistory.price_krw)).where(
-            PriceHistory.game_id == game_id, PriceHistory.item_condition == "new"
-        )
-    )
-    now = db.scalar(
-        select(func.min(PriceCurrent.price_krw)).where(
-            PriceCurrent.game_id == game_id, PriceCurrent.item_condition == "new"
-        )
-    )
-    found = [v for v in (hist, now) if v is not None]
-    return min(found) if found else None
+    """새 상품 역대 최저가. 이력 최저와 현재가 중 낮은 쪽.
+
+    카드 현재가와 같은 기준: PC 가격(이력·현재가)이 있으면 PC 안에서, 없으면(콘솔 전용) 전체 플랫폼.
+    """
+
+    def _min(platform: str | None) -> int | None:
+        hist_where = [PriceHistory.game_id == game_id, PriceHistory.item_condition == "new"]
+        now_where = [PriceCurrent.game_id == game_id, PriceCurrent.item_condition == "new"]
+        if platform is not None:
+            hist_where.append(PriceHistory.platform == platform)
+            now_where.append(PriceCurrent.platform == platform)
+        found = [
+            v
+            for v in (
+                db.scalar(select(func.min(PriceHistory.price_krw)).where(*hist_where)),
+                db.scalar(select(func.min(PriceCurrent.price_krw)).where(*now_where)),
+            )
+            if v is not None
+        ]
+        return min(found) if found else None
+
+    pc = _min(cards.PRIMARY_PLATFORM)
+    return pc if pc is not None else _min(None)
 
 
 def get_detail(db: Session, game_id: int) -> GameDetail:
