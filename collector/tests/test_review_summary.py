@@ -504,3 +504,51 @@ def test_verdict_slang_and_generic_nouns_from_real_data_are_dropped() -> None:
     words = ["명작", "최악", "강추", "개꿀", "수준", "요소", "이후", "스토리", "그래픽"]
     d = rs.parse_digest(es_result(pros=words))
     assert d.pros == ["스토리", "그래픽"]
+
+
+# ---------- 전체 키워드 재점검(2026-11-25, chi_square 결과)에서 찾은 것 ----------
+@pytest.mark.parametrize(
+    "word",
+    [
+        "섹스", "팬티", "관음증", "개똥", "개소리", "똥개", "버러지", "따구",
+        "찐따", "능지", "북괴", "자살", "개적",
+    ],
+)  # fmt: skip
+def test_words_found_in_second_review_are_dropped(word: str) -> None:
+    d = rs.parse_digest(es_result(pros=[word, "스토리"], cons=[word, "버그"]))
+    assert d.pros == ["스토리"] and d.cons == ["버그"]
+
+
+def test_feeling_only_words_are_dropped_but_problem_words_stay() -> None:
+    feeling = ["만족", "훌륭", "완벽", "감동", "수작", "짜증", "불쾌", "실망", "엉망", "구림"]
+    problems = ["버그", "지루", "불편", "반복", "환불"]  # 무엇이 문제인지 알려 주는 말은 남긴다
+    d = rs.parse_digest(es_result(pros=feeling + ["스토리"], cons=feeling + problems))
+    assert d.pros == ["스토리"]
+    assert d.cons == problems
+
+
+SECOND_REVIEW_FILTERED = [
+    # 감정·평가만 담은 말
+    "아쉬움", "후회", "허무", "감사", "낭비", "실패", "전설", "호불호", "매력", "완성", "압도",
+    "재미", "적당", "무난", "정상", "적절", "억지", "포기", "하차",
+    # 무엇이 그런지 알려 주지 않는 일반어
+    "다양", "부족", "기대", "취향", "해결", "중요", "심각", "특유", "불가", "필수",
+]  # fmt: skip
+SECOND_REVIEW_KEPT = [
+    "스트레스", "답답", "여운", "행복", "사랑", "감성", "추억", "기분", "긴장감", "쾌감",
+    "흥미", "독특", "참신", "신선",
+]  # fmt: skip
+
+
+def test_second_review_words_are_filtered_out_of_results() -> None:
+    assert len(SECOND_REVIEW_FILTERED) == 29
+    for word in SECOND_REVIEW_FILTERED:
+        d = rs.parse_digest(es_result(pros=[word, "스토리"], cons=[word, "버그"]))
+        assert d.pros == ["스토리"] and d.cons == ["버그"], word
+
+
+def test_second_review_kept_words_still_appear() -> None:
+    # 판단 끝에 남기기로 한 말은 결과에 쓰인다(분위기·감정을 전하는 말)
+    for word in SECOND_REVIEW_KEPT:
+        d = rs.parse_digest(es_result(pros=[word], cons=[word]))
+        assert d.pros == [word] and d.cons == [word], word
