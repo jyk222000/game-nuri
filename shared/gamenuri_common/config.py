@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     ai_model: str = ""
 
+    # 구글 로그인 (Backend). Backend 2대가 같은 session_secret을 써야 state 확인이 서로 통한다.
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_redirect_uri: str = ""  # 구글 콘솔에 등록한 값과 한 글자도 다르면 안 된다
+    session_secret: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:
