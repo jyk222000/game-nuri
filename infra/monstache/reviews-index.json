@@ -1,10 +1,43 @@
 {
-  "settings": { "analysis": { "analyzer": {
-    "korean": { "type": "custom", "tokenizer": "nori_tokenizer", "filter": ["lowercase", "nori_part_of_speech"] } } } },
+  "settings": {
+    "number_of_replicas": 0,
+    "analysis": {
+      "tokenizer": {
+        "nori_none": { "type": "nori_tokenizer", "decompound_mode": "none" }
+      },
+      "filter": {
+        "nouns_only": {
+          "type": "nori_part_of_speech",
+          "stoptags": ["E","IC","J","MAG","MAJ","MM","SP","SSC","SSO","SC","SE","SF","SY",
+                       "XPN","XSA","XSN","XSV","UNA","NA","VSV",
+                       "VV","VA","VX","VCP","VCN","NNB","NP","NR","SN"]
+        },
+        "min2": { "type": "length", "min": 2 },
+        "review_stop": {
+          "type": "stop",
+          "stopwords": ["게임","겜","진짜","그냥","정도","생각","사람","하나","부분","느낌","이번","작품"]
+        }
+      },
+      "analyzer": {
+        "korean": { "type": "custom", "tokenizer": "nori_tokenizer",
+                    "filter": ["lowercase", "nori_part_of_speech"] },
+        "korean_nouns": { "type": "custom", "tokenizer": "nori_none",
+                          "filter": ["nouns_only", "lowercase", "min2", "review_stop"] }
+      }
+    }
+  },
   "mappings": { "properties": {
-    "game_id": { "type": "long" },
-    "source": { "type": "keyword" },
-    "voted_up": { "type": "boolean" },
-    "review": { "type": "text", "analyzer": "korean", "fielddata": true },
-    "created_at": { "type": "date" } } }
+    "steam_appid":         { "type": "long" },
+    "recommendationid":    { "type": "keyword" },
+    "language":            { "type": "keyword" },
+    "review":              { "type": "text", "analyzer": "korean",
+                             "fields": { "nouns": { "type": "text", "analyzer": "korean_nouns", "fielddata": true } } },
+    "voted_up":            { "type": "boolean" },
+    "votes_up":            { "type": "integer" },
+    "weighted_vote_score": { "type": "float" },
+    "playtime_at_review":  { "type": "integer" },
+    "created_at":          { "type": "date", "format": "epoch_second" },
+    "source":              { "type": "keyword" },
+    "collected_at":        { "type": "date" }
+  } }
 }

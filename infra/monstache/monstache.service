@@ -1,0 +1,15 @@
+[Unit]
+Description=Monstache (MongoDB -> Elasticsearch sync)
+After=network-online.target elasticsearch.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+EnvironmentFile=/etc/monstache/monstache.env
+ExecStart=/usr/local/bin/monstache -f /etc/monstache/monstache.toml
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,20 @@
+{
+  "index_patterns": ["clickstream-*"],
+  "template": {
+    "settings": {
+      "number_of_replicas": 0,
+      "analysis": { "analyzer": {
+        "korean": { "type": "custom", "tokenizer": "nori_tokenizer", "filter": ["lowercase"] } } }
+    },
+    "mappings": { "properties": {
+      "event_id":    { "type": "keyword" },
+      "session_id":  { "type": "keyword" },
+      "user_id":     { "type": "keyword" },
+      "event":       { "type": "keyword" },
+      "game_id":     { "type": "long" },
+      "query":       { "type": "keyword", "fields": { "text": { "type": "text", "analyzer": "korean" } } },
+      "store":       { "type": "keyword" },
+      "occurred_at": { "type": "date" },
+      "served_by":   { "type": "keyword" } } }
+  }
+}
