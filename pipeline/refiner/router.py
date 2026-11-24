@@ -170,6 +170,19 @@ def route(envelope: dict[str, Any], maps: Maps) -> dict[str, Any]:
             rows, unmatched = console.refine_console_price(
                 envelope, maps.alias.get, danawa_match.maps_matcher(maps)
             )
+            # 본편이 있으면 에디션은 빼고, 없으면 에디션 최저가 (#93)
+            kept = [r for r in rows if maps.last_prices.console_keep(r)]
+            if rows and not kept and rows[0].get("variant_name"):
+                unmatched = unmatched + [
+                    {
+                        "reason": "에디션 (본편 있음)",
+                        "source": "danawa",
+                        "key": (envelope.get("payload") or {}).get("pcode"),
+                        "title": (envelope.get("payload") or {}).get("product_name"),
+                        "collected_at": envelope.get("collected_at"),
+                    }
+                ]
+            rows = kept
             pcode = (envelope.get("payload") or {}).get("pcode")
             if rows and pcode:
                 out.append(

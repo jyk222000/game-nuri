@@ -109,6 +109,7 @@ def refine_price_history(
                 "price_original": price.get("amount"),
                 "currency_original": cur,
                 "url": None,
+                "variant_name": None,
                 "collected_at": when,
             }
         )

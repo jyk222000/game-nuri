@@ -5,6 +5,12 @@
 platform 은 platform_hint, 없으면 상품명에서 찾는다. 못 찾으면 unmatched.
 item_condition 은 condition(new|used), 없으면 new.
 거르기(비게임·본체 번들·해외판·DLC·에디션)와 상품명 매칭은 rules/danawa_match.py.
+
+에디션 상품(#93)은 버리지 않고 variant_name(예: 얼티밋 에디션)을 붙여 돌려준다.
+"본편이 있으면 에디션은 빼고, 없으면 에디션 최저가"는 여러 상품을 봐야 해서 router 가
+LastPrices.console_keep() 으로 정한다.
+매칭 순서: 정확한 별칭 → 상품명 안의 별칭(TitleMatcher) → 수집 때 검색한 게임(request.params
+igdb_id, 검색어가 상품명 안에 있을 때만).
 """
 
 from __future__ import annotations
@@ -13,7 +19,13 @@ import re
 from collections.abc import Callable
 from typing import Any
 
-from refiner.rules.danawa_match import TitleMatcher, exclude_reason
+from refiner.rules.danawa_match import (
+    EDITION_REASON,
+    TitleMatcher,
+    edition_label,
+    exclude_reason,
+    hint_match,
+)
 from refiner.rules.normalize_title import normalize_title
 from refiner.rules.price import REFINED_PRICE_SCHEMA  # noqa: F401  (같은 schema)
 
@@ -37,10 +49,16 @@ def infer_platform(payload: dict[str, Any]) -> str | None:
     hint = payload.get("platform_hint")
     if hint in PLATFORMS:
         return hint
-    title = payload.get("product_name") or ""
-    for pattern, key in TITLE_PLATFORM:
-        if pattern.search(title):
-            return key
+    # 상품명 → 묶음 이름(PS5, 패키지디스크 …) → 다나와 분류 순으로 찾는다
+    texts = [
+        payload.get("product_name") or "",
+        payload.get("bundle_name") or "",
+        " ".join(c for c in payload.get("category") or [] if isinstance(c, str)),
+    ]
+    for text in texts:
+        for pattern, key in TITLE_PLATFORM:
+            if pattern.search(text):
+                return key
     return None
 
 
@@ -78,7 +96,10 @@ def refine_console_price(
         ]
 
     reason = exclude_reason(title)
-    if reason:
+    variant = None
+    if reason == EDITION_REASON:
+        variant = edition_label(title)  # 본편이 없는 플랫폼에만 쓴다 (router)
+    elif reason:
         return unmatched(reason)
     price = p.get("lowest_price")
     if not isinstance(price, (int, float)) or price <= 0:
@@ -88,12 +109,16 @@ def refine_console_price(
         return unmatched("플랫폼을 알 수 없음")
     condition = p.get("condition") if p.get("condition") in ("new", "used") else "new"
     game_id = resolve_game_id(normalize_title(title))
+    why = "상품명 → IGDB ID 매칭 실패"
     if game_id is None and matcher is not None:
         game_id, why = matcher.match(title)
-        if game_id is None:
-            return unmatched(why)
     if game_id is None:
-        return unmatched("상품명 → IGDB ID 매칭 실패")
+        params = (envelope.get("request") or {}).get("params") or {}
+        hint = params.get("igdb_id")
+        if str(hint).isdigit() and hint_match(title, str(params.get("query") or "")):
+            game_id = int(hint)  # 검색한 게임 이름이 상품명에 있다
+    if game_id is None:
+        return unmatched(why)
     return [
         {
             "game_id": int(game_id),
@@ -107,6 +132,7 @@ def refine_console_price(
             "price_original": float(price),
             "currency_original": "KRW",
             "url": p.get("url"),
+            "variant_name": variant,
             "collected_at": collected_at,
         }
     ], []

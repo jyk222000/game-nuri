@@ -54,6 +54,7 @@ def test_krw_kept_and_fields_filled():
             "price_original": 47900,
             "currency_original": "KRW",
             "url": "https://example.com/61",
+            "variant_name": None,
             "collected_at": "2026-11-19T02:30:00Z",
         }
     ]
