@@ -26,7 +26,7 @@
 
 > <- 이 결과까지 가는 데 막힌 곳(겪은 문제): ① `backup.sh` 실행 권한 없음 → `bash` 로 실행, ② 비밀번호 특수문자 때문에 옵션 파일 접속 거부 → 영문·숫자 비밀번호(또는 `MYSQL_PWD` 방식으로 스크립트 수정), ③ `MONGO_URI` 의 `&` 때문에 `unbound variable` → 작은따옴표로 감싸기.
 > <- 하루 약 121MB, 7일 보관해도 1GB 안팎이라 `/BACKUP` 75G에 충분합니다.
-> <- 아직 남음: cron 등록과 첫 자동 실행 확인, `/BACKUP` fstab 확인, 복구 시험.
+> <- 같은 날 이어서 완료: **cron 등록**(매일 03:00), **`/BACKUP` fstab 확인**, **MariaDB 복구 시험 성공**(시험용 DB `gamenuri_restore_test` 에 복구해 `games` 1000건·테이블 29개 확인 후 시험 DB·임시 파일 삭제). 아직 남음: 첫 **자동** 실행 확인(11/26 새벽), MongoDB 복구 시험.
 
 > <- 즉 **11/25 기준 백업은 아직 한 번도 돌지 않았습니다.** 아래 1~7장 순서대로 구성한 뒤 8장 복구 시험까지 하면 완성입니다. 완료한 항목은 10장의 체크를 채웁니다.
 > <- 아직 확인하지 못한 것: `/BACKUP` 의 파일시스템 종류와 `/etc/fstab` 등록 여부(재부팅 후에도 마운트되는지).
@@ -89,10 +89,13 @@ backup(10.0.1.108, PC-1) ──mariadb-dump──▶ mariadb-re(Replica)   ← P
 
 # 마운트가 안 돼 있으면 fstab 에 UUID 로 등록 (디스크 이름은 바뀔 수 있어 UUID 사용)
 [admina@backup ~]$ sudo blkid /dev/sda3
-> /dev/sda3: UUID="<위에서 나온 값>" TYPE="xfs"
+> /dev/sda3: UUID="<위에서 나온 값>" TYPE="ext4"
+
+# fstab 에 한 줄 추가 (재부팅해도 /BACKUP 에 자동 마운트). 11/25 실제 값은 ext4
+> UUID=<위에서 나온 값> /BACKUP ext4 defaults 1 2
 ```
 > <- `/BACKUP` 이 마운트돼 있지 않으면 **백업이 루트 디스크(`/`)에 쌓여 서버가 멈출 수 있습니다.** 스크립트는 `/BACKUP` 폴더가 없으면 실패하고 중단합니다(루트 폴더는 만들지 않음).
-> <- 11/25 확인: `sda3` 80G 가 `/BACKUP` 에 마운트돼 있습니다. ⚠ 미확인: 파일시스템 종류와 fstab 등록(`grep BACKUP /etc/fstab` 으로 확인). 위 `TYPE` 은 예시입니다. `docs/infra-status.md` 미해결 9번(`/backup` vs `/BACKUP` 경로)은 `backup.sh` 에서 `/BACKUP` 으로 정리됐습니다(커밋 `fe2b128`).
+> <- 11/25 확인: `sda3` 80G 가 `/BACKUP` 에 마운트돼 있고, **fstab 에 UUID 로 등록**돼 있습니다(`ext4`, `defaults 1 2`). 재부팅해도 붙습니다. `docs/infra-status.md` 미해결 9번(`/backup` vs `/BACKUP` 경로)은 `backup.sh` 에서 `/BACKUP` 으로 정리됐습니다(커밋 `fe2b128`).
 
 ## 3. 백업용 읽기 전용 계정
 백업 계정은 **읽기만** 가능하게 만듭니다. 비밀번호는 입력창으로 받고 문서·채팅에 쓰지 않습니다.
