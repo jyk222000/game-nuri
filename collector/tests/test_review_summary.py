@@ -580,3 +580,18 @@ def test_ordinary_compounds_that_contain_filtered_words_stay(word: str) -> None:
     # 걸러 낸 말이 글자로 들어 있어도 따로 의미가 있는 말은 남긴다
     d = rs.parse_digest(es_result(pros=[word], cons=[word]))
     assert d.pros == [word] and d.cons == [word]
+
+
+# ---------- 가격 이야기 (2026-11-25) ----------
+@pytest.mark.parametrize("word", ["할인", "세일", "정가"])
+def test_price_talk_words_are_filtered(word: str) -> None:
+    # 슬레이 더 스파이어 요약이 "할인된 가격에 즐길 수 있고…"로 시작했던 것을 막는다.
+    # 리뷰어가 언제 얼마에 샀는지일 뿐 게임의 특징이 아니고, 상세 화면에 가격이 이미 있다.
+    d = rs.parse_digest(es_result(pros=[word, "스토리"], cons=[word, "버그"]))
+    assert d.pros == ["스토리"] and d.cons == ["버그"]
+
+
+def test_price_word_itself_stays_because_it_can_be_a_real_pro_or_con() -> None:
+    # "가격 대비 만족"·"가격이 비싸다"처럼 장점이나 단점이 될 수 있어 "가격"은 남긴다
+    d = rs.parse_digest(es_result(pros=["가격"], cons=["가격"]))
+    assert d.pros == ["가격"] and d.cons == ["가격"]
