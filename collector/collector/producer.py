@@ -107,6 +107,26 @@ def publish(msg: RawEnvelope, key: str, dry_run: bool = False) -> None:
     p.poll(0)
 
 
+def publish_refined(topic: str, key: str, value: dict[str, Any], dry_run: bool = False) -> None:
+    """refined.* 토픽으로 보낸다(리뷰 요약 배치처럼 수집기가 아닌 프로그램이 직접 만드는 메시지).
+
+    value는 JDBC Sink용 JSON+schema 형식이어야 한다(docs/contracts/messages 참고).
+    """
+    data = json.dumps(value, ensure_ascii=False)
+    if dry_run:
+        out = Path(__file__).resolve().parents[1] / "samples" / f"{topic}.{key}.json"
+        out.parent.mkdir(exist_ok=True)
+        out.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
+        return
+    p = _get_producer()
+    try:
+        _produce(p, topic, key, data)
+    except Exception as e:  # 한 건의 로컬 오류로 전체를 멈추지 않는다
+        _stats["failed"] += 1
+        log.error("Kafka produce 오류 topic=%s: %s", topic, e)
+    p.poll(0)
+
+
 def flush(raise_on_failure: bool = True) -> dict[str, int]:
     """대기열이 빌 때까지 기다리고 성공·실패 개수를 남긴다. 실패가 있으면 DeliveryError."""
     global _logged_errors
