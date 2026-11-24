@@ -1,1 +1,1071 @@
-{"uid":"gamenuri-db","title":"겜누리 DB","tags":["gamenuri","db"],"timezone":"browser","schemaVersion":39,"version":1,"refresh":"15s","time":{"from":"now-1h","to":"now"},"links":[{"title":"겜누리 종합","type":"link","url":"/d/gamenuri-overview","icon":"dashboard","targetBlank":false,"keepTime":true,"includeVars":false},{"title":"겜누리 Kafka 상세","type":"link","url":"/d/gamenuri-kafka","icon":"dashboard","targetBlank":false,"keepTime":true,"includeVars":false},{"title":"겜누리 로그","type":"link","url":"/d/gamenuri-logs","icon":"dashboard","targetBlank":false,"keepTime":true,"includeVars":false}],"templating":{"list":[{"name":"ds","label":"데이터 소스","type":"datasource","query":"prometheus","current":{},"hide":2}]},"panels":[{"id":1,"type":"row","title":"한눈에 보는 상태","collapsed":false,"gridPos":{"h":1,"w":24,"x":0,"y":0},"panels":[]},{"id":2,"type":"stat","title":"MariaDB 원본 (mariadb-pr)","datasource":{"type":"prometheus","uid":"${ds}"},"gridPos":{"h":4,"w":4,"x":0,"y":1},"targets":[{"datasource":{"type":"prometheus","uid":"${ds}"},"expr":"max(mysql_up{instance=\"mariadb-pr:9104\"}) or vector(-1)","refId":"A","legendFormat":"","instant":true,"range":false}],"fieldConfig":{"defaults":{"unit":"short","color":{"mode":"thresholds"},"noValue":"확인 불가","thresholds":{"mode":"absolute","steps":[{"color":"gray","value":null},{"color":"red","value":0},{"color":"green","value":1}]},"mappings":[{"type":"value","options":{"1":{"text":"정상","color":"green"},"0":{"text":"꺼짐","color":"red"},"-1":{"text":"확인 불가","color":"gray"}}}]},"overrides":[]},"options":{"reduceOptions":{"calcs":["lastNotNull"],"fields":"","values":false},"colorMode":"background","graphMode":"none","textMode":"value"}},{"id":3,"type":"stat","title":"MariaDB 복제본 (mariadb-re)","datasource":{"type":"prometheus","uid":"${ds}"},"gridPos":{"h":4,"w":4,"x":4,"y":1},"targets":[{"datasource":{"type":"prometheus","uid":"${ds}"},"expr":"max(mysql_up{instance=\"mariadb-re:9104\"}) or vector(-1)","refId":"A","legendFormat":"","instant":true,"range":false}],"fieldConfig":{"defaults":{"unit":"short","color":{"mode":"thresholds"},"noValue":"확인 불가","thresholds":{"mode":"absolute","steps":[{"color":"gray","value":null},{"color":"red","value":0},{"color":"green","value":1}]},"mappings":[{"type":"value","options":{"1":{"text":"정상","color":"green"},"0":{"text":"꺼짐","color":"red"},"-1":{"text":"확인 불가","color":"gray"}}}]},"overrides":[]},"options":{"reduceOptions":{"calcs":["lastNotNull"],"fields":"","values":false},"colorMode":"background","graphMode":"none","textMode":"value"}},{"id":4,"type":"stat","title":"MariaDB 복제 상태","datasource":{"type":"prometheus","uid":"${ds}"},"gridPos":{"h":4,"w":4,"x":8,"y":1},"targets":[{"datasource":{"type":"prometheus","uid":"${ds}"},"expr":"min(mysql_slave_status_slave_io_running * mysql_slave_status_slave_sql_running) or vector(-1)","refId":"A","legendFormat":"","instant":true,"range":false}],"fieldConfig":{"defaults":{"unit":"short","color":{"mode":"thresholds"},"noValue":"확인 불가","thresholds":{"mode":"absolute","steps":[{"color":"gray","value":null},{"color":"red","value":0},{"color":"green","value":1}]},"mappings":[{"type":"value","options":{"1":{"text":"복제 중","color":"green"},"0":{"text":"멈춤","color":"red"},"-1":{"text":"확인 불가","color":"gray"}}}]},"overrides":[]},"options":{"reduceOptions":{"calcs":["lastNotNull"],"fields":"","values":false},"colorMode":"background","graphMode":"none","textMode":"value"}},{"id":5,"type":"stat","title":"MariaDB 복제 지연","datasource":{"type":"prometheus","uid":"${ds}"},"gridPos":{"h":4,"w":4,"x":12,"y":1},"targets":[{"datasource":{"type":"prometheus","uid":"${ds}"},"expr":"max(mysql_slave_status_seconds_behind_master)","refId":"A","legendFormat":"","instant":true,"range":false}],"fieldConfig":{"defaults":{"unit":"s","color":{"mode":"thresholds"},"noValue":"확인 불가","thresholds":{"mode":"absolute","steps":[{"color":"green","value":null},{"color":"orange","value":10},{"color":"red","value":30}]}},"overrides":[]},"options":{"reduceOptions":{"calcs":["lastNotNull"],"fields":"","values":false},"colorMode":"background","graphMode":"none","textMode":"value"}},{"id":6,"type":"stat","title":"살아 있는 MongoDB (총 3대)","datasource":{"type":"prometheus","uid":"${ds}"},"gridPos":{"h":4,"w":4,"x":16,"y":1},"targets":[{"datasource":{"type":"prometheus","uid":"${ds}"},"expr":"count(mongodb_up == 1) or vector(0)","refId":"A","legendFormat":"","instant":true,"range":false}],"fieldConfig":{"defaults":{"unit":"short","color":{"mode":"thresholds"},"noValue":"0","thresholds":{"mode":"absolute","steps":[{"color":"red","value":null},{"color":"orange","value":2},{"color":"green","value":3}]}},"overrides":[]},"options":{"reduceOptions":{"calcs":["lastNotNull"],"fields":"","values":false},"colorMode":"background","graphMode":"none","textMode":"value"}},{"id":7,"type":"stat","title":"MongoDB 복제 지연","datasource":{"type":"prometheus","uid":"${ds}"},"gridPos":{"h":4,"w":4,"x":20,"y":1},"targets":[{"datasource":{"type":"prometheus","uid":"${ds}"},"expr":"max(mongodb_mongod_replset_member_replication_lag)","refId":"A","legendFormat":"","instant":true,"range":false}],"fieldConfig":{"defaults":{"unit":"s","color":{"mode":"thresholds"},"noValue":"확인 불가","thresholds":{"mode":"absolute","steps":[{"color":"green","value":null},{"color":"orange","value":10},{"color":"red","value":30}]}},"overrides":[]},"options":{"reduceOptions":{"calcs":["lastNotNull"],"fields":"","values":false},"colorMode":"background","graphMode":"none","textMode":"value"}},{"id":8,"type":"stat","title":"MongoDB 3대 역할 (PRIMARY는 파랑)","datasource":{"type":"prometheus","uid":"${ds}"},"gridPos":{"h":4,"w":24,"x":0,"y":5},"targets":[{"datasource":{"type":"prometheus","uid":"${ds}"},"expr":"max by (instance) (mongodb_mongod_replset_my_state) or max by (instance) (up{job=\"mongodb\"} * 0 - 1)","refId":"A","legendFormat":"{{instance}}","instant":true,"range":false}],"fieldConfig":{"defaults":{"unit":"short","color":{"mode":"thresholds"},"noValue":"확인 불가","thresholds":{"mode":"absolute","steps":[{"color":"gray","value":null}]},"mappings":[{"type":"value","options":{"1":{"text":"PRIMARY","color":"blue"},"2":{"text":"SECONDARY","color":"green"},"-1":{"text":"꺼짐","color":"red"}}},{"type":"range","options":{"from":3,"to":99,"result":{"text":"이상 상태","color":"orange"}}},{"type":"range","options":{"from":0,"to":0,"result":{"text":"시작 중","color":"orange"}}}]},"overrides":[]},"options":{"reduceOptions":{"calcs":["lastNotNull"],"fields":"","values":false},"colorMode":"background","graphMode":"none","textMode":"value_and_name","orientation":"horizontal"}},{"id":9,"type":"row","title":"MariaDB 부하","collapsed":false,"gridPos":{"h":1,"w":24,"x":0,"y":9},"panels":[]},{"id":10,"type":"timeseries","title":"초당 쿼리 수","datasource":{"type":"prometheus","uid":"${ds}"},"gridPos":{"h":7,"w":12,"x":0,"y":10},"targets":[{"datasource":{"type":"prometheus","uid":"${ds}"},"expr":"rate(mysql_global_status_questions[2m])","refId":"A","legendFormat":"{{instance}}"}],"fieldConfig":{"defaults":{"unit":"short","noValue":"데이터 없음","custom":{"lineWidth":1,"fillOpacity":10}},"overrides":[]},"options":{"legend":{"displayMode":"list","placement":"bottom"},"tooltip":{"mode":"multi"}}},{"id":11,"type":"timeseries","title":"접속 수 (최대 허용치와 함께)","datasource":{"type":"prometheus","uid":"${ds}"},"gridPos":{"h":7,"w":12,"x":12,"y":10},"targets":[{"datasource":{"type":"prometheus","uid":"${ds}"},"expr":"mysql_global_status_threads_connected","refId":"A","legendFormat":"{{instance}} 접속"},{"datasource":{"type":"prometheus","uid":"${ds}"},"expr":"mysql_global_variables_max_connections","refId":"B","legendFormat":"{{instance}} 최대"}],"fieldConfig":{"defaults":{"unit":"short","noValue":"데이터 없음","custom":{"lineWidth":1,"fillOpacity":10}},"overrides":[]},"options":{"legend":{"displayMode":"list","placement":"bottom"},"tooltip":{"mode":"multi"}}},{"id":12,"type":"timeseries","title":"지금 실행 중인 쿼리 수","datasource":{"type":"prometheus","uid":"${ds}"},"gridPos":{"h":7,"w":12,"x":0,"y":17},"targets":[{"datasource":{"type":"prometheus","uid":"${ds}"},"expr":"mysql_global_status_threads_running","refId":"A","legendFormat":"{{instance}}"}],"fieldConfig":{"defaults":{"unit":"short","noValue":"데이터 없음","custom":{"lineWidth":1,"fillOpacity":10}},"overrides":[]},"options":{"legend":{"displayMode":"list","placement":"bottom"},"tooltip":{"mode":"multi"}}},{"id":13,"type":"timeseries","title":"느린 쿼리 (5분간 건수)","datasource":{"type":"prometheus","uid":"${ds}"},"gridPos":{"h":7,"w":12,"x":12,"y":17},"targets":[{"datasource":{"type":"prometheus","uid":"${ds}"},"expr":"increase(mysql_global_status_slow_queries[5m])","refId":"A","legendFormat":"{{instance}}"}],"fieldConfig":{"defaults":{"unit":"short","noValue":"데이터 없음","custom":{"lineWidth":1,"fillOpacity":10}},"overrides":[]},"options":{"legend":{"displayMode":"list","placement":"bottom"},"tooltip":{"mode":"multi"}}},{"id":14,"type":"row","title":"MongoDB 부하","collapsed":false,"gridPos":{"h":1,"w":24,"x":0,"y":24},"panels":[]},{"id":15,"type":"timeseries","title":"초당 연산 수 (종류별)","datasource":{"type":"prometheus","uid":"${ds}"},"gridPos":{"h":7,"w":8,"x":0,"y":25},"targets":[{"datasource":{"type":"prometheus","uid":"${ds}"},"expr":"sum by (legacy_op_type) (rate(mongodb_ss_opcounters[2m]))","refId":"A","legendFormat":"{{legacy_op_type}}"}],"fieldConfig":{"defaults":{"unit":"short","noValue":"데이터 없음","custom":{"lineWidth":1,"fillOpacity":10}},"overrides":[]},"options":{"legend":{"displayMode":"list","placement":"bottom"},"tooltip":{"mode":"multi"}}},{"id":16,"type":"timeseries","title":"접속 수","datasource":{"type":"prometheus","uid":"${ds}"},"gridPos":{"h":7,"w":8,"x":8,"y":25},"targets":[{"datasource":{"type":"prometheus","uid":"${ds}"},"expr":"mongodb_ss_connections{conn_type=\"current\"}","refId":"A","legendFormat":"{{instance}}"}],"fieldConfig":{"defaults":{"unit":"short","noValue":"데이터 없음","custom":{"lineWidth":1,"fillOpacity":10}},"overrides":[]},"options":{"legend":{"displayMode":"list","placement":"bottom"},"tooltip":{"mode":"multi"}}},{"id":17,"type":"timeseries","title":"복제 지연 추이 (멤버별)","datasource":{"type":"prometheus","uid":"${ds}"},"gridPos":{"h":7,"w":8,"x":16,"y":25},"targets":[{"datasource":{"type":"prometheus","uid":"${ds}"},"expr":"max by (name) (mongodb_mongod_replset_member_replication_lag)","refId":"A","legendFormat":"{{name}}"}],"fieldConfig":{"defaults":{"unit":"s","noValue":"데이터 없음","custom":{"lineWidth":1,"fillOpacity":10}},"overrides":[]},"options":{"legend":{"displayMode":"list","placement":"bottom"},"tooltip":{"mode":"multi"}}},{"id":18,"type":"row","title":"저장 공간 (DB VM, 남은 비율)","collapsed":false,"gridPos":{"h":1,"w":24,"x":0,"y":32},"panels":[]},{"id":19,"type":"bargauge","title":"남은 공간 % (15% 미만이면 경보)","datasource":{"type":"prometheus","uid":"${ds}"},"gridPos":{"h":7,"w":24,"x":0,"y":33},"targets":[{"datasource":{"type":"prometheus","uid":"${ds}"},"expr":"node_filesystem_avail_bytes{job=\"node\", instance=~\"(mariadb-pr|mariadb-re|mongodb-pr|mongo-se1|mongo-se2):9100\", mountpoint=~\"/|/DATA\"} / node_filesystem_size_bytes{job=\"node\", instance=~\"(mariadb-pr|mariadb-re|mongodb-pr|mongo-se1|mongo-se2):9100\", mountpoint=~\"/|/DATA\"} * 100","refId":"A","legendFormat":"{{instance}} {{mountpoint}}","instant":true,"range":false}],"fieldConfig":{"defaults":{"unit":"percent","min":0,"max":100,"noValue":"데이터 없음","color":{"mode":"thresholds"},"thresholds":{"mode":"absolute","steps":[{"color":"red","value":null},{"color":"orange","value":15},{"color":"green","value":30}]}},"overrides":[]},"options":{"orientation":"horizontal","displayMode":"basic","showUnfilled":true,"reduceOptions":{"calcs":["lastNotNull"],"fields":"","values":false}}}]}
+{
+  "uid": "gamenuri-db",
+  "title": "겜누리 DB",
+  "tags": [
+    "gamenuri",
+    "db"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "겜누리 종합",
+      "type": "link",
+      "url": "/d/gamenuri-overview",
+      "icon": "dashboard",
+      "targetBlank": false,
+      "keepTime": true,
+      "includeVars": false
+    },
+    {
+      "title": "겜누리 Kafka 상세",
+      "type": "link",
+      "url": "/d/gamenuri-kafka",
+      "icon": "dashboard",
+      "targetBlank": false,
+      "keepTime": true,
+      "includeVars": false
+    },
+    {
+      "title": "겜누리 로그",
+      "type": "link",
+      "url": "/d/gamenuri-logs",
+      "icon": "dashboard",
+      "targetBlank": false,
+      "keepTime": true,
+      "includeVars": false
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "ds",
+        "label": "데이터 소스",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {},
+        "hide": 2
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "한눈에 보는 상태",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "MariaDB 원본 (mariadb-pr)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds}"
+          },
+          "expr": "max(mysql_up{instance=\"mariadb-pr:9104\"}) or vector(-1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "확인 불가",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "gray",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "정상",
+                  "color": "green"
+                },
+                "0": {
+                  "text": "꺼짐",
+                  "color": "red"
+                },
+                "-1": {
+                  "text": "확인 불가",
+                  "color": "gray"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "MariaDB 복제본 (mariadb-re)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds}"
+          },
+          "expr": "max(mysql_up{instance=\"mariadb-re:9104\"}) or vector(-1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "확인 불가",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "gray",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "정상",
+                  "color": "green"
+                },
+                "0": {
+                  "text": "꺼짐",
+                  "color": "red"
+                },
+                "-1": {
+                  "text": "확인 불가",
+                  "color": "gray"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "MariaDB 복제 상태",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds}"
+          },
+          "expr": "min(mysql_slave_status_slave_io_running * mysql_slave_status_slave_sql_running) or vector(-1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "확인 불가",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "gray",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "복제 중",
+                  "color": "green"
+                },
+                "0": {
+                  "text": "멈춤",
+                  "color": "red"
+                },
+                "-1": {
+                  "text": "확인 불가",
+                  "color": "gray"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "MariaDB 복제 지연",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds}"
+          },
+          "expr": "max(mysql_slave_status_seconds_behind_master)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "확인 불가",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 30
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "살아 있는 MongoDB (총 3대)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds}"
+          },
+          "expr": "count(mongodb_up == 1) or vector(0)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 2
+              },
+              {
+                "color": "green",
+                "value": 3
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "MongoDB 복제 지연",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds}"
+          },
+          "expr": "max(mongodb_mongod_replset_member_replication_lag)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "확인 불가",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 30
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "MongoDB 3대 역할 (PRIMARY는 파랑)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds}"
+          },
+          "expr": "max by (instance) (mongodb_mongod_replset_my_state) or max by (instance) (up{job=\"mongodb\"} * 0 - 1)",
+          "refId": "A",
+          "legendFormat": "{{instance}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "확인 불가",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "gray",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "PRIMARY",
+                  "color": "blue"
+                },
+                "2": {
+                  "text": "SECONDARY",
+                  "color": "green"
+                },
+                "-1": {
+                  "text": "꺼짐",
+                  "color": "red"
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 3,
+                "to": 99,
+                "result": {
+                  "text": "이상 상태",
+                  "color": "orange"
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 0,
+                "to": 0,
+                "result": {
+                  "text": "시작 중",
+                  "color": "orange"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "horizontal"
+      }
+    },
+    {
+      "id": 9,
+      "type": "row",
+      "title": "MariaDB 부하",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "초당 쿼리 수",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds}"
+          },
+          "expr": "rate(mysql_global_status_questions[2m])",
+          "refId": "A",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "데이터 없음",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "접속 수 (최대 허용치와 함께)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds}"
+          },
+          "expr": "mysql_global_status_threads_connected",
+          "refId": "A",
+          "legendFormat": "{{instance}} 접속"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds}"
+          },
+          "expr": "mysql_global_variables_max_connections",
+          "refId": "B",
+          "legendFormat": "{{instance}} 최대"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "데이터 없음",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "지금 실행 중인 쿼리 수",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 17
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds}"
+          },
+          "expr": "mysql_global_status_threads_running",
+          "refId": "A",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "데이터 없음",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "느린 쿼리 (5분간 건수)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 17
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds}"
+          },
+          "expr": "increase(mysql_global_status_slow_queries[5m])",
+          "refId": "A",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "데이터 없음",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "row",
+      "title": "MongoDB 부하",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "panels": []
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "초당 연산 수 (종류별)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 25
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds}"
+          },
+          "expr": "sum by (legacy_op_type) (rate(mongodb_ss_opcounters[2m]))",
+          "refId": "A",
+          "legendFormat": "{{legacy_op_type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "데이터 없음",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "접속 수",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 25
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds}"
+          },
+          "expr": "mongodb_ss_connections{conn_type=\"current\"}",
+          "refId": "A",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "데이터 없음",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "복제 지연 추이 (멤버별)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 25
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds}"
+          },
+          "expr": "max by (name) (mongodb_mongod_replset_member_replication_lag)",
+          "refId": "A",
+          "legendFormat": "{{name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "데이터 없음",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 18,
+      "type": "row",
+      "title": "저장 공간 (DB VM, 남은 비율)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "panels": []
+    },
+    {
+      "id": 19,
+      "type": "bargauge",
+      "title": "남은 공간 % (15% 미만이면 경보)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 33
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds}"
+          },
+          "expr": "node_filesystem_avail_bytes{job=\"node\", instance=~\"(mariadb-pr|mariadb-re|mongodb-pr|mongo-se1|mongo-se2):9100\", mountpoint=~\"/|/DATA\"} / node_filesystem_size_bytes{job=\"node\", instance=~\"(mariadb-pr|mariadb-re|mongodb-pr|mongo-se1|mongo-se2):9100\", mountpoint=~\"/|/DATA\"} * 100",
+          "refId": "A",
+          "legendFormat": "{{instance}} {{mountpoint}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "noValue": "데이터 없음",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 15
+              },
+              {
+                "color": "green",
+                "value": 30
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    }
+  ]
+}
