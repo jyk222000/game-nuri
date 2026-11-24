@@ -369,3 +369,13 @@ def test_client_error_is_not_retried(db, valkey, monkeypatch) -> None:  # noqa: 
     with pytest.raises(ApiError):
         spec_check.check(db, 1, 7, settings())
     assert len(calls) == 1  # 키·요청 형식 오류는 다시 해도 같으므로 재시도하지 않는다
+
+
+def test_prompt_version_change_invalidates_cached_sentences(db, monkeypatch) -> None:  # noqa: ANN001
+    req = db.get(GameRequirement, 1)
+    user = db.get(UserSpec, 7)
+    before = spec_check.spec_hash(user, req, MODEL)
+    monkeypatch.setattr(spec_check, "PROMPT_VERSION", "next")
+    assert (
+        spec_check.spec_hash(user, req, MODEL) != before
+    )  # 프롬프트를 바꾸면 저장된 옛 문장을 쓰지 않는다
