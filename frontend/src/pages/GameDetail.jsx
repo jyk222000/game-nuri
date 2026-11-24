@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../auth.jsx';
@@ -216,15 +216,35 @@ function Prices({ id }) {
   );
 }
 
-// 같은 날 여러 스토어·여러 번 수집된 행은 그날 가장 싼 값 하나로 줄여 차트 한 줄로 그린다.
-function dailyLowest(items) {
-  const by = new Map();
-  for (const r of items) {
-    const date = r.collected_at.slice(0, 10);
-    const cur = by.get(date);
-    if (!cur || r.price_krw < cur.price_krw) by.set(date, { date, price_krw: r.price_krw, regular_krw: r.regular_krw, discount_pct: r.discount_pct });
+// 가격 이력은 "가격이 바뀐 날"만 기록된다. 바뀌지 않은 날은 스토어별 직전 가격을 이어서 채운 뒤,
+// 하루에 점 하나 = 그날 모든 스토어 중 가장 싼 값으로 만든다. 마지막 날은 오늘(UTC)까지 이어 붙인다.
+// 전체 이력으로 계산한 다음 마지막 `days`일만 잘라 쓴다(기간 안에 안 바뀐 스토어도 빠지지 않게).
+const DAY_MS = 86400000;
+const isoDay = (t) => new Date(t).toISOString().slice(0, 10);
+function dailySeries(items, days) {
+  if (!items.length) return [];
+  const rows = [...items].sort((a, b) => (a.collected_at < b.collected_at ? -1 : 1));
+  const byDay = new Map();
+  for (const r of rows) {
+    const d = r.collected_at.slice(0, 10);
+    if (!byDay.has(d)) byDay.set(d, []);
+    byDay.get(d).push(r);
   }
-  return [...by.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
+  const first = Date.parse(`${rows[0].collected_at.slice(0, 10)}T00:00:00Z`);
+  const today = Date.parse(`${isoDay(Date.now())}T00:00:00Z`);
+  const last = Math.max(today, Date.parse(`${rows[rows.length - 1].collected_at.slice(0, 10)}T00:00:00Z`));
+  const since = isoDay(last - days * DAY_MS);
+  const state = new Map(); // 스토어·에디션별 현재 가격
+  const out = [];
+  for (let t = first; t <= last; t += DAY_MS) {
+    const date = isoDay(t);
+    for (const r of byDay.get(date) || []) state.set(`${r.store}|${r.edition}`, r); // 같은 날 여러 번이면 마지막 값
+    if (date < since) continue;
+    let best = null;
+    for (const r of state.values()) if (!best || r.price_krw < best.price_krw) best = r;
+    if (best) out.push({ date, price_krw: best.price_krw, regular_krw: best.regular_krw, discount_pct: best.discount_pct });
+  }
+  return out;
 }
 
 function History({ id, user, platforms }) {
@@ -232,22 +252,42 @@ function History({ id, user, platforms }) {
   const [platform, setPlatform] = useState(platforms.includes('PC') ? 'PC' : platforms[0]);
   const [cond, setCond] = useState('new');
   const itemCondition = platform === 'PC' ? 'new' : cond; // PC는 새 상품(스토어)만 모은다
-  const h = useAsync(() => api.history(id, days, { platform, item_condition: itemCondition }), [id, days, platform, itemCondition]);
+  // 모든 플랫폼·상태의 전체 이력을 한 번 받아 두고, 탭(플랫폼·새 상품/중고·기간)은 화면에서 고른다. 탭을 눌러도 다시 받지 않는다.
+  const h = useAsync(() => api.history(id, 3650), [id]);
+  const all = h.data?.items;
+  const mine = useMemo(() => (all || []).filter((r) => r.platform === platform && r.item_condition === itemCondition), [all, platform, itemCondition]);
+  // 세로축 범위는 이 게임의 모든 탭(플랫폼·새 상품/중고)을 합친 값으로 고정한다. 탭을 오가도 같은 가격이 같은 높이로 보이게.
+  const domain = useMemo(() => {
+    const groups = new Map();
+    for (const r of all || []) {
+      const k = `${r.platform}|${r.item_condition}`;
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(r);
+    }
+    let lo = Infinity, hi = -Infinity;
+    for (const g of groups.values()) for (const pt of dailySeries(g, days)) { lo = Math.min(lo, pt.price_krw); hi = Math.max(hi, pt.price_krw); }
+    return Number.isFinite(lo) ? [lo, hi] : null;
+  }, [all, days]);
   const alerts = useAsync(() => (user ? api.alerts() : Promise.resolve({ items: [] })), [id, user]);
   const target = alerts.data?.items.find((a) => a.game_id === Number(id))?.target_price_krw;
   return (
-    <Section
-      title="가격 이력"
-      right={
-        <div className="seg">
-          {platforms.length > 1 && platforms.map((p) => <button key={p} className={p === platform ? 'on' : ''} onClick={() => setPlatform(p)}>{platformName(p)}</button>)}
-          {platform !== 'PC' && ['new', 'used'].map((c) => <button key={c} className={c === cond ? 'on' : ''} onClick={() => setCond(c)}>{CONDITION[c]}</button>)}
+    <Section title="가격 이력">
+      <div className="hist-ctl">
+        {platforms.length > 1 && (
+          <div className="seg" role="group" aria-label="플랫폼">
+            {platforms.map((p) => <button key={p} className={p === platform ? 'on' : ''} onClick={() => setPlatform(p)}>{platformName(p)}</button>)}
+          </div>
+        )}
+        {/* PC는 새 상품만 있다. 탭이 나타났다 사라지며 화면이 밀리지 않게 자리는 항상 잡아 두고 PC일 때만 숨긴다. */}
+        <div className="seg" role="group" aria-label="상품 상태" style={platform === 'PC' ? { visibility: 'hidden' } : undefined} aria-hidden={platform === 'PC'}>
+          {['new', 'used'].map((c) => <button key={c} tabIndex={platform === 'PC' ? -1 : 0} className={c === cond ? 'on' : ''} onClick={() => setCond(c)}>{CONDITION[c]}</button>)}
+        </div>
+        <div className="seg" role="group" aria-label="기간">
           {[30, 90, 180, 365].map((d) => <button key={d} className={d === days ? 'on' : ''} onClick={() => setDays(d)}>{d}일</button>)}
         </div>
-      }
-    >
-      <State s={h} isEmpty={(d) => !d.items.length} emptyMsg="아직 모인 가격 이력이 없어요.">
-        {(d) => <PriceChart items={dailyLowest(d.items)} target={target} />}
+      </div>
+      <State s={h} isEmpty={() => !mine.length} emptyMsg="아직 모인 가격 이력이 없어요.">
+        {() => <PriceChart items={dailySeries(mine, days)} domain={domain} target={target} />}
       </State>
     </Section>
   );
