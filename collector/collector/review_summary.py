@@ -182,6 +182,22 @@ def build_query(appid: int) -> dict:
 # 리뷰라면 어디에나 나오는 말. 장점·단점 키워드로 보여 주면 정보가 없다.
 STOPWORDS = frozenset(
     [
+        # 감정만 담은 거친 말(평가가 아니라 정보가 없고, 칩으로 보이면 거칠다)
+        "쓰레기",
+        "망겜",
+        "똥겜",
+        "노잼",
+        "갓겜",
+        # 어디에나 붙는 말
+        "가지",
+        "단점",
+        "장점",
+        "자체",
+        "개인",
+        "필요",
+        "시작",
+        "발견",
+        "대체",
         "게임",
         "최고",
         "추천",
@@ -304,6 +320,8 @@ def _clean_keyword(word: str, exclude: frozenset[str] = frozenset()) -> str | No
     if any(c in word for c in ("<", ">", ",", "\n", "\r", "\t")):  # 쉼표는 저장 형식과 겹친다
         return None
     low = word.lower()
+    if re.fullmatch(r"[ㄱ-ㅎㅏ-ㅣ]+", word):  # ㅇㅇ, ㅋㅋ처럼 자음·모음만 있는 말
+        return None
     if low in STOPWORDS or (low.isascii() and low not in ASCII_KEEP):
         return None
     if is_profane(word):  # 욕설은 키워드로도, AI 입력으로도 쓰지 않는다

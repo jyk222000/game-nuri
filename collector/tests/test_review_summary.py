@@ -415,3 +415,9 @@ def test_summary_with_profanity_is_dropped_and_falls_back() -> None:
 def test_prompt_forbids_profanity() -> None:
     d = rs.Digest(total=100, positive_ratio=0.9, pros=["스토리"], cons=["버그"])
     assert "욕설" in rs.build_prompt("게임", d)
+
+
+def test_rough_filler_and_jamo_only_keywords_are_dropped() -> None:
+    words = ["쓰레기", "ㅇㅇ", "ㅋㅋ", "망겜", "단점", "서버", "버그"]
+    d = rs.parse_digest(es_result(cons=words))
+    assert d.cons == ["서버", "버그"]
