@@ -194,11 +194,24 @@
 `GET /api/me/taste` → `{ "total_playtime_hours": 1840, "owned_games": 126, "top_genres": [ { "genre": "액션", "pct": 38 } ], "style": "긴 호흡의 액션·RPG를 즐기는 탐험가형" }`
 `GET /api/me/recommendations` → `{ "items": [카드 + "reason": "RPG 장르를 많이 플레이했어요"] }` (`reason`은 `"<장르> 장르를 많이 플레이했어요"` 형식)
 
-### 리뷰 — **미확정**
-리뷰 저장 구조(MongoDB `reviews`·ES, 팀 결정 대기)가 정해진 뒤 필드를 확정한다. 아래는 목업의 모양이고 확정이 아니다.
-`GET /api/games/119133/reviews?page=&size=10` → `{ "items": [ { "review_id": "119133-0", "source": "steam", "recommended": true, "text": "...", "playtime_hours": 42, "created_at": "...Z" } ], "total": 14, "page": 1, "size": 10 }`
+### 리뷰
+리뷰 저장은 MongoDB `reviews` → Monstache → ES `reviews`(Steam 리뷰, 한국어)이고, 요약은 MariaDB `review_summaries`다.
+목록(#26)·요약(#27)은 확정이고, **검색(#28)은 미확정**이다.
+
+`GET /api/games/119133/reviews?page=1&size=10&sort=helpful` (로그인 불필요) → `{ "items": [ { "review_id": "240839937", "source": "steam", "recommended": true, "text": "...", "playtime_hours": 42, "created_at": "...Z" } ], "total": 412, "page": 1, "size": 10 }`
+- `page` ≥ 1(기본 1), `size` 1~50(기본 10), `sort`: `helpful`(기본, 도움이 됐다는 반응(`votes_up`)이 많은 순, 같으면 최신순) | `recent`(최신순). 값이 틀리면 422 `INVALID_REQUEST`.
+- 필드: `review_id`=Steam `recommendationid`(문자열), `recommended`=`voted_up`, `playtime_hours`=리뷰를 쓸 때까지의 플레이 시간(Steam의 분 단위를 시간으로 **반올림**, 값이 없으면 `null`), `created_at`=UTC ISO 8601(`...Z`).
+- `text`는 **500자까지만** 보내고 더 길면 잘라 끝에 `…`을 붙인다.
+- 게임의 Steam 앱 ID(`game_store_ids`, store=`steam`)로 조회한다. **Steam 앱 ID가 없는 게임(콘솔 전용 등)은 `items: []`, `total: 0`** 이다. 없는 `game_id`는 404 `NOT_FOUND`.
+- ES 기본 한도 때문에 시작 위치(`(page-1)*size`) + `size`가 10,000을 넘는 페이지는 422 `INVALID_REQUEST`. ES를 못 읽으면 503 `UNAVAILABLE`.
+
+`GET /api/games/119133/reviews/summary` (로그인 불필요, `review_summaries` 기준) → `{ "game_id": 119133, "positive_ratio": 0.92, "summary": "...", "pros": ["보스전"], "cons": ["최적화"], "generated_by": "ai", "updated_at": "...Z" }`
+- `pros`·`cons`는 `pros_keywords`·`cons_keywords`(쉼표 구분)를 목록으로 바꾼 것이다.
+- `positive_ratio`는 카드의 긍정률과 **같은 값**이다(`game_review_stats`의 한국어 긍정률 → 전체 언어 → `review_summaries.positive_ratio` 순, 모두 없으면 `null`).
+- **요약 행이 아직 없는 게임도 200**이다: `summary: null`, `pros: []`, `cons: []`, `generated_by: null`, `updated_at: null`(긍정률은 위 규칙대로 채워질 수 있다). 없는 `game_id`만 404 `NOT_FOUND`. `generated_by`는 `ai` | `fallback`(AI 실패 시 키워드만).
+- Backend는 AI를 부르지 않고 `review_summaries`를 읽기만 한다.
+
 `GET /api/reviews/search?q=` → 같은 형식 + `game_id`, `game_name` (**미확정**)
-`GET /api/games/119133/reviews/summary` (`review_summaries` 기준) → `{ "game_id": 119133, "positive_ratio": 0.92, "summary": "...", "pros": ["보스전"], "cons": ["최적화"], "generated_by": "ai", "updated_at": "...Z" }`
 
 ### 사양
 `GET /api/games/119133/requirements` — **`game_requirements` 텍스트 컬럼 그대로** (`minimum_text`, `recommended_text`, `updated_at`). 구조화(`cpu`, `gpu` 등)는 ⑥ 사양 비교 방식이 정해지면 추가한다.
@@ -232,7 +245,7 @@
 | 11 | 알림 내역 `game_id`, `game_name`, `target_price_krw`, `channel` | `alert_logs`에 없음 | `alerts`·`games` 조인으로 채우고 `channel`은 `"email"` 고정 | 결정 |
 | 12 | 알림 목록 `game_name`, `current_krw` | `alerts`에 없음 | 조인(`games`, `prices_current` 최저가)으로 채움 | 결정(구현 방식) |
 | 13 | 카드 `positive_ratio` 등 | 조인·계산 | 스키마 변경 없음 | 결정(구현 방식) |
-| 14 | 리뷰 필드 | MariaDB 테이블 없음 | 리뷰 저장 구조가 정해진 뒤 확정, api.md에는 "미확정" | 결정(보류) |
+| 14 | 리뷰 필드 | MariaDB 테이블 없음 | 목록(#26)은 ES `reviews`, 요약(#27)은 `review_summaries`로 확정(위 '리뷰' 절). 검색(#28)만 "미확정" | 결정 |
 | 15 | `exchange-rates`에 `JPY` | USD·EUR·GBP | USD·EUR·GBP만, JPY는 프런트에서 뺀다 | 결정 |
 | 16 | `GET /api/me/notifications` | #22는 `PUT`만 | #22를 `GET·PUT`으로 적는다(38개 유지) | 결정 |
 | 17 | 이력 중복 제거 | 고유 키 없음 | `(game_id, store, edition, platform, item_condition, collected_at)`, UNIQUE는 넣지 않고 refiner·조회에서 처리 | 결정 |
