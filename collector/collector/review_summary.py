@@ -56,6 +56,9 @@ AI_RETRY_STATUSES = {429, 500, 502, 503, 504}
 AI_BACKOFF_SECONDS = 2.0
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 BETWEEN_GAMES_SECONDS = 1.0  # 호출 한도(429)를 피하기 위한 간격 (AI·ES 모두)
+# 무료 등급 한도(gemini-3.5-flash-lite: 분당 15회, 하루 500회)에서 사양 판정(⑥)이 쓸 몫을 남긴다.
+# 6초 간격이면 분당 최대 10회다.
+AI_INTERVAL_SECONDS = 6.0
 PROMPT_VERSION = 3
 
 # docs/contracts/messages/refined.review_summary.json 의 schema와 같아야 한다 (시험이 비교한다)
@@ -120,15 +123,55 @@ class Digest:
     cons: list[str]
 
 
+@dataclass
+class AiBudget:
+    """무료 한도(분당·하루 요청 수)를 지키기 위한 AI 호출 관리. 재시도도 한 번으로 센다.
+
+    한도는 키가 아니라 프로젝트 단위라서 사양 판정(⑥)과 같이 쓴다. 이 실행이 하루 한도를 다
+    쓰지 않도록 `max_calls`로 멈추고, 분당 한도를 넘지 않도록 `interval`로 간격을 둔다.
+    """
+
+    max_calls: int | None = None  # 이 실행에서 쓸 최대 호출 수(재시도 포함). None이면 제한 없음
+    interval: float = AI_INTERVAL_SECONDS  # 연속한 두 호출 사이의 최소 간격(초)
+    used: int = 0  # 지금까지 부른 횟수
+    last_call_at: float | None = None
+
+    @property
+    def exhausted(self) -> bool:
+        return self.max_calls is not None and self.used >= self.max_calls
+
+    def before_call(self, sleep: Callable[[float], None], clock: Callable[[], float]) -> None:
+        """직전 호출로부터 interval이 지나지 않았으면 남은 시간만큼 기다린다."""
+        if self.last_call_at is not None:
+            wait = self.interval - (clock() - self.last_call_at)
+            if wait > 0:
+                sleep(wait)
+
+    def after_call(self, clock: Callable[[], float]) -> None:
+        self.used += 1
+        self.last_call_at = clock()
+
+
+@dataclass
+class RunStats:
+    """한 번의 실행 결과. 이어서 하기(`--skip`)와 로그에 쓴다."""
+
+    processed: int = 0  # 목록 앞에서부터 끝까지 처리한 게임 수 (다음 --skip 계산용)
+    ai_failed_skipped: int = 0  # --ai-only 라서 AI가 실패해 전송하지 않은 게임 수
+    stopped_by_budget: bool = False  # AI 호출 상한에 닿아 멈췄는지
+
+
 # ---------- 대상 게임 ----------
 def load_targets(
     path: Path = DEFAULT_GAMES_FILE,
     game_ids: set[int] | None = None,
     limit: int | None = None,
+    skip: int = 0,
 ) -> list[Target]:
     """games_1000.csv에서 (game_id, steam_appid, 이름)을 rank 순으로 읽는다.
 
-    Steam 앱 ID가 없는 게임은 건너뛴다.
+    Steam 앱 ID가 없는 게임은 건너뛴다. `skip`은 목록 앞에서 건너뛸 개수(이어서 하기용),
+    `limit`는 그 뒤에서 가져올 최대 개수다.
     """
     out: list[Target] = []
     seen: set[int] = set()
@@ -142,6 +185,7 @@ def load_targets(
             seen.add(int(gid))
             name = (row.get("name_ko") or row.get("name") or "").strip()
             out.append(Target(int(gid), int(appid), name))
+    out = out[skip:]  # 이어서 하기: 앞에서 skip개를 건너뛴다 (rank 순서가 같으면 같은 게임)
     return out[:limit] if limit else out
 
 
@@ -568,8 +612,13 @@ def ask_ai(
     settings: Settings,
     session: requests.Session,
     sleep: Callable[[float], None] = time.sleep,
+    budget: AiBudget | None = None,
+    clock: Callable[[], float] = time.monotonic,
 ) -> str | None:
-    """요약 문장을 받는다. 키가 없거나 실패하면 None(호출한 쪽이 fallback으로 보낸다)."""
+    """요약 문장을 받는다. 키가 없거나 실패하면 None(호출한 쪽이 fallback으로 보낸다).
+
+    `budget`이 있으면 호출 사이에 간격을 두고, 호출 수가 상한에 닿으면 더 부르지 않는다.
+    """
     if not (settings.gemini_api_key and settings.ai_model):
         log.warning("GEMINI_API_KEY·AI_MODEL이 비어 있어 요약 문장을 만들지 않는다")
         return None
@@ -582,6 +631,11 @@ def ask_ai(
         },
     }
     for attempt in range(1, AI_RETRIES + 1):
+        if budget is not None:
+            if budget.exhausted:
+                log.warning("AI 호출 상한(%d회)에 닿아 더 부르지 않는다", budget.max_calls)
+                return None
+            budget.before_call(sleep, clock)
         try:
             res = session.post(
                 GEMINI_URL.format(model=settings.ai_model),
@@ -599,6 +653,9 @@ def ask_ai(
                 return None
             else:
                 return _parse_summary(res)
+        finally:
+            if budget is not None:  # 실패한 호출도 한도에 들어간다고 보고 센다
+                budget.after_call(clock)
         if attempt < AI_RETRIES:
             sleep(AI_BACKOFF_SECONDS * 2 ** (attempt - 1))
     return None
@@ -654,9 +711,26 @@ def summarize(
     session: requests.Session,
     use_ai: bool = True,
     sleep: Callable[[float], None] = time.sleep,
+    ai_only: bool = False,
+    budget: AiBudget | None = None,
+    stats: RunStats | None = None,
 ) -> Iterable[tuple[str, dict]]:
-    """게임마다 (키, 메시지)를 만든다. 한 게임이 실패해도 다음 게임을 계속한다."""
+    """게임마다 (키, 메시지)를 만든다. 한 게임이 실패해도 다음 게임을 계속한다.
+
+    - `ai_only`: AI 요약이 실패한 게임은 **보내지 않는다.** 이미 저장된 AI 요약을 키워드만
+      있는 것으로 덮어쓰지 않으려는 것이다(같은 game_id는 덮어쓰기라서).
+    - `budget`: AI 호출 수 상한에 닿으면 거기서 멈춘다. 멈춘 위치는 `stats.processed`에 남는다.
+    """
+    stats = stats if stats is not None else RunStats()
+    n = 0  # 이번에 받은 게임 수
+    handled = 0  # 끝까지 처리한 앞쪽 게임 수
     for i, t in enumerate(targets):
+        n = i + 1
+        handled = i
+        if budget is not None and budget.exhausted:
+            stats.stopped_by_budget = True
+            log.warning("AI 호출 상한(%d회)에 닿아 여기서 멈춘다", budget.max_calls)
+            break
         if i:
             sleep(BETWEEN_GAMES_SECONDS)
         try:
@@ -674,33 +748,99 @@ def summarize(
                 digest.total,
             )
             continue
-        summary = ask_ai(build_prompt(t.name, digest), settings, session) if use_ai else None
+        summary = None
+        if use_ai:
+            summary = ask_ai(
+                build_prompt(t.name, digest), settings, session, sleep=sleep, budget=budget
+            )
         if summary is not None and is_profane(summary):
             # AI가 욕설을 섞어 쓴 경우. 문장은 버리고 키워드만 보낸다(fallback)
             log.warning("game_id=%s AI 요약에 욕설이 있어 버림", t.game_id)
             summary = None
         if use_ai and summary is None:
+            if ai_only:
+                stats.ai_failed_skipped += 1
+                log.warning("game_id=%s AI 요약 실패 → 전송하지 않음(--ai-only)", t.game_id)
+                if budget is not None and budget.exhausted:
+                    # 상한 때문에 못 부른 것이다. 이 게임은 처리하지 않은 것으로 두어 이어서 한다
+                    stats.stopped_by_budget = True
+                    break
+                continue
             log.warning("game_id=%s AI 요약 실패 → fallback(키워드만)", t.game_id)
         yield str(t.game_id), build_message(t, digest, summary)
+    else:
+        handled = n  # 목록 끝까지 처리했다
+    stats.processed = handled
 
 
-def main() -> None:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(description="리뷰 요약 배치(⑤)")
     ap.add_argument("--game-ids", help="쉼표로 구분한 game_id만 (시험용, 예: 1877,16992)")
     ap.add_argument("--limit", type=int, help="앞에서 N개 게임만 (시험용)")
+    ap.add_argument(
+        "--skip", type=int, default=0, help="목록 앞에서 N개를 건너뛰고 시작(이어서 하기)"
+    )
     ap.add_argument("--games-file", type=Path, default=DEFAULT_GAMES_FILE)
     ap.add_argument("--dry-run", action="store_true", help="Kafka 대신 samples/에 저장")
     ap.add_argument("--no-ai", action="store_true", help="AI를 부르지 않고 키워드만(fallback)")
-    args = ap.parse_args()
+    ap.add_argument(
+        "--ai-only",
+        action="store_true",
+        help="AI 요약이 실패한 게임은 전송하지 않는다(이미 저장된 AI 요약을 지우지 않으려고)",
+    )
+    ap.add_argument(
+        "--max-ai-calls",
+        type=int,
+        help="이 실행에서 쓸 AI 호출 최대 수(재시도 포함). 닿으면 멈추고 --skip 값을 알려 준다",
+    )
+    ap.add_argument(
+        "--ai-interval",
+        type=float,
+        default=AI_INTERVAL_SECONDS,
+        help=f"AI 호출 사이의 최소 간격(초, 기본 {AI_INTERVAL_SECONDS:g})",
+    )
+    args = ap.parse_args(argv)
+    if args.no_ai and (args.ai_only or args.max_ai_calls is not None):
+        ap.error("--no-ai 는 --ai-only, --max-ai-calls 와 함께 쓸 수 없다 (AI를 부르지 않는다)")
+    if args.skip < 0:
+        ap.error("--skip 은 0 이상이어야 한다")
+    if args.max_ai_calls is not None and args.max_ai_calls < 1:
+        ap.error("--max-ai-calls 는 1 이상이어야 한다")
+    if args.ai_interval < 0:
+        ap.error("--ai-interval 은 0 이상이어야 한다")
+    return args
+
+
+def main() -> None:
+    args = parse_args()
     ids = (
         {int(x) for x in args.game_ids.split(",") if x.strip().isdigit()} if args.game_ids else None
     )
-    targets = load_targets(args.games_file, ids, args.limit)
-    log.info("리뷰 요약 대상 %d건 dry_run=%s ai=%s", len(targets), args.dry_run, not args.no_ai)
+    targets = load_targets(args.games_file, ids, args.limit, args.skip)
+    use_ai = not args.no_ai
+    budget = AiBudget(max_calls=args.max_ai_calls, interval=args.ai_interval) if use_ai else None
+    stats = RunStats()
+    log.info(
+        "리뷰 요약 대상 %d건 (skip=%d) dry_run=%s ai=%s ai_only=%s max_ai_calls=%s",
+        len(targets),
+        args.skip,
+        args.dry_run,
+        use_ai,
+        args.ai_only,
+        args.max_ai_calls,
+    )
     sent = 0
     try:
         with requests.Session() as session:
-            for key, message in summarize(targets, get_settings(), session, use_ai=not args.no_ai):
+            for key, message in summarize(
+                targets,
+                get_settings(),
+                session,
+                use_ai=use_ai,
+                ai_only=args.ai_only,
+                budget=budget,
+                stats=stats,
+            ):
                 producer.publish_refined(
                     TOPIC_REFINED_REVIEW_SUMMARY, key, message, dry_run=args.dry_run
                 )
@@ -710,6 +850,21 @@ def main() -> None:
         raise
     producer.flush()
     log.info("리뷰 요약 완료: %d건 %s", sent, "저장(dry-run)" if args.dry_run else "전송")
+    if budget is not None:
+        log.info(
+            "AI 호출 %d회 사용, AI 실패로 전송하지 않은 게임 %d건",
+            budget.used,
+            stats.ai_failed_skipped,
+        )
+    next_skip = args.skip + stats.processed
+    if stats.stopped_by_budget:
+        log.warning(
+            "AI 호출 상한(%d회)에 닿아 멈췄다. 이어서 하려면 --skip %d",
+            args.max_ai_calls,
+            next_skip,
+        )
+    else:
+        log.info("목록 끝까지 처리했다 (--skip %d부터 %d개)", args.skip, stats.processed)
 
 
 if __name__ == "__main__":
