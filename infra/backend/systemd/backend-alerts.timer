@@ -1,0 +1,13 @@
+# /etc/systemd/system/backend-alerts.timer  (backend1만, 매시 50분)
+# 가격 수집은 ITAD 00·06·12·18:05, 다나와 00·06·12·18:30(2시간 넘게 걸림)에 시작한다.
+# 매시 50분에 보면 새 가격이 들어온 직후에 알림이 나가고, 가격이 안 바뀌었으면 보낼 것이 없다.
+[Unit]
+Description=목표가 알림 메일 발송 (매시 50분)
+
+[Timer]
+OnCalendar=*-*-* *:50:00
+Persistent=false
+Unit=backend-alerts.service
+
+[Install]
+WantedBy=timers.target
