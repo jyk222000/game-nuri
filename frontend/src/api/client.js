@@ -1,33 +1,9 @@
 // 모든 화면은 이 파일의 api.* 만 쓴다. 경로는 항상 상대경로 /api/...
 //
 // VITE_API_MODE
-//   mock   (기본) 전부 브라우저 안의 목 데이터. Backend·DB 없이 개발할 때.
-//   hybrid Backend에 이미 구현된 공개 API(REAL_READY)만 실서버로 부르고, 실패하면 목으로 대신한다.
-//          나머지는 목. 수집이 시작되어 DB가 채워지는 동안 쓴다.
-//   real   전부 실서버(nginx → /api). 모든 API가 구현·적재된 뒤에 쓴다.
-// (예전 설정 VITE_USE_MOCK=false 는 real 로 취급한다.)
-const MODE = import.meta.env.VITE_API_MODE
-  || (import.meta.env.VITE_USE_MOCK === 'false' ? 'real' : 'mock');
-export const API_MODE = MODE;
-
-// Backend에 구현되어 있고 로그인이 필요 없는 조회 API. Backend 구현이 늘면 여기에 추가한다.
-// (docs/contracts/api.md #10~14, #38 — 가격·이력·최저가·할인 목록·환율·헬스체크)
-// (#5~#10 게임·#11~16 가격·타이밍·#25·#29·#32·#33 목록·#36 이벤트·#37 순위·#38 헬스)
-// 로그인이 필요한 /api/me/* 는 구글 로그인이 붙기 전까지 목으로 둔다.
-const REAL_READY = [
-  /^\/api\/health$/,
-  /^\/api\/exchange-rates$/,
-  /^\/api\/genres$/,
-  /^\/api\/tags$/,
-  /^\/api\/stats\/api-ranking$/,
-  /^\/api\/games$/,
-  /^\/api\/games\/(autocomplete|popular|deals|short)$/,
-  /^\/api\/games\/players\/(top|low)$/,
-  /^\/api\/games\/\d+$/,
-  /^\/api\/games\/\d+\/(prices|history|lowest|timing|prediction|requirements)$/,
-];
-// 로그인 없이 쓰는 쓰기 API
-const REAL_READY_POST = [/^\/api\/events$/];
+//   real (기본) 전부 실서버(nginx → /api). 구글 로그인도 실제로 동작한다.
+//   mock        전부 브라우저 안의 목 데이터. Backend·DB 없이 화면만 개발할 때 명시적으로 켠다.
+export const API_MODE = import.meta.env.VITE_API_MODE === 'mock' ? 'mock' : 'real';
 
 const mock = async (method, url, body) => (await import('./mock/router.js')).mockFetch(method, url, body);
 
@@ -48,24 +24,7 @@ async function real(method, url, body) {
   return data;
 }
 
-const warned = new Set();
-async function request(method, url, body) {
-  if (MODE === 'mock') return mock(method, url, body);
-  if (MODE === 'real') return real(method, url, body);
-  // hybrid
-  const path = url.split('?')[0];
-  const ready = method === 'GET' ? REAL_READY : method === 'POST' ? REAL_READY_POST : [];
-  if (!ready.some((re) => re.test(path))) return mock(method, url, body);
-  try {
-    return await real(method, url, body);
-  } catch (e) {
-    if (!warned.has(path.replace(/\d+/, '{id}'))) {
-      warned.add(path.replace(/\d+/, '{id}'));
-      console.info(`[api:hybrid] ${path} 실서버 실패(${e.code || e.message}) → 목 데이터로 대신합니다`);
-    }
-    return mock(method, url, body);
-  }
-}
+const request = (method, url, body) => (API_MODE === 'mock' ? mock(method, url, body) : real(method, url, body));
 
 // 클릭스트림용 익명 세션 id (브라우저가 만든 UUID, 로그인 쿠키와 무관). 저장소를 못 쓰면 탭마다 새로 만든다.
 let memSession = null;
@@ -89,8 +48,8 @@ const qs = (o = {}) => {
 export const api = {
   health: () => request('GET', '/api/health'),
   // 인증
-  // 구글 로그인은 real 모드에서만. mock·hybrid 에서는 모의 계정으로 로그인한다.
-  login: () => (MODE === 'real' ? (window.location.href = '/api/auth/google/login') : request('POST', '/api/auth/mock-login')),
+  // 구글 로그인은 real 모드에서만. mock 에서는 모의 계정으로 로그인한다.
+  login: () => (API_MODE === 'real' ? (window.location.href = '/api/auth/google/login') : request('POST', '/api/auth/mock-login')),
   logout: () => request('POST', '/api/auth/logout'),
   me: () => request('GET', '/api/me'),
   updateMe: (name) => request('PATCH', '/api/me', { name }),

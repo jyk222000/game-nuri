@@ -7,6 +7,7 @@ import { AnalysisIndex, AnalysisPage } from './pages/Analysis.jsx';
 import Login from './pages/Login.jsx';
 import MyPage from './pages/MyPage.jsx';
 import { useAuth } from './auth.jsx';
+import { API_MODE } from './api/client.js';
 
 function Private({ children }) {
   const { user, ready } = useAuth();
@@ -31,7 +32,8 @@ export default function App() {
         </Routes>
       </main>
       <footer className="foot">
-        겜누리 · 데이터: ITAD, 다나와, IGDB, Steam · 현재 <b>목(mock) 데이터</b>로 동작 중
+        겜누리 · 데이터: ITAD, 다나와, IGDB, Steam
+        {API_MODE === 'mock' && <> · 현재 <b>목(mock) 데이터</b>로 동작 중</>}
       </footer>
     </>
   );
