@@ -65,6 +65,6 @@ curl -s http://kafka1:8083/connectors/<이름>/status          # 상태 (FAILED�
 
 ## 남은 문제
 
-- `raw.steam`은 `raw_steam`(mongo-sink-raw, 전체)과 `reviews`(리뷰만)에 겹쳐 저장된다. 용량 확인 필요 (#53).
+- 리뷰(`kind=review`)는 `reviews`에만 저장한다. `mongo-sink-raw`는 Filter로 리뷰를 뺀다(11/24, 이중 저장 해소). 그 전에 `raw_steam`에 들어간 리뷰는 남아 있다.
 - 연결 테이블은 행을 지우지 않는다. 원본에서 빠진 장르·태그 등은 옛 행이 남는다.
 - `price_history`는 insert라 같은 메시지를 다시 받으면 줄이 겹칠 수 있다. Backend가 (game_id, store, edition, platform, item_condition, collected_at)으로 합친다 (#48).

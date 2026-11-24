@@ -150,3 +150,12 @@ def test_mongo_ingested_at_is_date(name):
     assert c["transforms.ingestedDate.type"].endswith("TimestampConverter$Value")
     assert c["transforms.ingestedDate.field"] == "ingested_at"
     assert c["transforms.ingestedDate.target.type"] == "Timestamp"
+
+
+def test_mongo_sink_raw_skips_reviews():
+    """리뷰는 mongo-sink-reviews가 reviews에 저장한다. raw_steam에 같은 리뷰를 또 넣지 않는다."""
+    c = json.loads((CONNECT / "mongo-sink-raw.json").read_text(encoding="utf-8"))["config"]
+    assert c["transforms"].split(",")[0] == "skipReview"
+    assert c["transforms.skipReview.filter.condition"] == "$[?(@.kind == 'review')]"
+    assert c["transforms.skipReview.filter.type"] == "exclude"
+    assert c["transforms.skipReview.missing.or.null.behavior"] == "include"
