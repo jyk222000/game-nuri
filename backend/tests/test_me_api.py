@@ -1,9 +1,9 @@
-"""찜(#17)·목표가 알림(#19 POST·PATCH)·메일 수신 설정(#22) API. 실제 DB 없이 SQLite로 검증한다."""
+"""찜(#17)·목표가 알림(#19)·메일 수신 설정(#22) API. 실제 DB 없이 SQLite로 검증한다."""
 
 from datetime import datetime
 
 import pytest
-from app.db.models import Alert, NotificationSetting, Wishlist
+from app.db.models import Alert, AlertLog, NotificationSetting, Wishlist
 from app.main import app
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -118,9 +118,42 @@ def test_alert_patch_not_found_or_others(env) -> None:
         assert r.status_code == 404 and r.json()["error"]["code"] == "NOT_FOUND"
 
 
-def test_alert_delete_not_implemented_yet(env) -> None:
-    client, *_ = env
-    assert client.delete("/api/me/alerts/1").status_code in (404, 405)
+def test_alert_delete_removes_alert_and_its_logs(env) -> None:
+    client, engine, _ = env
+    a = client.post("/api/me/alerts", json={"game_id": 7, "target_price_krw": 40000}).json()
+    with Session(engine) as s:
+        s.add(AlertLog(alert_id=a["alert_id"], price_krw=39000, store="steam", sent_at=NOW))
+        s.commit()
+    r = client.delete(f"/api/me/alerts/{a['alert_id']}")
+    assert r.status_code == 200 and r.json() == {"ok": True}
+    assert rows(engine, Alert) == [] and rows(engine, AlertLog) == []
+    assert client.get("/api/me/alerts").json()["total"] == 0
+
+
+def test_alert_delete_not_found_or_others(env) -> None:
+    client, engine, current = env
+    a = client.post("/api/me/alerts", json={"game_id": 7, "target_price_krw": 40000}).json()
+    current["id"] = 2
+    for alert_id in (a["alert_id"], 99999):  # 남의 것과 없는 것이 똑같이 보인다
+        r = client.delete(f"/api/me/alerts/{alert_id}")
+        assert r.status_code == 404 and r.json()["error"]["code"] == "NOT_FOUND"
+    assert len(rows(engine, Alert)) == 1  # 남의 알림은 지워지지 않았다
+
+
+def test_alert_delete_keeps_other_alerts_logs(env) -> None:
+    client, engine, _ = env
+    a = client.post("/api/me/alerts", json={"game_id": 7, "target_price_krw": 40000}).json()
+    b = client.post("/api/me/alerts", json={"game_id": 5, "target_price_krw": 30000}).json()
+    with Session(engine) as s:
+        s.add_all(
+            [
+                AlertLog(alert_id=a["alert_id"], price_krw=39000, store="steam", sent_at=NOW),
+                AlertLog(alert_id=b["alert_id"], price_krw=29000, store="steam", sent_at=NOW),
+            ]
+        )
+        s.commit()
+    client.delete(f"/api/me/alerts/{a['alert_id']}")
+    assert [r.alert_id for r in rows(engine, AlertLog)] == [b["alert_id"]]
 
 
 # ---------- #22 메일 수신 설정 ----------
@@ -157,6 +190,7 @@ def test_notifications_put_validation(env) -> None:
         ("delete", "/api/me/wishlist?game_id=1", None),
         ("post", "/api/me/alerts", {"game_id": 1, "target_price_krw": 100}),
         ("patch", "/api/me/alerts/1", {"active": True}),
+        ("delete", "/api/me/alerts/1", None),
         ("get", "/api/me/notifications", None),
         ("put", "/api/me/notifications", {"email_enabled": True}),
     ],

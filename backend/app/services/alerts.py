@@ -1,16 +1,16 @@
-"""목표가 알림 설정·수정 (#19 POST·PATCH). 삭제(DELETE)는 alert_logs FK 확인 전이라 아직 없다.
+"""목표가 알림 설정·수정·삭제 (#19 POST·PATCH·DELETE).
 
 alerts는 (user_id, game_id)가 고유라서, 이미 있으면 409가 아니라 덮어쓴다.
 """
 
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.errors import ApiError
-from app.db.models import Alert
+from app.db.models import Alert, AlertLog
 from app.services import games
 
 MAX_INT = 2_147_483_647  # alerts.target_price_krw는 INT
@@ -81,3 +81,17 @@ def patch(
     db.commit()
     db.refresh(alert)
     return alert
+
+
+def remove(db: Session, user_id: int, alert_id: int) -> None:
+    """내 알림을 지운다. 없거나 남의 것이면 둘 다 404 (존재 여부를 알려 주지 않는다).
+
+    alert_logs는 erd.sql의 FK(ON DELETE CASCADE)로 함께 지워진다. DB 설정에 기대지 않고
+    여기서도 먼저 지워서 어느 DB에서나 같게 동작한다.
+    """
+    alert = db.get(Alert, alert_id)
+    if alert is None or alert.user_id != user_id:
+        raise ApiError(404, "NOT_FOUND", "알림을 찾을 수 없습니다")
+    db.execute(delete(AlertLog).where(AlertLog.alert_id == alert_id))
+    db.delete(alert)
+    db.commit()
