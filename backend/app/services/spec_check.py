@@ -41,6 +41,8 @@ GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:ge
 HTTP_TIMEOUT_SECONDS = 20
 REQUIREMENTS_MAX_CHARS = 3000  # 사양 텍스트 한 칸당 AI에 보내는 최대 길이
 REASON_MAX_CHARS = 300
+# 프롬프트를 바꾸면 올린다. 올리면 hash가 달라져 저장된 옛 문장이 새 문장으로 바뀐다(7일 대기 없이).
+PROMPT_VERSION = "2"
 RETRY_STATUSES = {429, 500, 502, 503, 504}  # 잠깐 뒤 다시 하면 되는 응답
 RETRY_WAIT_SECONDS = 1.5
 
@@ -59,7 +61,13 @@ CPU·GPU 이름은 세대와 성능을 알고 있는 지식으로 비교하세�
 부품 성능이 확실하지 않으면 더 낮은 쪽으로 판정하세요.
 '미입력'인 항목은 비교에서 빼고, 입력된 항목만으로 판정하세요.
 미입력을 사양 부족으로 보지 마세요.
-reason은 한국어 한두 문장(150자 이내)으로, 어떤 부품이 기준이 되었는지 쓰세요.
+reason 쓰는 법:
+- 사이트 화면에 그대로 보이는 글입니다. 친절한 해요체(~해요, ~이에요)로 쓰세요.
+- 문장은 짧게, 최대 두 문장입니다. 한 문장에 부품은 한두 개만 다루고, 꾸미는 말을 겹쳐 쓰지 마세요.
+- 부품마다 "내 부품이 기준보다 높은지·낮은지"만 말하고, 마지막에 결론을 쓰세요.
+- 내 부품 이름과 기준 부품 이름은 입력된 그대로 쓰세요.
+- 모양 예시(부품 이름은 예시일 뿐입니다):
+  "CPU는 권장 사양보다 좋아요. GPU가 권장보다 낮아 최소 사양만 충족해요."
 
 <game_requirements>
 최소 사양:
@@ -123,6 +131,7 @@ def spec_hash(user: UserSpec, req: GameRequirement, model: str) -> str:
         _clip(req.minimum_text),
         _clip(req.recommended_text),
         model,
+        PROMPT_VERSION,
     ]
     return hashlib.sha256("\x1f".join(parts).encode()).hexdigest()[:32]
 
