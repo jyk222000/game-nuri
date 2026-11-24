@@ -423,6 +423,44 @@ def test_rough_filler_and_jamo_only_keywords_are_dropped() -> None:
     assert d.cons == ["서버", "버그"]
 
 
+# ---------- 점수 방식: chi_square (2026-11-24 proxy 시험으로 확인) ----------
+def test_query_uses_chi_square_for_disjoint_positive_negative_sets() -> None:
+    # 긍정·부정은 서로 겹치지 않는 집합이다. 기본 점수(JLH)는 기준 집합이 대상을 포함한다고
+    # 가정해서, 부정 리뷰가 적은 게임(스타듀 밸리 등)에서 키워드가 하나도 안 나왔다.
+    q = rs.build_query(1091500)
+    for side in ("pros", "cons"):
+        sig = q["aggs"][side]["aggs"]["kw"]["significant_terms"]
+        assert sig["chi_square"] == {"background_is_superset": False, "include_negatives": False}
+
+
+def test_cons_need_fewer_reviews_than_pros() -> None:
+    q = rs.build_query(1091500)
+    pros = q["aggs"]["pros"]["aggs"]["kw"]["significant_terms"]
+    cons = q["aggs"]["cons"]["aggs"]["kw"]["significant_terms"]
+    assert pros["min_doc_count"] == rs.KEYWORD_MIN_DOC_COUNT == 5
+    assert cons["min_doc_count"] == rs.CONS_MIN_DOC_COUNT == 3  # 부정 리뷰는 적다
+
+
+def test_game_with_only_pros_still_gets_a_summary() -> None:
+    # 스타듀 밸리처럼 부정 리뷰가 적어 단점이 없는 게임은 건너뛰지 않고 장점만으로 요약한다
+    s = FakeSession(
+        es=[Resp(200, es_result(total=505, pos=496, neg=9, pros=("농사", "힐링"), cons=()))]
+    )
+    ((_, msg),) = run(s)
+    p = msg["payload"]
+    assert p["pros_keywords"] == "농사,힐링" and p["cons_keywords"] is None
+    assert p["generated_by"] == "ai"
+
+
+def test_skip_logs_say_why(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level("INFO")
+    run(FakeSession(es=[Resp(200, es_result(total=3))]))
+    run(FakeSession(es=[Resp(200, es_result(total=500, pros=(), cons=()))]))
+    text = " ".join(caplog.messages)
+    assert "30건 미만이라 건너뜀" in text
+    assert "리뷰는 500건인데 걸러내고 나니 키워드가 없어 건너뜀" in text
+
+
 # ---------- 전체 키워드(2026-11-24)를 훑고 찾은 것 ----------
 def test_profane_fragment_from_real_data_is_dropped() -> None:
     d = rs.parse_digest(es_result(cons=["개병", "버그"]))
