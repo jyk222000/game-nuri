@@ -93,13 +93,17 @@ mongosh "mongodb://mongodb-pr:27017,mongo-se1:27017,mongo-se2:27017/gamenuri_raw
   --username gamenuri --file init-collections.js      # 비밀번호는 프롬프트로 입력
 ```
 - 조건이 맞을 때만 만들고, 아니면 `건너뜀 …` 이유를 출력한다. 여러 번 실행해도 같은 결과다.
-- **현재 건너뛰는 항목 (2026-11-23 mongosh로 확인)**
-  - **`raw_*` TTL은 아직 걸리지 않는다.** 실제 문서의 `ingested_at`이 BSON Date가 아니라 **Long(밀리초 숫자)**로 저장되어 있다(`raw_steam` 예: `ingested_at: Long('1795429167082')`). 스키마 없는 JSON으로 저장하면 InsertField가 넣은 시각이 숫자로 들어간다. TTL은 Date 타입에만 동작하므로 스크립트가 `건너뜀`으로 처리한다.
-    해결은 Connect 쪽(Date로 저장되게 하는 변환, pipeline 담당) 또는 날짜 기준 정리 작업이 필요하다. 그때까지 `raw_*`는 계속 늘어난다(2026-11-23 `raw_steam` 455,368건).
-  - (참고) `raw_*` TTL 스크립트 동작: `ingested_at`이 BSON Date가 아닌(없는) 문서가 있으면 그 컬렉션은 건너뛴다. 컬렉션이 아직 없어도 건너뛴다. 인덱스를 만든 뒤에는 `ingested_at`이 14일보다 오래된 문서가 자동으로 지워진다(지금 쌓인 문서는 모두 새것이라 만들 때 지워지는 것은 없을 것으로 예상, 실행 전 `db.raw_steam.countDocuments({ingested_at:{$lt:new Date(Date.now()-14*86400000)}})`로 확인).
-  - `reviews` 고유 인덱스: 리뷰는 1건 단위 봉투(kind=review)로 오고 Steam 리뷰 객체가 `payload` 안에 있어, 키는 `payload.recommendationid`다(2026-11-23 스크립트 수정, 인덱스 이름 `uq_payload_recommendationid`).
-    Sink가 `raw.steam` 전체(사양·동접자 포함)를 저장하는 동안은 `payload.recommendationid`가 없는 문서가 섞여 있어 건너뛴다. `kind=review`만 `reviews`에 넣고 `_id`를 `payload.recommendationid`로 쓰도록 Connect 설정이 바뀐 뒤(pipeline/connect, 남현식) 다시 실행한다.
-  - `raw.steam`은 `raw`와 `reviews` 두 컬렉션에 중복 저장된다(Sink 2개). 용량 면에서 확정 필요(pipeline 담당).
+- **2026-11-25 실행 결과 (mongodb-pr, 모두 적용됨)**
+  - `raw_itad`·`raw_danawa`·`raw_steam`·`raw_igdb`: `ttl_ingested_at_14d` 생성(14일). `raw_unknown`은 컬렉션이 아직 없어 건너뜀.
+  - `games`: `uq_game_id`, `reviews`: `uq_payload_recommendationid` 생성.
+- **적용하기 전에 한 정리 (같은 날, 모두 mongosh에서 직접 실행)**
+  1. 리뷰 이중 저장 해소: `mongo-sink-raw`에서 `kind=review`를 제외하는 필터(`skipReview`, #127)를 서버에 적용한 뒤, `raw_steam`에 이미 쌓여 있던 리뷰 451,620건을 삭제했다. 삭제 전에 `reviews`와 건수(451,620 = 451,620)·샘플 200건 대조로 같은 리뷰인지 확인했고, 삭제 후 `reviews`는 그대로, `raw_steam`은 33,999건(`app_details`·`player_count`·`review_summary`)이 남았다.
+  2. `ingested_at` 변환: 옛 문서는 Long(밀리초 숫자)이라 TTL이 동작하지 않았다. `raw_*`의 숫자 값을 `$toDate`로 BSON Date로 바꿨다(`raw_itad` 4,995 / `raw_danawa` 3,948 / `raw_steam` 21,999 / `raw_igdb` 3,558건). `reviews`와 `unmatched`는 건드리지 않았다(`reviews`를 바꾸면 Monstache가 ES에 전부 다시 색인하고, `unmatched`는 TTL이 없다).
+  3. TTL을 만들기 전에 `ingested_at`이 14일보다 오래된 문서가 없는 것을 확인했다(전부 0건). 인덱스를 만든 순간 지워진 문서는 없다.
+- 새 문서의 `ingested_at`은 Sink의 TimestampConverter(#82)로 처음부터 Date다. 옛 값이 다시 섞이면 `init-collections.js`가 그 컬렉션의 TTL을 건너뛰므로 같은 변환(`updateMany({ingested_at:{$type:"number"}}, [{$set:{ingested_at:{$toDate:"$ingested_at"}}}])`)을 `raw_*`에만 한다.
+- (참고) `raw_*` TTL 스크립트 동작: `ingested_at`이 BSON Date가 아닌(없는) 문서가 있으면 그 컬렉션은 건너뛴다. 컬렉션이 아직 없어도 건너뛴다. 인덱스를 만든 뒤에는 14일보다 오래된 문서가 자동으로 지워진다.
+- `reviews` 고유 인덱스 키는 `payload.recommendationid`다. 리뷰는 1건 단위 봉투(kind=review)로 오고 Steam 리뷰 객체가 `payload` 안에 있다.
+- **미확인**: 새 리뷰가 `raw_steam`에 더 쌓이지 않는지(필터 동작)는 다음 `steam-reviews` 수집(매일 05:00) 뒤에 `db.raw_steam.countDocuments({kind:"review"})`가 0인지로 확인한다. TTL이 실제로 14일 뒤부터 오래된 문서를 지우는지도 아직 보지 못했다.
 
 ## 계정 권한 (최소 권한 정리, 비밀번호 없음)
 | 계정 | 필요한 권한 | 이유 |
@@ -112,7 +116,7 @@ mongosh "mongodb://mongodb-pr:27017,mongo-se1:27017,mongo-se2:27017/gamenuri_raw
 - `admin`(root)은 앱·백업에 쓰지 않는다.
 
 ## 남은 일
-- [x] 컬렉션 이름·TTL 정책 정리 (위 표). 인덱스 생성은 `init-collections.js` 실행 결과를 확인한 뒤 판단
+- [x] 컬렉션 이름·TTL 정책 정리 (위 표), `raw_*` TTL 적용, 리뷰 이중 저장 해소 (2026-11-25)
 - [ ] Monstache 연결 시 resume 정보 저장용 `monstache` DB readWrite 권한 보강 검토
 - [ ] 모니터링용 계정(clusterMonitor) (11/25)
 - [ ] `/var/log/mongodb/mongod.log` 로테이션, THP 경고 처리
