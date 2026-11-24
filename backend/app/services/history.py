@@ -61,6 +61,7 @@ def get_history(
                 price_krw=r.price_krw,
                 regular_krw=r.regular_krw,
                 discount_pct=r.discount_pct,
+                variant_name=r.variant_name,
             )
             for r in rows
         ],

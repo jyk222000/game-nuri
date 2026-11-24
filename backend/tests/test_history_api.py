@@ -41,6 +41,7 @@ def test_history_defaults_and_period(env) -> None:
         "price_krw",
         "regular_krw",
         "discount_pct",
+        "variant_name",
     }
     assert body["items"][0]["collected_at"].endswith("Z")
 

@@ -49,6 +49,7 @@ def get_lowest(db: Session, game_id: int) -> LowestOut:
             price_krw=r.price_krw,
             regular_krw=r.regular_krw,
             discount_pct=r.discount_pct,
+            variant_name=r.variant_name,
             date=r.collected_at.strftime("%Y-%m-%d"),
         )
         for _, r in sorted(best.items())

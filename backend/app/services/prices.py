@@ -73,6 +73,7 @@ def get_prices(db: Session, game_id: int) -> PricesOut:
             regular_krw=r.regular_krw,
             discount_pct=r.discount_pct,
             url=r.url,
+            variant_name=r.variant_name,
             collected_at=r.collected_at,
         )
         for r in rows
@@ -88,6 +89,7 @@ def get_prices(db: Session, game_id: int) -> PricesOut:
             platform=pick[0].platform,
             item_condition="new",
             price_krw=pick[0].price_krw,
+            variant_name=pick[0].variant_name,
         )
         if pick
         else None
