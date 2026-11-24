@@ -94,6 +94,8 @@ backup(10.0.1.108, PC-1) ──mariadb-dump──▶ mariadb-re(Replica)   ← P
 # (mongodb-pr, PRIMARY 에서 한 번) 백업 계정: gamenuri_raw 읽기만. 비밀번호는 입력창으로
 > db.getSiblingDB("admin").createUser({user: "backup", pwd: passwordPrompt(), roles: [{role: "read", db: "gamenuri_raw"}]})
 ```
+> <- **비밀번호를 빈 문자열(`IDENTIFIED BY ''`)로 두지 않습니다.** 11/25에 접속 오류(`Access denied ... using password: YES`)를 풀려고 비밀번호를 비운 적이 있는데, 그러면 backup 서버에서 비밀번호 없이 DB를 읽을 수 있습니다. 오류의 흔한 원인은 `backup.env` 의 비밀번호와 DB 비밀번호가 다른 것(오타, 따옴표·공백)입니다. 반드시 `ALTER USER 'backup'@'10.0.1.108' IDENTIFIED BY '<새 비밀번호>';` 로 다시 정하고 `backup.env` 와 맞춥니다.
+> <- `sudo mariadb` 로 입력한 SQL(비밀번호 포함)은 root의 `.mysql_history` 에 남을 수 있습니다. 필요하면 그 줄을 지웁니다.
 > <- 복제 중이므로 MariaDB 계정은 Primary에서 만들면 Replica에도 복제됩니다. 덤프는 Replica(`mariadb-re`)에서 읽습니다.
 > <- `mongodump` 는 `find`·`listCollections`·`listIndexes` 만 필요해서 `read` 로 충분합니다. 11/25 확인: 두 계정 모두 **아직 없습니다**(MariaDB `mysql.user`, MongoDB `getUsers` 결과가 비어 있음).
 
@@ -131,12 +133,13 @@ backup(10.0.1.108, PC-1) ──mariadb-dump──▶ mariadb-re(Replica)   ← P
 [admina@backup ~]$ ls -l /opt/game-nuri/repo/infra/backup/backup.sh
 
 # 한 번 직접 실행 (스냅샷 후, 서비스 영향이 적은 시간에)
-[admina@backup ~]$ sudo /opt/game-nuri/repo/infra/backup/backup.sh
+[admina@backup ~]$ sudo bash /opt/game-nuri/repo/infra/backup/backup.sh
 > backup ok 2026-11-25
 
 # 결과 파일과 크기 확인
 [admina@backup ~]$ ls -lh /BACKUP/$(date +%F)/
 ```
+> <- **`bash` 를 앞에 붙이는 이유**: 레포의 `backup.sh` 에 실행 권한(`x`)이 없어(`-rw-r--r--`) 그냥 실행하면 `command not found` 가 납니다(11/25 확인). `bash 파일` 로 실행하면 권한과 무관합니다.
 > <- 성공 기준: `mariadb.sql.gz` 와 `mongo.archive.gz` 가 둘 다 있고 크기가 0이 아닙니다. `.tmp` 파일이 남아 있으면 중간에 실패한 것입니다.
 > <- 실패하면 `backup FAILED: ...` 메시지가 나옵니다. 흔한 원인: `/BACKUP` 미마운트, 계정·비밀번호 오류, 네트워크(`mariadb-re`, MongoDB 접속).
 
@@ -145,7 +148,7 @@ backup(10.0.1.108, PC-1) ──mariadb-dump──▶ mariadb-re(Replica)   ← P
 # root 의 cron 에 한 줄 추가 (편집기가 열린다)
 [admina@backup ~]$ sudo crontab -e
 > # KST 03:00 (OS 시간대 Asia/Seoul)
-> 0 3 * * * /opt/game-nuri/repo/infra/backup/backup.sh >> /var/log/game-nuri-backup.log 2>&1
+> 0 3 * * * /bin/bash /opt/game-nuri/repo/infra/backup/backup.sh >> /var/log/game-nuri-backup.log 2>&1
 
 # 등록 확인
 [admina@backup ~]$ sudo crontab -l
