@@ -1,5 +1,6 @@
-"""게임 라우터: 검색(#5)·자동완성(#6)·상세(#7)·장르/태그(#8)·사양(#29). 로그인 없이 볼 수 있다.
-읽기 전용(Replica, 실패 시 Primary 폴백).
+"""게임 라우터: 검색(#5)·자동완성(#6)·상세(#7)·장르/태그(#8)·사양(#29)·사양 판정(#31).
+사양 판정(#31)만 로그인이 필요하고, 나머지는 로그인 없이 볼 수 있다.
+읽기 전용(Replica, 실패 시 Primary 폴백). 사양 판정은 내 데이터(user_specs)를 읽어 Primary를 쓴다.
 
 주의: `/games/{game_id}` 같은 경로 변수 라우트는 `/games/autocomplete`처럼 고정 경로보다
 **뒤에** 둔다 (먼저 두면 고정 경로가 game_id로 해석돼 422가 난다).
@@ -10,7 +11,8 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.db.session import get_read_db
+from app.api.deps import CurrentUser, get_current_user
+from app.db.session import get_read_db, get_write_db
 from app.schemas.game import (
     AutocompleteOut,
     CardsOut,
@@ -20,11 +22,13 @@ from app.schemas.game import (
     WarningCardsOut,
 )
 from app.schemas.profile import RequirementsOut
-from app.services import catalog, detail, rankings, requirements, search
+from app.services import catalog, detail, rankings, requirements, search, spec_check
 
 router = APIRouter(prefix="/api")
 
 Db = Annotated[Session, Depends(get_read_db)]
+WriteDb = Annotated[Session, Depends(get_write_db)]  # 내 데이터를 읽는 API는 Primary
+User = Annotated[CurrentUser, Depends(get_current_user)]
 
 
 # ---- #8 장르·태그 ----
@@ -99,3 +103,9 @@ def game_detail(game_id: int, db: Db) -> GameDetail:
 @router.get("/games/{game_id}/requirements", response_model=RequirementsOut)
 def game_requirements(game_id: int, db: Db) -> RequirementsOut:
     return requirements.get_requirements(db, game_id)
+
+
+# ---- #31 사양 적합도 판정 (로그인 필요, AI는 services/spec_check.py가 부른다) ----
+@router.get("/games/{game_id}/spec-check", response_model=spec_check.SpecCheckOut)
+def game_spec_check(game_id: int, user: User, db: WriteDb) -> spec_check.SpecCheckOut:
+    return spec_check.check(db, game_id, user.user_id)
