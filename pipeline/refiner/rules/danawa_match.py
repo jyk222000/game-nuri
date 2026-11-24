@@ -23,6 +23,14 @@ import re
 from typing import Any
 
 # (이유, 패턴) — 위에서부터 먼저 맞는 것을 이유로 쓴다
+# 에디션: 본편 가격을 왜곡하지 않게 기본은 빼고, 다나와에서 본편이 없는 플랫폼에만 쓴다 (#93)
+EDITION_REASON = "에디션 (본편 아님)"
+EDITION_PATTERN = (
+    r"골드\s*에디션|골드판|얼티밋|Ultimate|GOTY|고티|Game of the Year|컴플리트|Complete|"
+    r"디럭스|Deluxe|컬렉터|Collector|프리미엄|Premium|마스터\s*에디션|"
+    r"에디션|Edition|DAY\s*[12]"
+)
+
 EXCLUDE_RULES: list[tuple[str, str]] = [
     (
         "비게임 상품",
@@ -40,12 +48,9 @@ EXCLUDE_RULES: list[tuple[str, str]] = [
         r"해외구매|해외직구|\[해외\]|일본판|유럽판|아시아판|북미판|수입|일본발매|EU 버전|\[호환\]",
     ),
     ("DLC·확장팩", r"확장팩|DLC|시즌\s*패스|추가\s*(컨텐츠|콘텐츠)|Separate\s*Ways|Add-?on|애드온"),
-    (
-        "에디션 (본편 아님)",
-        r"골드\s*에디션|골드판|얼티밋|Ultimate|GOTY|고티|Game of the Year|컴플리트|Complete|"
-        r"디럭스|Deluxe|컬렉터|Collector|프리미엄|Premium|리마스터|Remaster|마스터\s*에디션|"
-        r"에디션|Edition|\+\s*\S*(피규어|굿즈|아트북|[0-9]종)|DAY\s*[12]|CIB",
-    ),
+    # 리마스터는 다른 게임, 굿즈 묶음·CIB는 게임 가격이 아니다 → 에디션이어도 쓰지 않는다
+    ("리마스터·굿즈 묶음", r"리마스터|Remaster|\+\s*\S*(피규어|굿즈|아트북|[0-9]종)|CIB"),
+    (EDITION_REASON, EDITION_PATTERN),
 ]
 _EXCLUDE = [(reason, re.compile(p, re.I)) for reason, p in EXCLUDE_RULES]
 
@@ -59,6 +64,48 @@ def exclude_reason(title: str) -> str | None:
         if pat.search(title):
             return reason
     return None
+
+
+# 에디션 상품 → 화면에 보일 이름 (#93). 앞에 있는 것부터 본다.
+EDITION_LABELS: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"GOTY|고티|Game of the Year", re.I), "GOTY 에디션"),
+    (re.compile(r"얼티밋|Ultimate", re.I), "얼티밋 에디션"),
+    (re.compile(r"컴플리트|Complete", re.I), "컴플리트 에디션"),
+    (re.compile(r"디럭스|Deluxe", re.I), "디럭스 에디션"),
+    (re.compile(r"골드", re.I), "골드 에디션"),
+    (re.compile(r"컬렉터|Collector", re.I), "컬렉터 에디션"),
+    (re.compile(r"프리미엄|Premium", re.I), "프리미엄 에디션"),
+    (re.compile(r"마스터\s*에디션", re.I), "마스터 에디션"),
+    (re.compile(r"DAY\s*[12]", re.I), "DAY1 에디션"),
+]
+_GENERIC_EDITION = re.compile(r"([0-9A-Za-z가-힣]+)\s*(?:에디션|Edition)", re.I)
+
+
+def edition_label(title: str) -> str | None:
+    """에디션 상품이면 화면에 보일 이름 (최대 64자), 아니면 None.
+
+    exclude_reason() 이 에디션이라고 할 때만 쓴다. 다나와에서 본편 상품이 없는 플랫폼에 한해
+    이 이름을 붙여 가격을 싣는다 (#93, router 의 console 처리).
+    """
+    if exclude_reason(title) != EDITION_REASON:
+        return None
+    for pat, label in EDITION_LABELS:
+        if pat.search(title):
+            return label
+    m = _GENERIC_EDITION.search(title)
+    return f"{m.group(1)} 에디션"[:64] if m else "에디션"
+
+
+def hint_match(title: str, query: str) -> bool:
+    """수집 때 검색한 이름(query)이 상품명 안에 있는지 (#93 매칭 보완).
+
+    TitleMatcher 와 같은 경계·후속작 숫자 규칙을 쓴다. 너무 짧은 검색어는 쓰지 않는다.
+    """
+    k = norm(query or "")
+    if not usable(k):
+        return False
+    t, ends = norm_with_ends(title)
+    return TitleMatcher._hit(t, ends, k)
 
 
 def norm(s: str) -> str:

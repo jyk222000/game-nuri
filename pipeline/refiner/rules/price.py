@@ -45,6 +45,7 @@ REFINED_PRICE_SCHEMA: dict[str, Any] = {
         {"field": "price_original", "type": "double", "optional": True},
         {"field": "currency_original", "type": "string", "optional": True},
         {"field": "url", "type": "string", "optional": True},
+        {"field": "variant_name", "type": "string", "optional": True},  # 에디션 가격이면 이름
         {"field": "collected_at", "type": "string", "optional": False},
     ],
 }
@@ -124,6 +125,7 @@ def refine_price(
                 "price_original": price.get("amount"),
                 "currency_original": price.get("currency"),
                 "url": deal.get("url"),
+                "variant_name": None,
                 "collected_at": collected_at,
             }
         )
