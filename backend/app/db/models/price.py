@@ -29,6 +29,9 @@ class PriceCurrent(Base):
     price_original: Mapped[float | None] = mapped_column(Double)
     currency_original: Mapped[str | None] = mapped_column(String(8))
     url: Mapped[str | None] = mapped_column(String(512))
+    variant_name: Mapped[str | None] = mapped_column(
+        String(64)
+    )  # 에디션 가격이면 이름, 본편은 NULL (#93)
     collected_at: Mapped[datetime] = mapped_column(DateTime)
 
 
@@ -51,6 +54,9 @@ class PriceHistory(Base):
     price_original: Mapped[float | None] = mapped_column(Double)
     currency_original: Mapped[str | None] = mapped_column(String(8))
     url: Mapped[str | None] = mapped_column(String(512))
+    variant_name: Mapped[str | None] = mapped_column(
+        String(64)
+    )  # 에디션 가격이면 이름, 본편은 NULL (#93)
     collected_at: Mapped[datetime] = mapped_column(DateTime)
 
 

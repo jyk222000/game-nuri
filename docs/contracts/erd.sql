@@ -23,6 +23,7 @@
 -- 11/23 추가
 --   9) game_review_stats: Steam 리뷰 수·긍정률 (GetItems). review_summaries와 따로 둔다 (29개)
 --  10) stores 기본값 8곳 (빠져 있던 시드). 이미 적용된 서버는 erd_seed_stores_1123.sql
+--  11) prices_current·price_history에 variant_name (에디션 가격 표시, #93). 이미 적용된 서버는 erd_alter_1124.sql
 --
 -- 규칙 (구축 문서 4장)
 --   - 모든 테이블에 PRIMARY KEY
@@ -196,7 +197,9 @@ CREATE TABLE game_review_stats (                 -- Steam 스토어 리뷰 수·
 -- =====================================================================
 -- 2. 가격 (Kafka Connect: refined.prices)
 --    컬럼 = refined.prices 필드: game_id, store, edition, price_krw, regular_krw, discount_pct,
---                               price_original, currency_original, url, collected_at
+--                               price_original, currency_original, url, variant_name, collected_at
+--    variant_name: 본편이 아닌 에디션 가격일 때만 이름(예: 얼티밋 에디션). 본편은 NULL.
+--                  다나와에서 그 게임·플랫폼·상태에 본편 상품이 없을 때만 에디션 가격을 싣는다 (#93)
 -- =====================================================================
 CREATE TABLE prices_current (                    -- JDBC Sink upsert (pk.fields = game_id,store,edition,platform,item_condition)
   game_id          BIGINT NOT NULL,
@@ -210,6 +213,7 @@ CREATE TABLE prices_current (                    -- JDBC Sink upsert (pk.fields 
   price_original   DOUBLE,                        -- 환산 전 금액
   currency_original VARCHAR(8),                   -- KRW | USD | EUR | GBP
   url              VARCHAR(512),
+  variant_name     VARCHAR(64),                   -- 에디션 가격이면 이름 (본편은 NULL, #93)
   collected_at     DATETIME NOT NULL,
   PRIMARY KEY (game_id, store, edition, platform, item_condition)
 );
@@ -227,6 +231,7 @@ CREATE TABLE price_history (                     -- JDBC Sink insert (refined.pr
   price_original   DOUBLE,
   currency_original VARCHAR(8),
   url              VARCHAR(512),
+  variant_name     VARCHAR(64),
   collected_at     DATETIME NOT NULL,
   INDEX idx_game_time (game_id, collected_at),
   INDEX idx_game_platform_time (game_id, platform, item_condition, collected_at)
