@@ -92,7 +92,9 @@ def test_sends_when_price_reaches_target_and_logs_it(mail) -> None:  # noqa: ANN
     result = _send(engine, mailer)
     assert (result.due, result.sent, result.failed) == (1, 1, 0)
     msg = mailer.sent[0]
-    assert msg["To"] == "a@example.com" and msg["From"] == "sender@example.com"
+    assert msg["To"] == "a@example.com"
+    assert msg["From"].addresses[0].display_name == "겜누리"  # 보낸 사람 이름
+    assert msg["From"].addresses[0].addr_spec == "sender@example.com"
     assert "Seven" in msg["Subject"]
     body = msg.get_content()
     assert "38,900원" in body and "40,000원" in body and "https://example.test/games/7" in body
@@ -210,3 +212,12 @@ def test_test_to_sends_one_sample_without_db(monkeypatch) -> None:  # noqa: ANN0
     assert send_alerts.main(["--test-to", "me@example.com"]) == 0
     assert len(sent) == 1 and sent[0]["To"] == "me@example.com"
     assert sent[0]["Subject"].startswith("[테스트]")
+
+
+def test_sender_name_can_be_changed_or_omitted() -> None:
+    named = alert_mail.sender(_settings(mail_from_name="JYIT 알림"))
+    assert named.endswith("<sender@example.com>") and "JYIT" not in named  # 한글·공백 이름은 인코딩
+    assert alert_mail.sender(_settings(mail_from_name="")) == "sender@example.com"
+    due = alert_mail.sample_due("me@example.com")
+    msg = alert_mail.build_message(due, _settings(mail_from_name="줄\r\n바꿈"))
+    assert "\n" not in str(msg["From"]).replace("\r\n ", "")  # 헤더 주입 방지

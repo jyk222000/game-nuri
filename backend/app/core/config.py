@@ -19,7 +19,9 @@ class BackendSettings(Settings):
     smtp_port: int = 587  # STARTTLS
     smtp_user: str = ""
     smtp_password: str = ""
-    mail_from: str = ""  # 비면 smtp_user를 보낸 사람으로 쓴다
+    mail_from: str = ""  # 비면 smtp_user를 보낸 사람 주소로 쓴다
+    # 받는 사람 화면에 보이는 보낸 사람 이름. 비우면 이름 없이 주소만 보인다
+    mail_from_name: str = "겜누리"
     # 메일 속 게임 링크의 앞부분(예: https://gamenuri.store). 비면 링크를 넣지 않는다.
     public_base_url: str = ""
 

@@ -19,6 +19,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from email.message import EmailMessage
+from email.utils import formataddr
 from typing import Protocol
 
 import redis
@@ -106,7 +107,10 @@ def check_config(s: BackendSettings) -> None:
 
 
 def sender(s: BackendSettings) -> str:
-    return s.mail_from or s.smtp_user
+    """From 헤더 값. 이름이 있으면 `이름 <주소>`(한글은 자동 인코딩)."""
+    address = s.mail_from or s.smtp_user
+    name = " ".join(s.mail_from_name.split())  # 줄바꿈이 섞이지 않게
+    return formataddr((name, address)) if name else address
 
 
 def _one_line(text: str) -> str:
