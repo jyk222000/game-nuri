@@ -421,3 +421,48 @@ def test_rough_filler_and_jamo_only_keywords_are_dropped() -> None:
     words = ["쓰레기", "ㅇㅇ", "ㅋㅋ", "망겜", "단점", "서버", "버그"]
     d = rs.parse_digest(es_result(cons=words))
     assert d.cons == ["서버", "버그"]
+
+
+# ---------- 전체 키워드(2026-11-24)를 훑고 찾은 것 ----------
+def test_profane_fragment_from_real_data_is_dropped() -> None:
+    d = rs.parse_digest(es_result(cons=["개병", "버그"]))
+    assert d.cons == ["버그"]  # 개병신의 조각
+
+
+def test_keywords_with_other_scripts_are_dropped() -> None:
+    d = rs.parse_digest(es_result(cons=["хуйня", "漢字", "버그", "서버"]))
+    assert d.cons == ["버그", "서버"]  # 러시아어·한자 등 한글·영문·숫자가 아닌 글자
+
+
+@pytest.mark.parametrize(
+    "word",
+    [
+        "불알",
+        "정액",
+        "섹시",
+        "포르노",
+        "소아",
+        "짱깨",
+        "혐한",
+        "게이",
+        "동성애",
+        "페미",
+        "발암",
+        "죽창",
+    ],
+)
+def test_sensitive_keywords_are_dropped_by_exact_match(word: str) -> None:
+    d = rs.parse_digest(es_result(cons=[word, "버그"]))
+    assert d.cons == ["버그"]
+
+
+def test_sensitive_words_do_not_block_ordinary_words_that_contain_them() -> None:
+    # "게이"를 부분 일치로 막으면 이런 말까지 막힌다. 정확히 같은 말만 막는다.
+    d = rs.parse_digest(es_result(pros=["게이머", "게이트", "게이지", "소아과", "거지"]))
+    assert d.pros == ["게이머", "게이트", "게이지", "소아과"]
+
+
+def test_verdict_slang_and_generic_nouns_from_real_data_are_dropped() -> None:
+    words = ["명작", "최악", "강추", "개꿀", "수준", "요소", "이후", "스토리", "그래픽"]
+    d = rs.parse_digest(es_result(pros=words))
+    assert d.pros == ["스토리", "그래픽"]
