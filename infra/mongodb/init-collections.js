@@ -5,8 +5,9 @@
 //     --username gamenuri --file init-collections.js
 //
 // 컬렉션 (pipeline/connect/mongo-sink-*.json 기준, DB gamenuri_raw)
-//   raw      ← raw.price, raw.console, raw.steam, raw.igdb   API 원본(공통 봉투) → TTL 14일
-//   reviews  ← raw.steam                                      백업 대상, 분석에 사용 → TTL 없음
+//   raw_itad·raw_danawa·raw_steam·raw_igdb(·raw_unknown) ← raw.price·raw.console·raw.steam·raw.igdb
+//                                                             API 원본(공통 봉투) → ingested_at 기준 TTL 14일
+//   reviews  ← raw.steam(kind=review)                         백업 대상, 분석에 사용 → TTL 없음
 //   games    ← refined.games                                  백업 대상, Monstache → ES → TTL 없음
 //
 // 조건이 맞지 않으면 인덱스를 만들지 않고 이유를 출력한다 (추측으로 만들지 않는다).
@@ -23,21 +24,28 @@ function ensureIndex(coll, keys, options) {
   }
 }
 
-// 1) raw: 수집 시각(collected_at)이 BSON Date일 때만 TTL 14일
-{
-  const c = d.raw;
-  const total = c.countDocuments({});
-  const notDate = c.countDocuments({ collected_at: { $not: { $type: "date" } } });
-  if (total === 0) {
-    print("건너뜀 raw TTL: 컬렉션이 비어 있어 collected_at 타입을 확인할 수 없음");
-  } else if (notDate > 0) {
-    const sample = c.findOne({ collected_at: { $not: { $type: "date" } } }, { collected_at: 1 });
-    print(`건너뜀 raw TTL: collected_at이 BSON Date가 아닌 문서 ${notDate}/${total}건 (예: ${tojson(sample)})`);
-    print("        → Sink가 문자열로 저장 중. Connect 변환(TimestampConverter 등) 후 다시 실행");
-  } else {
-    ensureIndex("raw", { collected_at: 1 }, { name: "ttl_collected_at_14d", expireAfterSeconds: TTL_SECONDS });
+// 1) raw_*: 저장 시각(ingested_at)이 BSON Date일 때만 TTL 14일
+//    mongo-sink-raw는 토픽별 컬렉션에 나눠 담고(raw.price→raw_itad, raw.console→raw_danawa,
+//    raw.steam→raw_steam, raw.igdb→raw_igdb, 그 밖→raw_unknown) 저장 시각 ingested_at(BSON Date)을 붙인다.
+//    원본의 collected_at은 문자열이라 TTL에 쓸 수 없다. TTL은 14일이 지난 문서부터 지우므로,
+//    이미 쌓인 문서 중 ingested_at이 14일보다 오래된 것은 인덱스를 만든 뒤 자동으로 지워진다(없으면 지워지는 것도 없다).
+const RAW_COLLECTIONS = ["raw_itad", "raw_danawa", "raw_steam", "raw_igdb", "raw_unknown"];
+const existing = new Set(d.getCollectionNames());
+RAW_COLLECTIONS.forEach((name) => {
+  if (!existing.has(name)) {
+    print(`건너뜀 ${name} TTL: 컬렉션이 아직 없음`);
+    return;
   }
-}
+  const c = d.getCollection(name);
+  const total = c.countDocuments({});
+  const notDate = c.countDocuments({ ingested_at: { $not: { $type: "date" } } });
+  if (notDate > 0) {
+    print(`건너뜀 ${name} TTL: ingested_at이 BSON Date가 아닌(없는) 문서 ${notDate}/${total}건`);
+    print("        → Sink의 InsertField(ingested_at) 설정이 적용되기 전에 쌓인 문서일 수 있음");
+  } else {
+    ensureIndex(name, { ingested_at: 1 }, { name: "ttl_ingested_at_14d", expireAfterSeconds: TTL_SECONDS });
+  }
+});
 
 // 2) games: game_id 고유 (TTL 없음)
 ensureIndex("games", { game_id: 1 }, { name: "uq_game_id", unique: true });
@@ -64,6 +72,7 @@ const REVIEW_KEY = "payload.recommendationid";
 }
 
 print("--- 현재 인덱스 ---");
-["raw", "games", "reviews"].forEach((n) => {
+[...RAW_COLLECTIONS, "games", "reviews"].forEach((n) => {
+  if (!existing.has(n)) return;
   print(`${n}: ${d.getCollection(n).getIndexes().map((i) => i.name).join(", ")}`);
 });
