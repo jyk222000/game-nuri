@@ -53,7 +53,7 @@
 ## 공통 규칙 (응답 형식은 프론트 목업 `frontend/src/api/mock/router.js`·`data.js` 기준, 2026-11-23 결정 반영)
 - 시각: UTC ISO 8601 `Z` (`2026-11-19T02:30:00Z`). 날짜만 쓰는 필드는 `YYYY-MM-DD`(UTC).
 - 목록: `{"items": [...], "total": 123, "page": 1, "size": 20}`. 페이지가 없는 목록(`genres`, `popular` 등)은 `{"items": [...]}`.
-- **현재가**: `prices_current`에서 `item_condition='new'`인 행 중 `price_krw`가 가장 낮은 값(플랫폼 무관, 새 상품 최저가). 같으면 `store`·`platform` 이름순. 목록·카드·알림의 `price_krw`, `current_krw`가 이 값이다.
+- **현재가**: `prices_current`에서 `item_condition='new'`인 행 중 `price_krw`가 가장 낮은 값(**PC 가격이 있는 게임은 PC 행 안에서만**, PC 가격이 없는 콘솔 전용 게임은 전체 플랫폼에서). 같으면 `store`·`platform` 이름순. 목록·카드·알림의 `price_krw`, `current_krw`가 이 값이다. 콘솔 가격은 `/prices`·`/lowest`의 플랫폼별 값으로 본다.
 - `time_to_beat_hours`는 값이 없으면 `null`.
 - 할인 목록(`GET /api/games/deals`): **할인 중 = 새 상품 최저가의 `discount_pct` > 0**, 할인율 큰 순, `size` 기본 20 / 최대 100. 로그인 없이 보는 목록이라 `wished`는 항상 `false`.
 - 역대 최저가(`GET /api/games/{id}/lowest`) 동점: 가장 이른 날짜 → `store`·`edition` 이름순.
@@ -165,8 +165,8 @@
   "lowest_krw": 38900, "lowest_date": "2025-12-05", "vs_lowest_pct": 4, "sale_count_2y": 9 }
 ```
 `verdict`: `buy_now` | `neutral` | `wait` | `insufficient_data` ← 마지막 값은 목업에 없는 값(확정)
-- **기준 이력은 PC·새 상품(`item_condition='new'`)** 이다. 하루에 여러 건이면 그날 최저가 한 줄만 쓴다. 따라서 **`current_krw`는 이 이력의 최신 값**이며, 카드의 현재가(플랫폼 무관 새 상품 최저가)와 **다를 수 있다.**
-- **`insufficient_data` 조건**: PC·새 상품 이력이 없거나(콘솔 전용 포함), **이력 일수가 3 미만**(하루 한 줄로 합친 뒤 날짜 수)일 때. 이때 `current_krw`, `lowest_krw`, `lowest_date`, `vs_lowest_pct`, `sale_count_2y`는 `null`이고 `reason`에 이유를 쓴다.
+- **기준 이력은 PC·새 상품(`item_condition='new'`)** 이다. 하루에 여러 건이면 그날 최저가 한 줄만 쓴다. 따라서 **`current_krw`는 이 이력의 최신 값**이며, 카드의 현재가(PC 우선 새 상품 최저가)와 **PC 가격이 있는 게임에서는 같다.** 콘솔 전용 게임은 `insufficient_data`라 비교할 값이 없다.
+- **`insufficient_data` 조건**: PC·새 상품 이력이 없거나(콘솔 전용 포함), **이력 일수가 3 미만**(하루 한 줄로 합친 뒤 날짜 수)일 때. 이때 `current_krw`, `lowest_krw`, `lowest_date`, `vs_lowest_pct`, `sale_count_2y`는 `null`이고 `reason`에 이유를 쓴다. (정상 판정에서도 역대 최저가가 0원이었다가 지금은 유료이면 `vs_lowest_pct`만 `null`이다. 계속 무료이면 0.)
 - 판정 규칙(임시, analysis A1 확정 전 — 프런트 목업도 같게 맞춘다), 위에서부터 먼저 맞는 것:
   1. 현재가가 0원이면 `buy_now`("무료예요").
   2. **현재가가 역대 최저가의 105% 이하(같은 값 포함)이고 '내려간 가격'이면 `buy_now`** — 할인율과 무관하다. '내려간 가격' = 현재 할인율 ≥ 10% **또는** 역대 최저가가 이력 최고가보다 10% 이상 낮음. (스토어가 할인율을 주지 않는 다나와 행은 `discount_pct`가 비어 있어서 이력으로 판단한다. 가격이 한 번도 변하지 않은 게임은 현재가=최저가=정가이므로 여기에 해당하지 않는다.)
@@ -189,7 +189,7 @@
 `GET /api/me/alerts` → `{ "items": [ { "alert_id": 3, "game_id": 119133, "game_name": "엘든 링", "target_price_krw": 40000, "current_krw": 47900, "active": true, "created_at": "...Z" } ], "total": 1 }`
 `POST /api/me/alerts` 본문 `{ "game_id": 119133, "target_price_krw": 40000 }` → 알림 한 건. **(user_id, game_id)가 이미 있으면 409가 아니라 덮어쓴다.** `target_price_krw`가 0 이하이면 400 `INVALID_PRICE`
 `PATCH /api/me/alerts/{alert_id}` 본문 `{ "target_price_krw"?, "active"? }` → 알림 한 건 (없거나 남의 것이면 404 `NOT_FOUND`)
-`DELETE /api/me/alerts/{alert_id}` → `{ "ok": true }` (※ `alert_logs` FK 삭제 규칙 확인 전이라 구현 보류)
+`DELETE /api/me/alerts/{alert_id}` → `{ "ok": true }` (없거나 남의 것이면 404 `NOT_FOUND`. 그 알림의 `alert_logs`는 FK `ON DELETE CASCADE`로 함께 지워진다)
 `GET /api/me/alerts/logs` → `alert_logs`에 `alerts`·`games`를 조인해 `game_id`, `game_name`, `target_price_krw`를 채우고 **`channel`은 `"email"` 고정**
 ```json
 { "items": [ { "log_id": 9, "game_id": 119133, "game_name": "엘든 링", "price_krw": 38900, "target_price_krw": 40000,
