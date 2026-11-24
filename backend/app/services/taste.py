@@ -111,8 +111,10 @@ def get_taste(db: Session, user_id: int) -> TasteOut:
 
 
 def recommend(db: Session, user_id: int, size: int) -> list[RecommendationCard]:
-    """상위 장르 게임 중 아직 없는(보유하지 않은) 게임을 긍정 비율 높은 순으로.
+    """상위 장르 게임 중 아직 없는(보유하지 않은) 게임을 점수 높은 순으로.
 
+    점수 = 장르 비중(내 플레이 시간이 가장 많은 장르 대비) × 긍정 비율. 평점만으로 줄을 세우면
+    플레이 시간이 적은 장르의 고평점 게임이 위를 차지하므로 장르 비중을 곱한다.
     reason은 그 게임이 속한 장르 중 내 플레이 시간이 가장 많은 장르 기준이다.
     """
     _require_steam(db, user_id)
@@ -130,8 +132,13 @@ def recommend(db: Session, user_id: int, size: int) -> list[RecommendationCard]:
         if gid not in best_genre or t.genre_minutes[genre_id] > t.genre_minutes[best_genre[gid]]:
             best_genre[gid] = genre_id
     known = ratings.positive_ratios(db, best_genre)
-    ratio = {gid: known.get(gid, -1.0) for gid in best_genre}  # 평가 없는 게임은 뒤로
-    ids = sorted(best_genre, key=lambda g: (-ratio[g], g))[:size]
+    top_minutes = t.genre_minutes[top[0]]
+    # 평가 없는 게임은 점수 대신 -1로 뒤에 둔다
+    score = {
+        gid: t.genre_minutes[genre_id] / top_minutes * known[gid] if gid in known else -1.0
+        for gid, genre_id in best_genre.items()
+    }
+    ids = sorted(best_genre, key=lambda g: (-score[g], g))[:size]
     wished = set(db.scalars(select(Wishlist.game_id).where(Wishlist.user_id == user_id)))
     built = cards.build_cards(db, ids, wished_ids=wished)
     return [

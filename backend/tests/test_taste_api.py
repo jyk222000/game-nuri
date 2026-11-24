@@ -137,6 +137,28 @@ def test_recommendations_order_by_positive_ratio_and_size(played) -> None:
     assert reason == "RPG 장르를 많이 플레이했어요"  # RPG 4800분 > Action 3600분
 
 
+def test_recommendations_weigh_genre_share_over_rating(played) -> None:
+    """플레이 시간이 많은 장르(RPG 4800분)가 평점이 약간 더 높은 적은 장르(Action 3600분)보다 앞."""
+    client, engine, _ = played
+    with seed(engine) as s:
+        s.add_all(
+            [
+                Game(game_id=31, name="Rpg A", updated_at=NOW),
+                Game(game_id=33, name="Action A", updated_at=NOW),
+                GameGenre(game_id=31, genre_id=2),
+                GameGenre(game_id=33, genre_id=1),
+                ReviewSummary(
+                    game_id=31, positive_ratio=Decimal("0.800"), generated_by="ai", updated_at=NOW
+                ),
+                ReviewSummary(
+                    game_id=33, positive_ratio=Decimal("0.900"), generated_by="ai", updated_at=NOW
+                ),
+            ]
+        )
+    ids = [i["game_id"] for i in client.get("/api/me/recommendations").json()["items"]]
+    assert ids[:2] == [31, 33]  # 0.8×1.0 > 0.9×0.75 (평점만 보면 33이 앞)
+
+
 def test_recommendations_empty_cases(env) -> None:
     client, engine, _ = env
     r = client.get("/api/me/recommendations")
