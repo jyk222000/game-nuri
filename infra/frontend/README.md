@@ -20,19 +20,22 @@
 `VITE_API_MODE` 값은 **빌드 때 파일 안에 굳어진다**(서버에서 바꿀 수 없음). 바꾸려면 다시 빌드해 올린다.
 | 값 | 동작 | 언제 |
 |---|---|---|
-| `mock` (기본) | 전부 브라우저 안의 목 데이터 | Backend 없이 개발 |
-| `hybrid` | Backend에 구현된 공개 조회 API(`frontend/src/api/client.js`의 `REAL_READY`)만 실서버, 실패하면 목 | 지금(구글 로그인 전) |
-| `real` | 전부 실서버, 로그인도 실제 | 모든 API가 구현·적재된 뒤 |
+| `real` (**기본**, 값을 안 주면 이 모드) | 전부 실서버 `/api`. 구글 로그인도 실제 로그인으로 연결 | **서버에 올리는 빌드는 항상 이 모드** |
+| `mock` | 전부 브라우저 안의 목 데이터 | Backend 없이 화면만 개발할 때 (`VITE_API_MODE=mock`으로 명시) |
 
-hybrid에서 **실제 값**: 게임 목록·상세·가격·이력·최저가·할인·구매 타이밍·사양·동접자.
-**목 값**: 로그인, 마이페이지, 목표가 알림, 실시간 검색어, 리뷰 요약(Backend에 API 없음).
+(`hybrid` 모드는 frontend #89에서 없어졌다. 목 분석 데이터 파일도 지워졌다.)
+
+`real`에서는 Backend에 없는 API를 부르면 목으로 대신하지 않고 **그대로 오류**가 난다. 2026-11-24 기준
+Backend에 아직 없는 것: 구글 로그인(`/api/auth/*`), 리뷰·리뷰 요약(`/api/games/{id}/reviews*`),
+사양 비교(`/spec-check`), 실시간·최근 검색어(`/api/search/*`). 이 화면들이 오류 대신 빈 상태로
+보이는지는 **미확인**이다(frontend 담당).
 
 ## 설치·배포 순서 (frontend1 기준, frontend2는 `fe2.conf`로 같은 순서)
 PC에서 빌드(Node.js LTS 필요):
 ```powershell
 cd frontend
 npm ci
-$env:VITE_API_MODE="hybrid"; npm run build        # 결과: frontend/dist
+npm run build                                     # 결과: frontend/dist (기본이 real. VITE_API_MODE를 주지 않는다)
 scp -r dist admina@frontend1:~/dist
 scp nginx/fe1.conf admina@frontend1:~/fe1.conf
 ```
@@ -43,6 +46,7 @@ sudo dnf install -y nginx
 getent hosts backend1                              # 이름이 풀리는지
 
 sudo mkdir -p /var/www/game-nuri
+# 새 빌드로 갱신할 때만: 옛 파일이 남지 않게 먼저 비운다 (아래 '새 빌드로 갱신' 참고)
 sudo cp -r ~/dist/. /var/www/game-nuri/            # mv 말고 cp (SELinux 레이블 때문)
 sudo cp ~/fe1.conf /etc/nginx/conf.d/game-nuri.conf
 sudo restorecon -Rv /var/www /etc/nginx
@@ -61,17 +65,28 @@ sudo systemctl enable --now nginx
 ```
 되돌리기: `sudo cp -p /etc/nginx/nginx.conf.orig /etc/nginx/nginx.conf && sudo systemctl reload nginx`
 
-새 빌드로 갱신할 때는 `/var/www/game-nuri/`의 파일만 교체하고 `restorecon`을 다시 한다(nginx 재시작은 필요 없음).
-기존 파일을 지우는 `rm`은 대상(`/var/www/game-nuri/assets` 등)을 확인한 뒤 한다.
+### 새 빌드로 갱신할 때 (옛 파일 비우기)
+빌드마다 `assets/` 파일 이름(해시)이 바뀌고, 예전 빌드에는 `analysis-data/`도 있었다. `cp`만 하면 옛 파일이
+남아 용량만 차지하고 헷갈린다. **지우기 전에 목록을 보고**, 대상이 맞는지 확인한 뒤 실행한다.
+```bash
+hostname                                           # 대상 VM인지 확인
+ls /var/www/game-nuri                              # index.html, assets, (analysis-data) 등
+sudo rm -r /var/www/game-nuri/assets /var/www/game-nuri/analysis-data   # 없다는 메시지는 무시
+sudo cp -r ~/dist/. /var/www/game-nuri/
+sudo restorecon -Rv /var/www
+```
+- 이 `rm -r`은 위 두 폴더만 지운다. `/var/www/game-nuri` 전체를 지우지 않는다(`index.html`이 잠깐 없어지면 사이트가 404).
+- 갱신 후 nginx 재시작은 필요 없다. 브라우저는 강력 새로고침(Ctrl+F5)으로 확인한다.
 
 ## 확인
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' localhost/      # 200 (index.html)
-curl -s localhost/api/health                              # {"status":..., "server":"backend1", ...}
+curl -s localhost/api/health                              # {"status":"ok", "server":"backend1", ...}
 curl -s "localhost/api/games?size=2"                      # 게임 2건, total 1000
 ```
 - `/api/health`의 `server` 값이 짝 Backend 이름(frontend1 → backend1)이어야 한다.
-- `status: degraded`는 ES 로그인이 아직 연결되지 않아 `es: down`인 경우다(정상 범위).
+- `status: ok`, `es: ok`가 정상이다(ES 로그인 적용 후, 2026-11-24 backend1에서 확인).
+  `degraded`이면 `es`·`valkey` 중 어느 것이 `down`인지 본다.
 - 브라우저: `https://gamenuri.store`(Proxy 경유). F12 → Network에서 `/api/...`가 200인지 본다.
 
 ## 겪은 문제
@@ -90,11 +105,12 @@ curl -s "localhost/api/games?size=2"                      # 게임 2건, total 1
 ## 확인 기록
 | 날짜 | VM | 내용 |
 |---|---|---|
-| 2026-11-24 | frontend1 | nginx 1.26.3 설치, hybrid 빌드 배포. `/` 200, `/api/health`(server=backend1, db ok·valkey ok·es down), `/api/games`(total 1000). `gamenuri.store`에서 메인·상세 화면이 실제 데이터로 표시됨 |
+| 2026-11-24 | frontend1 | nginx 1.26.3 설치, **hybrid 빌드**(당시) 배포. `/` 200, `/api/health`(server=backend1, db ok·valkey ok·es down), `/api/games`(total 1000). `gamenuri.store`에서 메인·상세 화면이 실제 데이터로 표시됨 |
+| – | frontend1 | real 기본 빌드로 재배포: 한예찬이 frontend #89에서 확인했다고 적음. 서버에서 직접 확인은 **미확인** |
 | – | frontend2 | **미확인** (아직 같은 절차를 하지 않음) |
 
 ## 남은 일
+- [ ] frontend1·2에 real 기본 빌드 올리기 (위 '새 빌드로 갱신할 때' 순서로 옛 `assets`·`analysis-data` 비우기)
 - [ ] frontend2 배포 (`fe2.conf` → `backend2:8000`, backend2 배포 후)
-- [ ] 리뷰 요약 칸: hybrid에서는 목이 실제 게임 ID를 못 찾아 "게임을 찾을 수 없습니다"로 보인다 → 빈 상태 표시로 바꾸기 (frontend, 한예찬)
-- [ ] 실시간 검색어·리뷰 요약 API가 Backend에 생기면 `REAL_READY`에 추가 (frontend)
-- [ ] 로그인(구글 OAuth)이 붙으면 `real` 모드로 다시 빌드
+- [ ] Backend에 없는 API(로그인·리뷰·사양 비교·검색어)를 만들고, 그 전까지 해당 화면이 오류가 아닌 빈 상태로 보이게 하기 (frontend, 한예찬)
+- [ ] 구글 로그인(OAuth)이 붙으면 `/api/auth/google/login`이 동작하는지 확인하고, 개발용 `AUTH_FAKE_USER`를 끈다
