@@ -45,7 +45,8 @@ ES_INDEX = "reviews"
 LANGUAGE = "koreana"
 MIN_REVIEWS = 30  # 이보다 리뷰가 적으면 키워드가 믿을 만하지 않아 요약하지 않는다
 KEYWORDS_PER_SIDE = 8  # 장점·단점 키워드 최대 개수
-KEYWORD_MIN_DOC_COUNT = 5  # 한 키워드가 최소 이 개수의 리뷰에 나와야 한다
+KEYWORD_MIN_DOC_COUNT = 5  # 장점 키워드가 최소 이 개수의 리뷰에 나와야 한다
+CONS_MIN_DOC_COUNT = 3  # 단점 키워드는 부정 리뷰가 적어서 더 적은 건수부터 인정한다
 KEYWORD_MAX_CHARS = 20
 KEYWORDS_COLUMN_MAX = 512  # review_summaries.pros_keywords·cons_keywords VARCHAR(512)
 SUMMARY_MAX_CHARS = 200  # review_summaries.summary VARCHAR(1000)보다 훨씬 짧게 쓴다
@@ -150,6 +151,11 @@ def _significant(side: bool, scope: dict) -> dict:
 
     긍정이 90%를 넘는 게임은 "전체 리뷰와 비교"하면 게임 이름·고유명사가 두드러져 버린다.
     반대편(긍정 ↔ 부정)과 비교하면 칭찬·불만에 쓰이는 말이 남는다.
+
+    점수 방식은 `chi_square`다. 기본 방식(JLH)은 기준 집합이 대상 집합을 포함한다고 가정하는데,
+    긍정과 부정은 서로 겹치지 않는 집합이라 이 가정이 깨져서, 부정 리뷰가 적은 게임(스타듀 밸리 등
+    긍정 97% 이상)에서 키워드가 하나도 안 나왔다. `background_is_superset: false`로 겹치지 않는
+    집합임을 알려 주고, `include_negatives: false`로 "그쪽에 오히려 덜 나오는 말"은 뺀다.
     """
     opposite = {"bool": {"filter": [scope, {"term": {"voted_up": not side}}]}}
     return {
@@ -160,8 +166,10 @@ def _significant(side: bool, scope: dict) -> dict:
                     "field": "review.nouns",
                     "size": KEYWORDS_PER_SIDE
                     * 4,  # 일반어·이름 조각을 거르고도 남도록 넉넉히 받는다
-                    "min_doc_count": KEYWORD_MIN_DOC_COUNT,
+                    # 부정 리뷰는 수가 적으니 단점 키워드는 더 적은 건수부터 인정한다
+                    "min_doc_count": KEYWORD_MIN_DOC_COUNT if side else CONS_MIN_DOC_COUNT,
                     "background_filter": opposite,
+                    "chi_square": {"background_is_superset": False, "include_negatives": False},
                 }
             }
         },
@@ -587,8 +595,15 @@ def summarize(
         except (requests.RequestException, KeyError, ValueError) as e:
             log.error("game_id=%s ES 집계 실패: %s", t.game_id, type(e).__name__)
             continue
-        if digest is None or not (digest.pros or digest.cons):
-            log.info("game_id=%s 리뷰·키워드가 부족해 건너뜀", t.game_id)
+        if digest is None:
+            log.info("game_id=%s 한국어 리뷰가 %d건 미만이라 건너뜀", t.game_id, MIN_REVIEWS)
+            continue
+        if not (digest.pros or digest.cons):
+            log.info(
+                "game_id=%s 리뷰는 %d건인데 걸러내고 나니 키워드가 없어 건너뜀",
+                t.game_id,
+                digest.total,
+            )
             continue
         summary = ask_ai(build_prompt(t.name, digest), settings, session) if use_ai else None
         if summary is not None and is_profane(summary):
