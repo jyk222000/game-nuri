@@ -23,6 +23,7 @@ import logging
 import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Literal, TypedDict
 
 import redis
 from authlib.integrations.base_client.errors import OAuthError
@@ -110,7 +111,17 @@ def _client(s: BackendSettings, **kwargs: object) -> OAuth2Client:
 
 
 # ---------- 쿠키 속성 (라우터가 그대로 set_cookie(**옵션)에 쓴다) ----------
-def session_cookie_options() -> dict[str, object]:
+class CookieOptions(TypedDict):
+    """set_cookie의 키워드 인자와 이름·타입이 같다(타입 검사기가 **펼치기를 확인할 수 있게)."""
+
+    httponly: bool
+    secure: bool
+    samesite: Literal["lax"]
+    max_age: int
+    path: str
+
+
+def session_cookie_options() -> CookieOptions:
     # Secure: 사용자는 HTTPS(HAProxy)로 접속한다. Lax: 구글에서 돌아오는 이동에는 쿠키가 같이 간다.
     return {
         "httponly": True,
@@ -121,7 +132,7 @@ def session_cookie_options() -> dict[str, object]:
     }
 
 
-def state_cookie_options() -> dict[str, object]:
+def state_cookie_options() -> CookieOptions:
     return {
         "httponly": True,
         "secure": True,
