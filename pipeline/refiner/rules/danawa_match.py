@@ -4,8 +4,10 @@
 collector/experiments/check_candidates.py.
 
 1) 거르기 (가격에는 국내판 본편만 쓴다, 6·7절)
-   - 비게임(아트북·피규어·컨트롤러 등), 본체 번들(CUH-, 1TB 등), DLC·확장팩, 에디션(얼티밋·GOTY 등),
+   - 비게임(아트북·피규어·컨트롤러 등), 본체 번들(CUH-, 1TB 등), DLC·확장팩, 리마스터·굿즈 동봉,
      해외판(해외구매·[해외]·일본판 등)은 refined.unmatched 로 이유를 남긴다.
+   - 에디션(얼티밋·GOTY 등)은 같은 게임·플랫폼·상태에 본편이 없을 때만 가격에 쓴다
+     (#93, console.py).
 2) 이름 매칭 (5·15절)
    - 상품명과 별칭을 정규화(소문자, 영숫자·한글만, 로마 숫자 → 아라비아)한 뒤
      별칭이 상품명 안에 들어 있으면 후보. 가장 긴 별칭의 게임에 배정한다
@@ -21,6 +23,9 @@ from __future__ import annotations
 
 import re
 from typing import Any
+
+# 에디션은 "본편이 없는 플랫폼"이면 가격에 쓴다 (#93). 나머지 이유는 항상 제외.
+EDITION_REASON = "에디션 (본편 아님)"
 
 # (이유, 패턴) — 위에서부터 먼저 맞는 것을 이유로 쓴다
 EXCLUDE_RULES: list[tuple[str, str]] = [
@@ -41,10 +46,14 @@ EXCLUDE_RULES: list[tuple[str, str]] = [
     ),
     ("DLC·확장팩", r"확장팩|DLC|시즌\s*패스|추가\s*(컨텐츠|콘텐츠)|Separate\s*Ways|Add-?on|애드온"),
     (
-        "에디션 (본편 아님)",
+        "리마스터·굿즈 동봉",
+        r"리마스터|Remaster|\+\s*\S*(피규어|굿즈|아트북|[0-9]종)|CIB",
+    ),
+    (
+        EDITION_REASON,
         r"골드\s*에디션|골드판|얼티밋|Ultimate|GOTY|고티|Game of the Year|컴플리트|Complete|"
-        r"디럭스|Deluxe|컬렉터|Collector|프리미엄|Premium|리마스터|Remaster|마스터\s*에디션|"
-        r"에디션|Edition|\+\s*\S*(피규어|굿즈|아트북|[0-9]종)|DAY\s*[12]|CIB",
+        r"디럭스|Deluxe|컬렉터|Collector|프리미엄|Premium|마스터\s*에디션|"
+        r"에디션|Edition|DAY\s*[12]",
     ),
 ]
 _EXCLUDE = [(reason, re.compile(p, re.I)) for reason, p in EXCLUDE_RULES]
@@ -138,6 +147,20 @@ class TitleMatcher:
                 return True
             start = t.find(k, start + 1)
         return False
+
+
+def hint_match(title: str, query: str | None) -> bool:
+    """수집 때 검색한 게임 이름(query)이 상품명에 들어 있는지 (후속작 숫자 규칙은 같다).
+
+    별칭에 없는 표기(한글 이름, 제조사 접두사 등)로 매칭이 실패했을 때, 수집기가 보낸
+    request.params.igdb_id 를 쓸지 검증한다 (#93). 검색 결과에 섞인 다른 게임(후속작·스핀오프)은
+    상품명에 검색어가 없으므로 걸러진다.
+    """
+    q = norm(query or "")
+    if not usable(q):
+        return False
+    t, ends = norm_with_ends(title)
+    return TitleMatcher._hit(t, ends, q)
 
 
 def match_payload(title: str, matcher: TitleMatcher) -> tuple[int | None, str]:

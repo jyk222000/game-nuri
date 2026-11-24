@@ -88,5 +88,6 @@ def test_router_console_uses_filters_and_matcher():
 
     ok = route(env("프롬 소프트웨어 엘든링 한글판"), maps)
     assert ok["out"][0][2]["payload"]["game_id"] == 119133
-    assert route(env("엘든 링 GOTY 에디션"), maps)["unmatched"][0]["reason"] == "에디션 (본편 아님)"
+    # 같은 회차에 본편이 이미 있으면 에디션은 가격에 쓰지 않는다 (#93)
+    assert route(env("엘든 링 GOTY 에디션"), maps)["unmatched"][0]["reason"] == "에디션 (본편 있음)"
     assert route(env("PS5 본체 엘든 링 번들"), maps)["unmatched"][0]["reason"] == "본체 번들"
