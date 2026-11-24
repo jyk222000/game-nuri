@@ -87,21 +87,28 @@
 ### 가격 키: `platform`, `item_condition` 추가 (목업 대비 변경)
 가격 테이블 키가 `(game_id, store, edition, platform, item_condition)`이므로 가격 비교·이력·최저가 응답에 `platform`(`PC`, `PS5`, `PS4`, `Switch`, `Switch2`, `XboxSeries`, `XboxOne`)과 `item_condition`(`new` | `used`)을 넣는다. 목업의 `edition: "used"`는 `edition: "physical"` + `item_condition: "used"`로 바꾼다.
 
+### 에디션 가격: `variant_name` 추가 (#93)
+가격 행을 그대로 내려 주는 응답(`prices`의 `items`·`lowest`, `history`의 `items`, `lowest`의 `items`)에 `variant_name`을 넣는다.
+- **본편 가격이면 `null`**, 본편이 아닌 에디션 가격이면 이름(예: `"얼티밋 에디션"`). `prices_current`·`price_history`의 `variant_name VARCHAR(64) NULL`을 그대로 내린다(erd.sql 11번).
+- 다나와에서 그 게임·플랫폼·상태에 **본편 상품이 없을 때만** 에디션 가격을 싣는다(정제기 규칙). 같은 키에 본편과 에디션이 함께 들어오지 않으므로 **`variant_name`은 가격 키·중복 판단 키에 넣지 않는다.** ITAD(PC)는 항상 `null`.
+- 화면은 값이 있을 때 "얼티밋 에디션"처럼 표시해 본편 가격이 아님을 알린다.
+- **이번 범위 밖**: 카드·상세의 `price_krw`와 구매 타이밍(`/timing`)에는 넣지 않는다. 카드는 PC 우선이라 PC 가격이 없는 콘솔 전용 게임에서만 에디션 가격이 카드에 나올 수 있고, 그때의 표시(`price_platform`과 함께)는 따로 정한다.
+
 `GET /api/games/119133/prices`
 ```json
 { "game_id": 119133,
   "items": [
     { "store": "steam", "edition": "digital", "platform": "PC", "item_condition": "new",
-      "price_krw": 47900, "regular_krw": 64800, "discount_pct": 26, "url": "https://...", "collected_at": "2026-11-19T02:30:00Z" },
+      "price_krw": 47900, "regular_krw": 64800, "discount_pct": 26, "url": "https://...", "variant_name": null, "collected_at": "2026-11-19T02:30:00Z" },
     { "store": "danawa", "edition": "physical", "platform": "PS5", "item_condition": "used",
-      "price_krw": 38000, "regular_krw": null, "discount_pct": null, "url": "https://...", "collected_at": "2026-11-19T02:30:00Z" } ],
-  "lowest": { "store": "steam", "edition": "digital", "platform": "PC", "item_condition": "new", "price_krw": 47900 } }
+      "price_krw": 38000, "regular_krw": null, "discount_pct": null, "url": "https://...", "variant_name": "얼티밋 에디션", "collected_at": "2026-11-19T02:30:00Z" } ],
+  "lowest": { "store": "steam", "edition": "digital", "platform": "PC", "item_condition": "new", "price_krw": 47900, "variant_name": null } }
 ```
 `GET /api/games/119133/history?days=180&platform=PC&item_condition=new`
 ```json
 { "game_id": 119133, "days": 180, "platform": "PC", "item_condition": "new",
   "items": [ { "store": "steam", "edition": "digital", "platform": "PC", "item_condition": "new",
-               "collected_at": "2026-11-19T02:30:00Z", "price_krw": 47900, "regular_krw": 64800, "discount_pct": 26 } ] }
+               "collected_at": "2026-11-19T02:30:00Z", "price_krw": 47900, "regular_krw": 64800, "discount_pct": 26, "variant_name": null } ] }
 ```
 **가격 이력 중복 제거 (결정)**
 - 중복 판단 키: **`(game_id, store, edition, platform, item_condition, collected_at)`**. 같은 시각에 `edition`만 다른 행(digital·physical)은 서로 다른 행이다.
@@ -112,9 +119,9 @@
 ```json
 { "game_id": 119133,
   "items": [ { "platform": "PC", "item_condition": "new", "store": "steam", "edition": "digital",
-               "price_krw": 38900, "regular_krw": 64800, "discount_pct": 40, "date": "2025-12-05" },
+               "price_krw": 38900, "regular_krw": 64800, "discount_pct": 40, "variant_name": null, "date": "2025-12-05" },
              { "platform": "PS5", "item_condition": "used", "store": "danawa", "edition": "physical",
-               "price_krw": 31000, "regular_krw": null, "discount_pct": null, "date": "2026-10-02" } ] }
+               "price_krw": 31000, "regular_krw": null, "discount_pct": null, "variant_name": "얼티밋 에디션", "date": "2026-10-02" } ] }
 ```
 
 ### 인증·내 정보
