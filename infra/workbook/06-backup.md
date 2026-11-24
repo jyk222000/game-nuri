@@ -16,6 +16,18 @@
 | MariaDB `backup` 계정 | **없음** | 3장에서 만듦 |
 | MongoDB `backup` 계정 | **없음** | 3장에서 만듦 |
 
+## 11/25 첫 수동 백업 결과 (성공)
+| 항목 | 결과 |
+|---|---|
+| 실행 | `sudo bash /opt/game-nuri/repo/infra/backup/backup.sh` → `backup ok 2026-11-25` |
+| `mariadb.sql.gz` | 9.1M (`gamenuri` DB 전체) |
+| `mongo.archive.gz` | 112M (`reviews` 451,620 / `raw_steam` 35,999 / `raw_itad` 8,037 / `raw_danawa` 6,526 / `raw_igdb` 3,558 / `unmatched` 2,450 / `games` 1,000건) |
+| 파일 소유·권한 | root, 600 |
+
+> <- 이 결과까지 가는 데 막힌 곳(겪은 문제): ① `backup.sh` 실행 권한 없음 → `bash` 로 실행, ② 비밀번호 특수문자 때문에 옵션 파일 접속 거부 → 영문·숫자 비밀번호(또는 `MYSQL_PWD` 방식으로 스크립트 수정), ③ `MONGO_URI` 의 `&` 때문에 `unbound variable` → 작은따옴표로 감싸기.
+> <- 하루 약 121MB, 7일 보관해도 1GB 안팎이라 `/BACKUP` 75G에 충분합니다.
+> <- 아직 남음: cron 등록과 첫 자동 실행 확인, `/BACKUP` fstab 확인, 복구 시험.
+
 > <- 즉 **11/25 기준 백업은 아직 한 번도 돌지 않았습니다.** 아래 1~7장 순서대로 구성한 뒤 8장 복구 시험까지 하면 완성입니다. 완료한 항목은 10장의 체크를 채웁니다.
 > <- 아직 확인하지 못한 것: `/BACKUP` 의 파일시스템 종류와 `/etc/fstab` 등록 여부(재부팅 후에도 마운트되는지).
 
