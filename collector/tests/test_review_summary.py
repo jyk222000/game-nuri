@@ -118,7 +118,38 @@ def test_query_filters_game_and_language_and_fetches_no_review_text() -> None:
     assert q["aggs"]["cons"]["filter"] == {"term": {"voted_up": False}}
     sig = q["aggs"]["pros"]["aggs"]["kw"]["significant_terms"]
     assert sig["field"] == "review.nouns"
-    assert sig["background_filter"] == q["query"]  # 기준은 같은 게임의 전체 리뷰
+    # 기준 집합 = 같은 게임의 **반대편** 리뷰 (긍정은 부정과, 부정은 긍정과 비교)
+    assert sig["background_filter"] == {
+        "bool": {"filter": [q["query"], {"term": {"voted_up": False}}]}
+    }
+    cons = q["aggs"]["cons"]["aggs"]["kw"]["significant_terms"]
+    assert cons["background_filter"] == {
+        "bool": {"filter": [q["query"], {"term": {"voted_up": True}}]}
+    }
+
+
+def test_generic_words_and_ascii_slang_are_dropped() -> None:
+    words = ["최고", "구매", "추천", "goat", "GOAT", "스토리", "dlc", "그래픽"]
+    d = rs.parse_digest(es_result(pros=words))
+    assert d.pros == [
+        "스토리",
+        "dlc",
+        "그래픽",
+    ]  # 일반어·영어 속어는 빠지고 게임 약어(dlc)는 남는다
+
+
+def test_game_name_pieces_are_dropped() -> None:
+    exclude = rs.name_tokens("사이버펑크 2077 (Cyberpunk)")
+    assert {"사이버펑크", "2077", "cyberpunk"} <= exclude
+    words = ["사이버", "사이버펑크", "스토리", "펑크", "버그"]
+    d = rs.parse_digest(es_result(pros=words), exclude)
+    assert d.pros == ["스토리", "버그"]  # 이름과 같거나 이름 안에 든 조각(사이버·펑크)은 뺀다
+
+
+def test_digest_uses_game_name_to_filter_keywords() -> None:
+    s = FakeSession(es=[Resp(200, es_result(pros=("사이버", "스토리")))])
+    d = rs.fetch_digest(1, settings(), s, rs.name_tokens("사이버펑크 2077"))
+    assert d.pros == ["스토리"]
 
 
 def test_parse_digest_ratio_and_keywords() -> None:
@@ -335,3 +366,52 @@ def test_publish_refined_sends_json_to_topic(monkeypatch: pytest.MonkeyPatch) ->
     topic, key, value = sent[0]
     assert (topic, key) == ("refined.review_summary", b"1877")
     assert json.loads(value.decode()) == {"payload": {"summary": "한글"}}
+
+
+def test_prompt_forbids_recommendation_slang_and_guessing() -> None:
+    d = rs.Digest(total=100, positive_ratio=0.9, pros=["스토리"], cons=["버그"])
+    p = rs.build_prompt("게임", d)
+    assert "권하거나 말리지" in p and "속어" in p and "지어내지" in p
+
+
+# ---------- 욕설 필터 ----------
+@pytest.mark.parametrize(
+    "text", ["시발", "씨 발", "ㅅㅂ", "병.신", "FUCK", "존나게 재밌음", "개새끼"]
+)
+def test_is_profane_catches_words_and_split_spelling(text: str) -> None:
+    assert rs.is_profane(text)
+
+
+@pytest.mark.parametrize("text", ["스토리가 좋아요", "시발점", "새끼손가락", "버그와 최적화", ""])
+def test_is_profane_lets_normal_words_through(text: str) -> None:
+    assert not rs.is_profane(text)
+
+
+def test_profane_keywords_are_dropped_from_digest() -> None:
+    d = rs.parse_digest(
+        es_result(pros=("스토리", "시발", "그래픽"), cons=("병신", "버그", "시발점"))
+    )
+    assert d.pros == ["스토리", "그래픽"]
+    assert d.cons == ["버그", "시발점"]  # 보통 말(시발점)은 남긴다
+
+
+def test_profane_keywords_never_reach_the_ai_prompt() -> None:
+    s = FakeSession(es=[Resp(200, es_result(pros=("스토리",), cons=("씨발", "버그")))])
+    ((_, msg),) = list(rs.summarize([TARGET], settings(), s, sleep=no_wait))
+    sent = next(c for c in s.calls if "/_search" not in c["url"])["json"]
+    prompt = sent["contents"][0]["parts"][0]["text"]
+    assert "씨발" not in prompt and "버그" in prompt
+    assert msg["payload"]["cons_keywords"] == "버그"  # 저장되는 키워드에서도 빠진다
+
+
+def test_summary_with_profanity_is_dropped_and_falls_back() -> None:
+    s = FakeSession(ai=[Resp(200, ai_body("스토리는 좋은데 버그가 존나 많아요."))])
+    ((_, msg),) = run(s)
+    p = msg["payload"]
+    assert p["generated_by"] == "fallback" and p["summary"] is None
+    assert p["pros_keywords"] == "스토리,그래픽"  # 키워드는 그대로 보낸다
+
+
+def test_prompt_forbids_profanity() -> None:
+    d = rs.Digest(total=100, positive_ratio=0.9, pros=["스토리"], cons=["버그"])
+    assert "욕설" in rs.build_prompt("게임", d)

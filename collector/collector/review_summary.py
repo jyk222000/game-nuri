@@ -55,7 +55,7 @@ AI_RETRY_STATUSES = {429, 500, 502, 503, 504}
 AI_BACKOFF_SECONDS = 2.0
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 BETWEEN_GAMES_SECONDS = 1.0  # 호출 한도(429)를 피하기 위한 간격 (AI·ES 모두)
-PROMPT_VERSION = 1
+PROMPT_VERSION = 3
 
 # docs/contracts/messages/refined.review_summary.json 의 schema와 같아야 한다 (시험이 비교한다)
 SCHEMA = {
@@ -81,6 +81,11 @@ summary 쓰는 법:
 - 사이트 화면에 그대로 보이는 글입니다. 친절한 해요체(~해요, ~이에요)로 쓰세요.
 - 한두 문장, 합쳐서 120자 안쪽으로 쓰세요. 장점을 먼저, 단점을 뒤에 말하세요.
 - 키워드가 한쪽에만 있으면 있는 쪽만 말하세요. 키워드 나열이 아니라 자연스러운 문장으로 쓰세요.
+- 리뷰어들이 어떤 점을 좋게·나쁘게 봤는지만 전하세요. 구매나 플레이를 권하거나 말리지 마세요.
+- 속어·영어 표현은 그대로 쓰지 말고 우리말로 바꾸거나 빼세요.
+- 욕설·비속어·특정 집단을 깎아내리는 말은 절대 쓰지 마세요. 자료에 있어도 빼세요.
+- 키워드 뜻이 애매하면 해석해서 지어내지 말고 그 키워드는 쓰지 마세요.
+- 키워드를 전부 쓸 필요는 없습니다.
 
 <data>
 게임: {name}
@@ -140,18 +145,23 @@ def load_targets(
 
 
 # ---------- ES 집계 ----------
-def _significant(side: bool) -> dict:
-    """긍정(side=True) 또는 부정 리뷰에서 그 게임 전체 리뷰보다 두드러지게 자주 나온 명사."""
+def _significant(side: bool, scope: dict) -> dict:
+    """긍정(side=True) 또는 부정 리뷰에서 **반대편 리뷰보다** 두드러지게 자주 나온 명사.
+
+    긍정이 90%를 넘는 게임은 "전체 리뷰와 비교"하면 게임 이름·고유명사가 두드러져 버린다.
+    반대편(긍정 ↔ 부정)과 비교하면 칭찬·불만에 쓰이는 말이 남는다.
+    """
+    opposite = {"bool": {"filter": [scope, {"term": {"voted_up": not side}}]}}
     return {
         "filter": {"term": {"voted_up": side}},
         "aggs": {
             "kw": {
                 "significant_terms": {
                     "field": "review.nouns",
-                    "size": KEYWORDS_PER_SIDE * 2,  # 한 글자 같은 걸 거르고도 남도록 넉넉히 받는다
+                    "size": KEYWORDS_PER_SIDE
+                    * 4,  # 일반어·이름 조각을 거르고도 남도록 넉넉히 받는다
                     "min_doc_count": KEYWORD_MIN_DOC_COUNT,
-                    # 기준 집합 = 같은 게임의 전체 리뷰. 게임 이름·공통어는 점수가 낮다
-                    "background_filter": {"term": {"steam_appid": 0}},  # 아래에서 앱 ID로 바꾼다
+                    "background_filter": opposite,
                 }
             }
         },
@@ -165,26 +175,148 @@ def build_query(appid: int) -> dict:
     }
     aggs: dict = {"votes": {"terms": {"field": "voted_up"}}}
     for name, side in (("pros", True), ("cons", False)):
-        agg = _significant(side)
-        agg["aggs"]["kw"]["significant_terms"]["background_filter"] = scope
-        aggs[name] = agg
+        aggs[name] = _significant(side, scope)
     return {"size": 0, "track_total_hits": True, "query": scope, "aggs": aggs}
 
 
-def _clean_keyword(word: str) -> str | None:
-    """키워드로 쓸 수 있는 모양인지 확인한다(한 글자·숫자뿐인 것·너무 긴 것은 버린다)."""
+# 리뷰라면 어디에나 나오는 말. 장점·단점 키워드로 보여 주면 정보가 없다.
+STOPWORDS = frozenset(
+    [
+        "게임",
+        "최고",
+        "추천",
+        "비추",
+        "구매",
+        "진짜",
+        "정말",
+        "가능",
+        "때문",
+        "생각",
+        "사람",
+        "느낌",
+        "시간",
+        "이거",
+        "그냥",
+        "하나",
+        "부분",
+        "정도",
+        "처음",
+        "지금",
+        "계속",
+        "완전",
+        "제일",
+        "사실",
+        "이상",
+        "이하",
+        "모두",
+        "다시",
+        "항상",
+        "조금",
+        "약간",
+        "별로",
+        "리뷰",
+        "평가",
+        "스팀",
+        "플레이",
+        "오늘",
+        "요즘",
+        "이번",
+        "하루",
+        "한번",
+        "다음",
+        "이전",
+        "우리",
+        "자기",
+        "사용",
+        "선택",
+        "내용",
+        "경우",
+        "결과",
+        "이유",
+        "문제",
+    ]
+)
+# 영어 속어(goat 등)는 버리고, 게임 용어로 쓰이는 약어만 남긴다
+ASCII_KEEP = frozenset({"dlc", "fps", "ui", "npc", "ai", "pc", "rpg", "vr", "2d", "3d"})
+
+# 욕설·비하 표현. 키워드와 AI 요약 문장에서 이 말이 들어 있으면 쓰지 않는다(부분 일치).
+# 완전한 목록은 아니다. 새어 나온 말을 발견하면 여기에 추가한다.
+PROFANITY = (
+    "시발",
+    "씨발",
+    "시팔",
+    "씨팔",
+    "씹",
+    "병신",
+    "븅신",
+    "지랄",
+    "좆",
+    "존나",
+    "개새",
+    "새끼",
+    "썅",
+    "염병",
+    "니미",
+    "느금",
+    "애미",
+    "엠창",
+    "미친놈",
+    "미친년",
+    "맘충",
+    "틀딱",
+    "한남충",
+    "김치녀",
+    "된장녀",
+    "ㅅㅂ",
+    "ㅆㅂ",
+    "ㅂㅅ",
+    "ㅈㄹ",
+    "fuck",
+    "shit",
+    "bitch",
+)
+# 욕설이 글자로는 들어 있지만 보통 말인 경우. 검사 전에 지운다.
+PROFANITY_EXCEPTIONS = ("시발점", "시발역", "시발지", "새끼손가락", "새끼발가락", "새끼줄")
+
+
+def is_profane(text: str) -> bool:
+    """욕설이 들어 있는지. 띄어쓰기·기호로 끊어 쓴 것("시 발")도 잡도록 글자만 이어서 본다."""
+    squashed = re.sub(r"[^0-9a-zㄱ-ㅎ가-힣]", "", text.lower())
+    for ok in PROFANITY_EXCEPTIONS:
+        squashed = squashed.replace(ok, "")
+    return any(bad in squashed for bad in PROFANITY)
+
+
+def name_tokens(name: str) -> frozenset[str]:
+    """게임 이름에서 뽑은 단어. 이름 조각이 키워드로 올라오는 것을 거르는 데 쓴다."""
+    words = re.findall(r"[0-9a-z가-힣]+", name.lower())
+    return frozenset(w for w in words if len(w) >= 2)
+
+
+def _clean_keyword(word: str, exclude: frozenset[str] = frozenset()) -> str | None:
+    """키워드로 쓸 수 있는 모양인지 확인한다.
+
+    한 글자·숫자뿐·너무 긴 것·일반어·영어 속어·게임 이름 조각은 버린다.
+    """
     word = word.strip()
     if len(word) < 2 or len(word) > KEYWORD_MAX_CHARS or word.isdigit():
         return None
-    if any(c in word for c in "<>,\n\r\t"):  # 쉼표는 저장 형식(쉼표 구분)과 겹친다
+    if any(c in word for c in ("<", ">", ",", "\n", "\r", "\t")):  # 쉼표는 저장 형식과 겹친다
+        return None
+    low = word.lower()
+    if low in STOPWORDS or (low.isascii() and low not in ASCII_KEEP):
+        return None
+    if is_profane(word):  # 욕설은 키워드로도, AI 입력으로도 쓰지 않는다
+        return None
+    if any(low in token for token in exclude):  # 게임 이름과 같거나 이름 안에 든 조각
         return None
     return word
 
 
-def _keywords(agg: dict) -> list[str]:
+def _keywords(agg: dict, exclude: frozenset[str] = frozenset()) -> list[str]:
     out: list[str] = []
     for bucket in agg.get("kw", {}).get("buckets", []):
-        word = _clean_keyword(str(bucket.get("key", "")))
+        word = _clean_keyword(str(bucket.get("key", "")), exclude)
         if word and word not in out:
             out.append(word)
         if len(out) == KEYWORDS_PER_SIDE:
@@ -192,7 +324,7 @@ def _keywords(agg: dict) -> list[str]:
     return out
 
 
-def parse_digest(result: dict) -> Digest | None:
+def parse_digest(result: dict, exclude: frozenset[str] = frozenset()) -> Digest | None:
     """ES 응답에서 집계를 꺼낸다. 리뷰가 부족하면 None."""
     total = int(result["hits"]["total"]["value"])
     if total < MIN_REVIEWS:
@@ -206,12 +338,17 @@ def parse_digest(result: dict) -> Digest | None:
     return Digest(
         total=total,
         positive_ratio=round(positive / counted, 3),
-        pros=_keywords(aggs["pros"]),
-        cons=_keywords(aggs["cons"]),
+        pros=_keywords(aggs["pros"], exclude),
+        cons=_keywords(aggs["cons"], exclude),
     )
 
 
-def fetch_digest(appid: int, settings: Settings, session: requests.Session) -> Digest | None:
+def fetch_digest(
+    appid: int,
+    settings: Settings,
+    session: requests.Session,
+    exclude: frozenset[str] = frozenset(),
+) -> Digest | None:
     auth = (settings.es_user, settings.es_password) if settings.es_user else None
     res = session.post(
         f"{settings.es_url.rstrip('/')}/{ES_INDEX}/_search",
@@ -220,7 +357,7 @@ def fetch_digest(appid: int, settings: Settings, session: requests.Session) -> D
         timeout=HTTP_TIMEOUT_SECONDS,
     )
     res.raise_for_status()
-    return parse_digest(res.json())
+    return parse_digest(res.json(), exclude)
 
 
 # ---------- AI 요약 ----------
@@ -336,7 +473,7 @@ def summarize(
         if i:
             sleep(BETWEEN_GAMES_SECONDS)
         try:
-            digest = fetch_digest(t.steam_appid, settings, session)
+            digest = fetch_digest(t.steam_appid, settings, session, name_tokens(t.name))
         except (requests.RequestException, KeyError, ValueError) as e:
             log.error("game_id=%s ES 집계 실패: %s", t.game_id, type(e).__name__)
             continue
@@ -344,6 +481,10 @@ def summarize(
             log.info("game_id=%s 리뷰·키워드가 부족해 건너뜀", t.game_id)
             continue
         summary = ask_ai(build_prompt(t.name, digest), settings, session) if use_ai else None
+        if summary is not None and is_profane(summary):
+            # AI가 욕설을 섞어 쓴 경우. 문장은 버리고 키워드만 보낸다(fallback)
+            log.warning("game_id=%s AI 요약에 욕설이 있어 버림", t.game_id)
+            summary = None
         if use_ai and summary is None:
             log.warning("game_id=%s AI 요약 실패 → fallback(키워드만)", t.game_id)
         yield str(t.game_id), build_message(t, digest, summary)
@@ -374,7 +515,7 @@ def main() -> None:
         producer.flush(raise_on_failure=False)
         raise
     producer.flush()
-    log.info("리뷰 요약 완료: %d건 전송", sent)
+    log.info("리뷰 요약 완료: %d건 %s", sent, "저장(dry-run)" if args.dry_run else "전송")
 
 
 if __name__ == "__main__":
