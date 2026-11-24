@@ -363,12 +363,37 @@ function TrustBadge({ t }) {
   );
 }
 
+// 오류 종류(code)마다 안내가 다르다. 마이페이지 링크는 사양을 입력하지 않았을 때만 맞는 안내다.
+function SpecCheckError({ e }) {
+  if (e.code === 'SPEC_REQUIRED') {
+    return <p className="err">내 PC 사양을 먼저 입력해 주세요. <Link to="/me">마이페이지에서 입력하기</Link></p>;
+  }
+  if (e.code === 'UNAUTHORIZED') {
+    return <p className="err">로그인이 만료됐어요. <Link to="/login">다시 로그인</Link></p>;
+  }
+  if (e.code === 'NOT_FOUND') {
+    return <p className="muted">이 게임은 사양 정보가 아직 없어서 비교할 수 없어요.</p>;
+  }
+  // UNAVAILABLE(AI 실패 등)·그 밖: 잠시 뒤 다시 누르면 된다. 위의 최소·권장 사양 표는 그대로 볼 수 있다.
+  return <p className="err">{e.message} 위의 최소·권장 사양 표를 참고해 주세요.</p>;
+}
+
 function Requirements({ id, user }) {
   const r = useAsync(() => api.requirements(id), [id]);
+  // check: null(아직 안 눌렀음) | { loading } | { data } | { error }
   const [check, setCheck] = useState(null);
+  // 게임을 바꾸면 이전 게임의 판정이 남지 않게 지운다
+  useEffect(() => { setCheck(null); }, [id]);
   const run = async () => {
-    try { setCheck({ data: await api.specCheck(id) }); } catch (e) { setCheck({ error: e }); }
+    if (check?.loading) return; // 처음 판정은 AI 호출이라 몇 초 걸린다. 그동안 다시 누르지 않게 한다.
+    setCheck({ loading: true });
+    try {
+      const data = await api.specCheck(id);
+      // 모르는 판정 값이면 화면을 깨뜨리지 않고 오류로 보인다
+      setCheck(SPEC_VERDICT[data?.verdict] ? { data } : { error: new Error('판정 결과를 읽지 못했어요') });
+    } catch (e) { setCheck({ error: e }); }
   };
+  const verdict = check?.data && SPEC_VERDICT[check.data.verdict];
   return (
     <Section title="PC 사양">
       <State s={r}>
@@ -383,14 +408,16 @@ function Requirements({ id, user }) {
       </State>
       {user ? (
         <>
-          <button className="btn" onClick={run}>내 PC로 돌려도 될까?</button>
-          {check?.data && (
-            <div className={`verdict ${SPEC_VERDICT[check.data.verdict].cls}`}>
-              <strong>{SPEC_VERDICT[check.data.verdict].label} <span className="tag-ai">AI 판정</span></strong>
+          <button className="btn" onClick={run} disabled={check?.loading}>
+            {check?.loading ? '판정하는 중… (처음엔 몇 초 걸려요)' : '내 PC로 돌려도 될까?'}
+          </button>
+          {verdict && (
+            <div className={`verdict ${verdict.cls}`}>
+              <strong>{verdict.label} <span className="tag-ai">AI 판정</span></strong>
               <p>{check.data.reason}</p>
             </div>
           )}
-          {check?.error && <p className="err">{check.error.message} <Link to="/me">마이페이지로</Link></p>}
+          {check?.error && <SpecCheckError e={check.error} />}
         </>
       ) : <p className="muted"><Link to="/login">로그인</Link> 후 내 PC 사양과 비교할 수 있어요.</p>}
     </Section>

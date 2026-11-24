@@ -36,7 +36,7 @@ button.link { background: none; border: 0; color: var(--muted); cursor: pointer;
 input, select { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-width: 0; }
 input:focus, select:focus, button:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
 .btn { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer; }
-.btn:hover { border-color: var(--brand); } .btn.pri, .btn.on { background: var(--brand); color: #fff; border-color: var(--brand); }
+.btn:hover { border-color: var(--brand); } .btn:disabled { opacity: .6; cursor: default; } .btn.pri, .btn.on { background: var(--brand); color: #fff; border-color: var(--brand); }
 
 .hero { margin: 28px 0 8px; padding: 36px 28px; border-radius: 16px; color: #fff; background: linear-gradient(120deg, #4636c8, #8b7cff 60%, #c07cff); }
 .hero h1 { font-size: 34px; } .hero p { margin: 10px 0 0; opacity: .92; }
