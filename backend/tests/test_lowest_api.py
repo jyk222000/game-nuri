@@ -45,6 +45,7 @@ def test_lowest_per_platform_and_condition(env) -> None:
             "price_krw": 38900,
             "regular_krw": 64800,
             "discount_pct": 40,
+            "variant_name": None,
             "date": "2025-12-05",
         },
         {
@@ -55,6 +56,7 @@ def test_lowest_per_platform_and_condition(env) -> None:
             "price_krw": 55000,
             "regular_krw": 64800,
             "discount_pct": None,
+            "variant_name": None,
             "date": "2026-11-02",
         },
         {
@@ -65,6 +67,7 @@ def test_lowest_per_platform_and_condition(env) -> None:
             "price_krw": 31000,
             "regular_krw": None,
             "discount_pct": None,
+            "variant_name": None,
             "date": "2026-10-02",
         },
     ]

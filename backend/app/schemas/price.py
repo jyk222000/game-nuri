@@ -15,6 +15,7 @@ class PriceItem(BaseModel):
     regular_krw: int | None
     discount_pct: int | None
     url: str | None
+    variant_name: str | None  # 본편이 아닌 에디션 가격이면 이름, 본편은 null
     collected_at: UtcDatetime
 
 
@@ -24,6 +25,7 @@ class LowestNow(BaseModel):
     platform: str
     item_condition: str
     price_krw: int
+    variant_name: str | None
 
 
 class PricesOut(BaseModel):
@@ -41,6 +43,7 @@ class HistoryItem(BaseModel):
     price_krw: int
     regular_krw: int | None
     discount_pct: int | None
+    variant_name: str | None
 
 
 class HistoryOut(BaseModel):
@@ -59,6 +62,7 @@ class LowestItem(BaseModel):
     price_krw: int
     regular_krw: int | None
     discount_pct: int | None
+    variant_name: str | None
     date: str  # 최저가를 처음 수집한 날 YYYY-MM-DD (UTC)
 
 

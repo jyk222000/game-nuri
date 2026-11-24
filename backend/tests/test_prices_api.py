@@ -84,6 +84,7 @@ def test_prices_items_and_lowest(priced) -> None:
         "regular_krw": 64800,
         "discount_pct": 26,
         "url": "https://example.com/steam",
+        "variant_name": None,
         "collected_at": "2026-11-23T00:00:00Z",
     }
     # 중고(30000)가 더 싸도 현재가(lowest)는 새 상품 기준
@@ -93,6 +94,7 @@ def test_prices_items_and_lowest(priced) -> None:
         "platform": "PC",
         "item_condition": "new",
         "price_krw": 45000,
+        "variant_name": None,
     }
 
 
