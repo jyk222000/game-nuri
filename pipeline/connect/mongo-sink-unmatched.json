@@ -9,9 +9,12 @@
     "value.converter": "org.apache.kafka.connect.json.JsonConverter",
     "value.converter.schemas.enable": "false",
     "tasks.max": "1",
-    "transforms": "ingested",
+    "transforms": "ingested,ingestedDate",
     "transforms.ingested.type": "org.apache.kafka.connect.transforms.InsertField$Value",
     "transforms.ingested.timestamp.field": "ingested_at",
+    "transforms.ingestedDate.type": "org.apache.kafka.connect.transforms.TimestampConverter$Value",
+    "transforms.ingestedDate.field": "ingested_at",
+    "transforms.ingestedDate.target.type": "Timestamp",
     "max.num.retries": "3",
     "retries.defer.timeout": "5000"
   }
