@@ -72,7 +72,7 @@ def list_alert_logs(user: User, db: Db) -> AlertLogListOut:
     return AlertLogListOut(items=items, total=len(items))
 
 
-# ---- #19 목표가 알림 (POST·PATCH. DELETE는 보류) ----
+# ---- #19 목표가 알림 (POST·PATCH·DELETE) ----
 @router.post("/alerts", response_model=AlertOut)
 def set_alert(body: AlertCreate, user: User, db: Db) -> AlertOut:
     return _alert_out(alerts.upsert(db, user.user_id, body.game_id, body.target_price_krw))
@@ -81,6 +81,12 @@ def set_alert(body: AlertCreate, user: User, db: Db) -> AlertOut:
 @router.patch("/alerts/{alert_id}", response_model=AlertOut)
 def patch_alert(alert_id: int, body: AlertPatch, user: User, db: Db) -> AlertOut:
     return _alert_out(alerts.patch(db, user.user_id, alert_id, body.target_price_krw, body.active))
+
+
+@router.delete("/alerts/{alert_id}")
+def delete_alert(alert_id: int, user: User, db: Db) -> dict[str, bool]:
+    alerts.remove(db, user.user_id, alert_id)
+    return {"ok": True}
 
 
 # ---- #22 메일 수신 설정 ----
