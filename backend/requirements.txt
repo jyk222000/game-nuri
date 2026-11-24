@@ -3,7 +3,8 @@ uvicorn[standard]>=0.29
 sqlalchemy>=2.0
 pymysql>=1.1
 redis>=5.0
-elasticsearch>=8.12
+# ES 서버가 8.x라 9.x 클라이언트는 400으로 거부된다. ES를 9로 올릴 때 함께 올린다.
+elasticsearch>=8.12,<9
 confluent-kafka>=2.3
 bcrypt>=4.1
 httpx>=0.27
