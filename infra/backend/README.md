@@ -55,6 +55,37 @@ curl -s http://localhost:8000/api/health
 - `backend/requirements.txt`가 바뀐 배포일 때만 패키지를 다시 설치한다: `sudo -u backend -H /opt/game-nuri/repo/.venv/bin/pip install -e shared -r backend/requirements.txt` (이 줄은 아직 서버에서 실행해 확인하지 않았다).
 - DB 칸이 늘어나는 변경(예: `variant_name`)은 **DB에 칸을 먼저 추가한 뒤** 코드를 배포한다. 반대 순서면 조회가 오류를 낸다.
 
+## 목표가 알림 메일 (backend1에서만, NW2-74)
+가격이 목표가 이하가 된 알림에 메일을 보낸다. API와 따로 도는 주기 작업이다(`backend-alerts.timer` → `python -m app.jobs.send_alerts`, 매시 50분).
+- 규칙: 켜진 알림 + 메일 수신을 끄지 않은 사용자, 현재가(카드와 같은 PC 우선 기준) ≤ 목표가. 같은 가격이면 다시 보내지 않고 **더 내려가면 다시** 보낸다. 보낸 뒤에도 알림은 켜 둔다.
+- **backend1에서만 켠다.** backend2까지 켜면 같은 메일이 두 번 나갈 수 있다(Valkey 키가 막아 주지만 키가 만료되기 전까지만이다).
+
+**준비 (사용자가 직접)**
+1. 발신용 구글 계정에서 2단계 인증을 켜고 **앱 비밀번호**를 발급한다. 이 값은 대화·문서·코드에 쓰지 않는다.
+2. `/etc/game-nuri/backend.env`에 `SMTP_USER`, `SMTP_PASSWORD`를 넣는다(이름·설명은 `backend.env.example`). 앱 비밀번호는 공백 없이 붙여서 넣는다. `PUBLIC_BASE_URL`도 확인한다.
+3. 서버에서 Gmail SMTP(`smtp.gmail.com:587`)로 나가는 연결이 되는지 확인한다: `timeout 5 bash -c '</dev/tcp/smtp.gmail.com/587' && echo open || echo blocked` (막혀 있으면 나가는 방화벽 정책을 확인, **미확인**).
+
+**확인 순서 (위에서 아래로)**
+```bash
+cd /opt/game-nuri/repo/backend
+# 1) 설정만으로 예시 메일 한 통을 내 주소로만 보낸다 (DB 안 씀, 실제 사용자에게 가지 않음)
+sudo -u backend -H bash -c 'set -a; . /etc/game-nuri/backend.env; set +a; /opt/game-nuri/repo/.venv/bin/python -m app.jobs.send_alerts --test-to 내주소@gmail.com'
+# 2) 보낼 대상만 출력 (보내지 않음). 건수가 예상과 맞는지 본다 (메일 주소는 가려서 나온다)
+sudo -u backend -H bash -c 'set -a; . /etc/game-nuri/backend.env; set +a; /opt/game-nuri/repo/.venv/bin/python -m app.jobs.send_alerts --dry-run'
+```
+3. 1)을 받은편지함(스팸함 포함)에서 확인하고 2)의 대상이 맞으면 서비스를 등록한다.
+```bash
+sudo cp /opt/game-nuri/repo/infra/backend/systemd/backend-alerts.service /opt/game-nuri/repo/infra/backend/systemd/backend-alerts.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl start backend-alerts.service        # 한 번 실제로 실행 (대상이 있으면 진짜 메일이 나간다)
+journalctl -u backend-alerts -n 20 --no-pager      # "알림 메일: 대상 N건, 발송 N건 ..." 확인
+sudo systemctl enable --now backend-alerts.timer   # 주기 실행 시작
+systemctl list-timers 'backend-alerts*' --no-pager
+```
+- 종료 코드: 0 정상, 1 일부 발송 실패(다음 실행에서 다시 시도), 2 설정 오류(비어 있는 환경 변수 이름이 로그에 나온다).
+- 한 번에 보내는 메일은 200통까지다(설정 실수 방지). 넘으면 다음 실행으로 넘어간다.
+- 한계: 가격이 목표가 위로 올랐다가 **같은 가격으로** 다시 내려오면 새 알림으로 보지 않는다(더 내려가면 보낸다).
+
 ## 문제 해결
 **`status=203/EXEC`, `Unable to locate executable '…/.venv/bin/…': Permission denied`**
 - 원인: SELinux(Rocky 기본 Enforcing)가 `systemd`(`init_t`)의 실행을 막는다. 레포를 홈 디렉터리에서 `mv`로 `/opt`에 옮기면 파일 라벨이 `user_home_t`로 남는다(`ls -lZ`로 확인, `ausearch -m avc`에 `denied { execute } … user_home_t`).

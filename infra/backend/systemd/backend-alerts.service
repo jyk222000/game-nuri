@@ -1,0 +1,23 @@
+# /etc/systemd/system/backend-alerts.service  (목표가 알림 메일 발송, NW2-74)
+# backend-alerts.timer가 주기적으로 실행한다. **backend1에서만** 켠다(두 서버가 함께 돌면 같은 메일이 두 번 나갈 수 있다).
+# 환경 변수: /etc/game-nuri/backend.env (SMTP_USER, SMTP_PASSWORD 등 — 이름은 backend.env.example, 값은 서버에만)
+#
+# 먼저 손으로 확인한다 (README "목표가 알림 메일" 참고):
+#   --dry-run  → 보낼 대상만 출력   /   --test-to 내주소 → 예시 메일 한 통을 내 주소로만 발송
+[Unit]
+Description=game-nuri 목표가 알림 메일 발송
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=backend
+Group=backend
+WorkingDirectory=/opt/game-nuri/repo/backend
+EnvironmentFile=/etc/game-nuri/backend.env
+ExecStart=/opt/game-nuri/repo/.venv/bin/python -m app.jobs.send_alerts
+# 멈춘 실행이 다음 실행을 막지 않게 상한을 둔다
+TimeoutStartSec=10min
+Nice=10
+NoNewPrivileges=true
+PrivateTmp=true
