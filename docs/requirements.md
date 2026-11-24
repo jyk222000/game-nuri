@@ -14,7 +14,7 @@
 | 7 | API 명세서 (기능 명세서) | api.md + FastAPI `/docs` | – | NW2-71 | BE |
 | 8 | API 모니터링 (어떤 API가 많이 쓰이나) | Prometheus 계측 → Grafana 순위 | 사용 로그 수집·집계 | NW2-78 | 운영 |
 | 9 | 회원가입은 구글로 | Google OAuth, 도메인+HTTPS | – | NW2-68, NW2-72 | 인프라·BE |
-| 10 | 검색 로그 기반 실시간 검색어 | clickstream → Valkey sorted set (1시간 창) | 스트림 데이터 실시간 집계 | NW2-73, NW2-70 | BE·수집 |
+| 10 | 검색 로그 기반 실시간 검색어 | clickstream → ES (1시간 창) | 스트림 데이터 실시간 집계 | NW2-73, NW2-70 | BE·수집 |
 | 11 | 일정관리 · 회고 | Jira, 매일 회고 | – | NW2-64, NW2-82 | 공통 |
 | 12 | 시나리오와 시연 | 사용자 시나리오 + 데이터 흐름 시연 | 흐름 전체를 보여 줌 | NW2-81 | 공통 |
 | 13 | 차트로 시각화 (분석력) | 가격 그래프, Grafana, Kibana, Jupyter | 저장 데이터 활용 | NW2-55, NW2-57 | 분석·FE |
