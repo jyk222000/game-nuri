@@ -1,0 +1,15 @@
+[Unit]
+Description=Kafka watch (broker/controller reachability + KRaft leader)
+After=network-online.target
+
+[Service]
+User=kafkawatch
+ExecStart=/usr/bin/python3 /opt/kafka-watch/kafka_watch.py
+Environment=KAFKA_HEAP_OPTS=-Xmx64m
+MemoryMax=250M
+PrivateTmp=true
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

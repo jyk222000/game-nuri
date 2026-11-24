@@ -1,0 +1,105 @@
+# 모니터링 서버 직접 확인(kafka_watch)·수집기·VM 기본 경보 (Prometheus). rules/*.yml 로 자동 로드된다.
+# severity: critical = 서비스·데이터에 영향 → Slack 즉시 / warning = 징후, 지켜보기
+groups:
+  - name: kafka-watch
+    rules:
+      - alert: KafkaBrokerUnreachable
+        expr: kafka_watch_up{kind="broker"} == 0
+        for: 30s
+        labels: {severity: critical}
+        annotations:
+          summary: "Kafka 브로커 {{ $labels.host }}(9092) 접속 안 됨"
+          description: "monitoring이 2초마다 직접 접속해 확인한 결과. 계획된 재시작이면 무시해도 된다. 대시보드 '겜누리 Kafka 상세' 맨 위 줄 확인"
+
+      - alert: KafkaControllerUnreachable
+        expr: kafka_watch_up{kind="controller"} == 0
+        for: 30s
+        labels: {severity: warning}
+        annotations:
+          summary: "컨트롤러 {{ $labels.node_id }}번({{ $labels.host }}:9093) 접속 안 됨"
+          description: "컨트롤러 5대 중 1~2대가 꺼져도 과반(3대)이 살아 있으면 Kafka는 정상. 3대 미만이 되면 아래 KafkaControllerQuorumLost가 울린다"
+
+      - alert: KafkaControllerQuorumLost
+        expr: sum(kafka_watch_up{kind="controller"}) < 3
+        for: 15s
+        labels: {severity: critical}
+        annotations:
+          summary: "컨트롤러가 {{ $value }}대만 접속됨 (과반 3대 필요)"
+          description: "과반이 깨지면 새 리더를 뽑지 못해 Kafka 설정 변경·리더 선출이 멈춘다. 꺼진 컨트롤러부터 복구"
+
+      - alert: KafkaControllerLeaderChanged
+        expr: changes(kafka_watch_quorum_leader_epoch[10m]) > 0
+        labels: {severity: warning}
+        annotations:
+          summary: "KRaft 컨트롤러 리더가 최근 10분 안에 바뀜 (현재 {{ with query \"kafka_watch_quorum_leader_id\" }}{{ . | first | value }}{{ end }}번)"
+          description: "리더 컨트롤러 재시작이나 네트워크 문제 뒤에 생긴다. 한 번이면 정상, 반복되면 불안정"
+
+      - alert: KafkaWatchBlind
+        expr: up{job="kafka_watch"} == 0 or kafka_watch_quorum_ok == 0
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: "kafka_watch가 컨트롤러 상태를 못 읽는 중"
+          description: "systemctl status kafka-watch, journalctl -u kafka-watch 확인. 이 동안 위 Kafka 직접 확인 경보가 울리지 않을 수 있다"
+
+  - name: log-collection
+    rules:
+      - alert: AlloyDown
+        expr: up{job="alloy"} == 0
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.instance }} 로그 수집기(Alloy) 응답 없음"
+          description: "이 VM의 로그가 Loki로 안 들어온다. systemctl status alloy"
+
+      - alert: LokiDown
+        expr: up{job="loki"} == 0
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: "Loki 로그 서버 응답 없음"
+          description: "monitoring에서 systemctl status loki. 메모리 상한(550MB) 초과로 종료됐을 수 있다"
+
+  - name: hosts
+    rules:
+      - alert: VMDown
+        expr: up{job="node"} == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: "{{ $labels.instance }} 서버 응답 없음"
+          description: "VM이 꺼졌거나 네트워크가 끊겼다. 이 VM의 다른 지표도 함께 비어 있다"
+
+      - alert: BackendDown
+        expr: up{job="backend"} == 0 and on(instance) (max_over_time(up{job="backend"}[1d]) == 1)
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "Backend {{ $labels.instance }} 응답 없음"
+          description: "최근 하루 안에 정상이었던 Backend가 멈춤. 아직 한 번도 안 뜬 서버(배포 전)는 이 경보에서 제외된다"
+
+      - alert: HostMemoryLow
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.08
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.instance }} 쓸 수 있는 메모리 8% 미만"
+          description: "메모리 부족이 이어지면 서비스가 강제 종료될 수 있다(OOM). 대시보드에서 어느 프로세스인지 확인"
+
+      - alert: HostDiskLowOthers
+        expr: |
+          node_filesystem_avail_bytes{job="node", instance!~"(kafka1|kafka2|kafka3|backup|monitoring):9100", mountpoint=~"/|/DATA"}
+            / node_filesystem_size_bytes{job="node", instance!~"(kafka1|kafka2|kafka3|backup|monitoring):9100", mountpoint=~"/|/DATA"} < 0.15
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.instance }} {{ $labels.mountpoint }} 남은 공간 15% 미만"
+          description: "Kafka 계열 서버(kafka1~3, backup, monitoring)는 kafka.rules.yml이 따로 감시한다"
+
+      - alert: HostCpuHigh
+        expr: 100 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100 > 90
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.instance }} CPU 사용률 90% 초과 (10분 이상)"
+          description: "부하 시험 중이면 정상일 수 있다. 어느 서비스인지 대시보드에서 확인"

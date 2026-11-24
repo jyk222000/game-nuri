@@ -18,4 +18,26 @@ scrape_configs:
       - targets: [mariadb-pr:9104, mariadb-re:9104]
   - job_name: mongodb
     static_configs:
-      - targets: [mongodb-pr:9216]
+      - targets: [mongodb-pr:9216, mongo-se1:9216, mongo-se2:9216]
+
+  - job_name: backend
+    static_configs:
+      - targets: [backend1:8000, backend2:8000]   # FastAPI /metrics (#67)
+
+  - job_name: kafka_watch
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['10.0.2.1:9399']
+
+  - job_name: loki
+    static_configs:
+      - targets: ['10.0.2.1:3100']
+
+  - job_name: alloy
+    static_configs:
+      - targets: ['mariadb-re:12345','elk:12345','kafka1:12345','kafka2:12345','kafka3:12345', 'backend1:12345', 'backend2:12345']
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['127.0.0.1:9095']

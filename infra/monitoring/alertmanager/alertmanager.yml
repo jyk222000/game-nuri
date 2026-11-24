@@ -1,0 +1,34 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: slack-warning
+  group_by: [alertname, severity]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers: [severity="critical"]
+      receiver: slack-critical
+      group_wait: 10s
+      repeat_interval: 1h
+
+receivers:
+  - name: slack-critical
+    slack_configs:
+      - api_url_file: /etc/alertmanager/slack_webhook
+        send_resolved: true
+        title: '{{ if eq .Status "firing" }}🔥 [긴급]{{ else }}✅ [복구]{{ end }} {{ .CommonLabels.alertname }} ({{ .Alerts.Firing | len }}건)'
+        text: |-
+          {{ range .Alerts }}• {{ .Labels.instance }} {{ .Annotations.summary }}
+          {{ .Annotations.description }}
+          {{ end }}
+  - name: slack-warning
+    slack_configs:
+      - api_url_file: /etc/alertmanager/slack_webhook
+        send_resolved: true
+        title: '{{ if eq .Status "firing" }}⚠️ [주의]{{ else }}✅ [복구]{{ end }} {{ .CommonLabels.alertname }} ({{ .Alerts.Firing | len }}건)'
+        text: |-
+          {{ range .Alerts }}• {{ .Labels.instance }} {{ .Annotations.summary }}
+          {{ .Annotations.description }}
+          {{ end }}

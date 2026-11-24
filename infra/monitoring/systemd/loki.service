@@ -1,0 +1,15 @@
+[Unit]
+Description=Loki log server
+After=network-online.target
+
+[Service]
+User=loki
+ExecStart=/usr/local/bin/loki -config.file=/etc/loki/loki.yaml
+Environment=GOMEMLIMIT=400MiB
+MemoryMax=550M
+LimitNOFILE=65536
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,21 @@
+[Unit]
+Description=Alertmanager
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=alertmanager
+Group=alertmanager
+Environment=GOMEMLIMIT=64MiB
+ExecStart=/usr/local/bin/alertmanager \
+  --config.file=/etc/alertmanager/alertmanager.yml \
+  --storage.path=/DATA/alertmanager \
+  --web.listen-address=127.0.0.1:9095 \
+  --cluster.listen-address=
+ExecReload=/bin/kill -HUP $MAINPID
+MemoryMax=100M
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

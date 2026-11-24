@@ -1,0 +1,75 @@
+# DB 경보 (mysqld_exporter, mongodb_exporter). rules/*.yml 로 자동 로드된다.
+groups:
+  - name: db
+    rules:
+      - alert: MariaDBDown
+        expr: mysql_up == 0 or up{job="mariadb"} == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: "MariaDB {{ $labels.instance }} 접속 안 됨"
+          description: "exporter가 DB에 못 붙거나 exporter 자체가 응답 없음. systemctl status mariadb / mysqld_exporter"
+
+      - alert: MariaDBReplicationBroken
+        expr: mysql_slave_status_slave_io_running == 0 or mysql_slave_status_slave_sql_running == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: "{{ $labels.instance }} 복제가 멈춤 (IO 또는 SQL 스레드 중지)"
+          description: "mariadb-re에서 SHOW REPLICA STATUS\\G 의 Last_IO_Error / Last_SQL_Error 확인"
+
+      - alert: MariaDBReplicationLag
+        expr: mysql_slave_status_seconds_behind_master > 30
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.instance }} 복제 지연 {{ $value }}초"
+          description: "Primary보다 Replica가 뒤처짐. 대량 적재 중이면 일시적일 수 있다"
+
+      - alert: MariaDBConnectionsHigh
+        expr: mysql_global_status_threads_connected / mysql_global_variables_max_connections > 0.8
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.instance }} 접속 수가 최대치의 80% 초과"
+          description: "접속이 꽉 차면 새 요청이 거절된다. Backend·Connect 접속 수 확인"
+
+      - alert: MariaDBSlowQueries
+        expr: rate(mysql_global_status_slow_queries[5m]) > 1
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.instance }} 느린 쿼리가 초당 {{ $value | humanize }}건"
+          description: "느린 쿼리 기준 시간(long_query_time) 초과 쿼리가 계속 발생 중"
+
+      - alert: MongoDBDown
+        expr: mongodb_up == 0 or up{job="mongodb"} == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: "MongoDB {{ $labels.instance }} 접속 안 됨"
+          description: "mongod 또는 exporter 문제. 계획된 장애 시연이면 무시. PRIMARY가 죽으면 se1이 승격된다"
+
+      - alert: MongoDBNoPrimary
+        expr: count(mongodb_mongod_replset_my_state == 1) < 1
+        for: 30s
+        labels: {severity: critical}
+        annotations:
+          summary: "MongoDB 복제 셋에 PRIMARY가 없음"
+          description: "과반(2대)이 안 살아 있으면 쓰기가 막힌다. rs.status() 확인"
+
+      - alert: MongoDBMemberUnhealthy
+        expr: min by (member_idx) (mongodb_members_health) == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: "MongoDB 멤버 {{ $labels.member_idx }} 상태 불량"
+          description: "복제 셋 멤버가 응답하지 않음"
+
+      - alert: MongoDBReplicationLag
+        expr: mongodb_mongod_replset_member_replication_lag > 10
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: "MongoDB 멤버 {{ $labels.name }} 복제 지연 {{ $value }}초"
+          description: "SECONDARY가 PRIMARY를 따라가지 못함"
