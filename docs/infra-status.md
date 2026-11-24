@@ -42,7 +42,8 @@
 | 11/21 | Kafka KRaft 클러스터, 토픽, Connect | 남현식 | 완료 |
 | 11/22 | Valkey, 테이블 28개, 방화벽 정리(10대), Frontend 목업 | 김준영, 이고은, 한예찬 | 완료 |
 | 11/23 | 남은 firewalld 5대, elk 재부팅 → ES·Kibana·Monstache, 게임 100개 흐름 검증 | 남현식, 김준영 | ES·Kibana·Monstache 완료 (games 1000·reviews 451,368건 ES 동기화) |
-| 11/24 | Backend·Frontend 배포, 수집기 타이머, 게임 300개 | 김준영, 한예찬 | 예정 |
+| 11/23 | proxy 수집기 설치·첫 실행, 타이머 8개 가동, 게임 1,000개 수집 (`docs/collector-test/first-run-2026-11-23.md`) | 한예찬 | 완료 (11/24 아침 8종 정상, `--failed` 0건) |
+| 11/24 | Backend·Frontend 배포 (수집기 타이머·게임 1,000개 수집은 11/23에 앞당겨 완료) | 김준영, 한예찬 | 예정 |
 | 11/25 | Prometheus·Grafana, 백업 cron·복구 시험, 게임 1,000개, 구축 동결 | 남현식, 김준영 | 예정 |
 | 11/26~27 | 분석 8개, Locust 부하, 장애 시나리오 | 전체 | 예정 |
 | 11/29 | 최종 스냅샷, 리허설 | 전체 | 예정 |
