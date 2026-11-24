@@ -19,13 +19,12 @@ from app.db.models import (
     GameGenre,
     GameStoreId,
     Genre,
-    ReviewSummary,
     UserOwnedGame,
     Wishlist,
 )
 from app.schemas.game import RecommendationCard
 from app.schemas.me import TasteGenre, TasteOut
-from app.services import cards, profile
+from app.services import cards, profile, ratings
 
 TOP_GENRES = 5  # 취향 프로필에 보여 줄 장르 수
 RECOMMEND_FROM_GENRES = 3  # 추천 후보를 모을 상위 장르 수
@@ -122,18 +121,16 @@ def recommend(db: Session, user_id: int, size: int) -> list[RecommendationCard]:
     if not top:
         return []
     rows = db.execute(
-        select(GameGenre.game_id, GameGenre.genre_id, ReviewSummary.positive_ratio)
-        .outerjoin(ReviewSummary, ReviewSummary.game_id == GameGenre.game_id)
-        .where(GameGenre.genre_id.in_(top))
+        select(GameGenre.game_id, GameGenre.genre_id).where(GameGenre.genre_id.in_(top))
     ).all()
     best_genre: dict[int, int] = {}
-    ratio: dict[int, float] = {}
-    for gid, genre_id, pos in rows:
+    for gid, genre_id in rows:
         if gid in t.owned_game_ids:
             continue
         if gid not in best_genre or t.genre_minutes[genre_id] > t.genre_minutes[best_genre[gid]]:
             best_genre[gid] = genre_id
-        ratio[gid] = float(pos) if pos is not None else -1.0  # 평가 없는 게임은 뒤로
+    known = ratings.positive_ratios(db, best_genre)
+    ratio = {gid: known.get(gid, -1.0) for gid in best_genre}  # 평가 없는 게임은 뒤로
     ids = sorted(best_genre, key=lambda g: (-ratio[g], g))[:size]
     wished = set(db.scalars(select(Wishlist.game_id).where(Wishlist.user_id == user_id)))
     built = cards.build_cards(db, ids, wished_ids=wished)

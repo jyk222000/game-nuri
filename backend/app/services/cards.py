@@ -17,9 +17,9 @@ from app.db.models import (
     Genre,
     PlayerCount,
     PriceCurrent,
-    ReviewSummary,
 )
 from app.schemas.game import Card
+from app.services import ratings
 
 
 def game_name(game: Game) -> str:
@@ -81,14 +81,7 @@ def build_cards(db: Session, game_ids: list[int], wished_ids: set[int]) -> list[
 
     prices = lowest_new_prices(db, ids)
 
-    ratio = {
-        gid: value
-        for gid, value in db.execute(
-            select(ReviewSummary.game_id, ReviewSummary.positive_ratio).where(
-                ReviewSummary.game_id.in_(ids)
-            )
-        )
-    }
+    ratio = ratings.positive_ratios(db, ids)
 
     latest = (
         select(PlayerCount.game_id, func.max(PlayerCount.collected_at).label("latest"))
@@ -131,7 +124,7 @@ def build_cards(db: Session, game_ids: list[int], wished_ids: set[int]) -> list[
                 price_krw=price.price_krw if price else None,
                 regular_krw=price.regular_krw if price else None,
                 discount_pct=price.discount_pct if price else None,
-                positive_ratio=float(ratio[gid]) if ratio.get(gid) is not None else None,
+                positive_ratio=ratio.get(gid),
                 concurrent_players=players.get(gid),
                 time_to_beat_hours=round(seconds / 3600) if seconds else None,
                 wished=gid in wished_ids,
