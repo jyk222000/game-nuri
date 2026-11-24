@@ -5,7 +5,19 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from app.api import auth, events, games, health, me, prices, profile, search, stats, timing
+from app.api import (
+    auth,
+    events,
+    games,
+    health,
+    me,
+    prices,
+    profile,
+    reviews,
+    search,
+    stats,
+    timing,
+)
 from app.clients import kafka
 from app.core.config import get_backend_settings
 from app.core.errors import register_error_handlers
@@ -32,6 +44,7 @@ app.include_router(profile.router)
 app.include_router(prices.router)
 app.include_router(timing.router)
 app.include_router(games.router)
+app.include_router(reviews.router)
 app.include_router(events.router)
 app.include_router(search.router)
 app.include_router(stats.router)
