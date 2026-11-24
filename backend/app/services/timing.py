@@ -3,7 +3,10 @@
 판정 규칙은 docs/contracts/timing_rules.md(analysis 담당, A1)가 확정되기 전의 **임시 값**이다
 (프런트 목업 `router.js`의 규칙과 같다). 규칙을 바꿀 때는 아래 상수만 고친다.
 
-기준 이력: PC·새 상품(item_condition='new') 이력. 하루에 여러 건이면 그날 최저가 한 줄만 쓴다.
+기준 이력: PC·새 상품(item_condition='new') 이력.
+price_history에는 '그날 가격이 바뀌었거나 수집된 스토어'의 행만 있다. 그래서 날짜마다 스토어별
+마지막 가격을 이어서 채운(forward fill) 뒤 그날의 최저가 한 줄만 쓴다. 이렇게 해야 현재가·
+할인 구간·주기·역대 최저가가 같은 기준(모든 스토어의 그 시점 가격)이 된다.
 PC 이력이 없거나(콘솔 전용 등) 이력 일수가 MIN_HISTORY_DAYS 미만이면 insufficient_data다.
 """
 
@@ -48,23 +51,31 @@ def _now(now: datetime | None) -> datetime:
 
 
 def daily_series(db: Session, game_id: int) -> tuple[list[Day], bool]:
-    """(날짜 오름차순 일별 최저가, PC·새 상품 외 다른 이력이 있는지)."""
-    rows = db.scalars(select(PriceHistory).where(PriceHistory.game_id == game_id)).all()
-    best: dict[date, PriceHistory] = {}
+    """(날짜 오름차순 일별 최저가, PC·새 상품 외 다른 이력이 있는지).
+
+    날짜는 PC·새 상품 행이 하나라도 있는 날만 센다(이력 일수 기준은 그대로).
+    각 날짜의 가격은 스토어(+에디션)별 '그 날짜까지의 마지막 행'들 중 최저가다.
+    """
+    rows = db.scalars(
+        select(PriceHistory)
+        .where(PriceHistory.game_id == game_id)
+        .order_by(PriceHistory.collected_at, PriceHistory.id)
+    ).all()
     has_other = False
+    by_day: dict[date, dict[tuple[str, str], PriceHistory]] = {}
     for r in rows:
         if r.platform != TIMING_PLATFORM or r.item_condition != "new":
             has_other = True
             continue
-        d = r.collected_at.date()
-        cur = best.get(d)
-        if cur is None or (r.price_krw, r.store, r.edition) < (
-            cur.price_krw,
-            cur.store,
-            cur.edition,
-        ):
-            best[d] = r
-    days = [Day(d, r.price_krw, r.discount_pct or 0) for d, r in sorted(best.items())]
+        # 같은 날 같은 스토어·에디션 행이 여러 건이면 마지막(가장 늦게 수집된) 행을 쓴다.
+        by_day.setdefault(r.collected_at.date(), {})[(r.store, r.edition)] = r
+
+    days: list[Day] = []
+    latest: dict[tuple[str, str], PriceHistory] = {}  # 스토어·에디션별 마지막 행
+    for d in sorted(by_day):
+        latest.update(by_day[d])
+        best = min(latest.values(), key=lambda r: (r.price_krw, r.store, r.edition))
+        days.append(Day(d, best.price_krw, best.discount_pct or 0))
     return days, has_other
 
 
@@ -164,8 +175,15 @@ def get_timing(db: Session, game_id: int, now: datetime | None = None) -> Timing
     current = days[-1]
     low = min(days, key=lambda d: (d.price_krw, d.day))  # 역대(전체 이력) 최저가, 동점은 이른 날짜
     near_low = current.price_krw <= low.price_krw * NEAR_LOW_RATIO
+    # 최저가가 0원이면 비율을 구할 수 없다(0으로 나눔). 계속 무료면 0%, 무료였다가 유료면 None.
+    if low.price_krw > 0:
+        vs_lowest_pct: int | None = round((current.price_krw / low.price_krw - 1) * 100)
+    else:
+        vs_lowest_pct = 0 if current.price_krw == 0 else None
 
-    if current.discount_pct >= BUY_NOW_MIN_PCT and near_low:
+    if current.price_krw == 0:
+        verdict, reason = "buy_now", "무료예요. 지금 받아 두면 돼요."
+    elif current.discount_pct >= BUY_NOW_MIN_PCT and near_low:
         verdict, reason = "buy_now", "역대 최저가에 가까운 가격이에요. 지금 사도 손해가 적어요."
     elif current.discount_pct >= NEUTRAL_MIN_PCT:
         verdict = "neutral"
@@ -186,6 +204,6 @@ def get_timing(db: Session, game_id: int, now: datetime | None = None) -> Timing
         current_krw=current.price_krw,
         lowest_krw=low.price_krw,
         lowest_date=low.day.isoformat(),
-        vs_lowest_pct=round((current.price_krw / low.price_krw - 1) * 100),
+        vs_lowest_pct=vs_lowest_pct,
         sale_count_2y=len(sale_events(_recent(days, now))),
     )
