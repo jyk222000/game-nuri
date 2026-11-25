@@ -24,7 +24,6 @@ from app.services import games, ratings
 log = logging.getLogger(__name__)
 
 INDEX = "reviews"
-MAX_TEXT_CHARS = 500  # 리뷰 한 건이 길 수 있어 목록에서는 잘라서 보낸다
 MAX_RESULT_WINDOW = 10_000  # ES 기본 한도: 시작 위치 + size가 이 값을 넘으면 조회할 수 없다
 SORTS: dict[str, list[dict]] = {
     # 도움이 됐다는 반응(votes_up)이 많은 순. 반응이 같으면 최신순, 그래도 같으면 id순(순서 고정)
@@ -43,17 +42,13 @@ def steam_app_id(db: Session, game_id: int) -> int | None:
     return int(external) if external is not None and external.isdigit() else None
 
 
-def _clip(text: str) -> str:
-    return text if len(text) <= MAX_TEXT_CHARS else text[:MAX_TEXT_CHARS].rstrip() + "…"
-
-
 def _item(source: dict) -> ReviewItem:
     minutes = source.get("playtime_at_review")  # Steam은 분 단위로 준다
     return ReviewItem(
         review_id=str(source["recommendationid"]),
         source=source.get("source") or "steam",
         recommended=bool(source.get("voted_up")),
-        text=_clip(source.get("review") or ""),
+        text=source.get("review") or "",  # 원문 전체(자르지 않는다). 접기는 프런트가 한다
         playtime_hours=round(minutes / 60) if minutes is not None else None,
         created_at=datetime.fromtimestamp(source["created_at"], UTC),
     )

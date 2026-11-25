@@ -110,15 +110,23 @@ def test_list_paging_offset(steam_game, monkeypatch) -> None:  # noqa: ANN001
     assert es.calls[0]["from_"] == 10 and es.calls[0]["size"] == 5
 
 
-def test_list_clips_long_text_and_handles_missing_playtime(steam_game, monkeypatch) -> None:  # noqa: ANN001
+def test_list_sends_full_text_and_handles_missing_playtime(steam_game, monkeypatch) -> None:  # noqa: ANN001
     client, *_ = steam_game
+    long_bbcode = "[h1]제목[/h1]\n" + "다" * 8000
     use_es(
         monkeypatch,
-        FakeEs(_result(_doc(review="가" * 600, minutes=None), _doc(rid="2", review="나" * 500))),
+        FakeEs(
+            _result(
+                _doc(review="가" * 600, minutes=None),
+                _doc(rid="2", review="나" * 500),
+                _doc(rid="3", review=long_bbcode),
+            )
+        ),
     )
-    first, second = client.get("/api/games/7/reviews").json()["items"]
-    assert first["text"] == "가" * 500 + "…" and first["playtime_hours"] is None
-    assert second["text"] == "나" * 500  # 딱 500자는 그대로
+    first, second, third = client.get("/api/games/7/reviews").json()["items"]
+    assert first["text"] == "가" * 600 and first["playtime_hours"] is None  # 잘리지 않고 …도 없다
+    assert second["text"] == "나" * 500
+    assert third["text"] == long_bbcode  # 8천 자도, BBCode도 그대로
 
 
 def test_list_game_without_steam_id_is_empty_and_skips_es(env, monkeypatch) -> None:  # noqa: ANN001
