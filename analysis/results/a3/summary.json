@@ -1,0 +1,141 @@
+{
+  "games_total": 916,
+  "games_used": 571,
+  "min_critics": 3,
+  "spearman_critic_user": 0.352,
+  "genre_gap": {
+    "Tactical": {
+      "n": 47,
+      "gap": -1.6
+    },
+    "Turn-based strategy (TBS)": {
+      "n": 38,
+      "gap": -0.9
+    },
+    "Shooter": {
+      "n": 160,
+      "gap": -0.4
+    },
+    "Role-playing (RPG)": {
+      "n": 215,
+      "gap": 0.4
+    },
+    "Hack and slash/Beat 'em up": {
+      "n": 70,
+      "gap": 1.9
+    },
+    "Adventure": {
+      "n": 390,
+      "gap": 2.1
+    },
+    "Strategy": {
+      "n": 127,
+      "gap": 2.1
+    },
+    "Simulator": {
+      "n": 125,
+      "gap": 4.2
+    },
+    "Puzzle": {
+      "n": 90,
+      "gap": 5.3
+    },
+    "Platform": {
+      "n": 74,
+      "gap": 6.6
+    },
+    "Indie": {
+      "n": 218,
+      "gap": 6.7
+    },
+    "Arcade": {
+      "n": 36,
+      "gap": 8.2
+    }
+  },
+  "by_year": {
+    "~2010": {
+      "n": 35,
+      "critic": 81.5,
+      "user": 87.8
+    },
+    "2011~15": {
+      "n": 120,
+      "critic": 79.7,
+      "user": 85.0
+    },
+    "2016~20": {
+      "n": 241,
+      "critic": 79.3,
+      "user": 83.1
+    },
+    "2021~23": {
+      "n": 114,
+      "critic": 82.1,
+      "user": 78.3
+    },
+    "2024~": {
+      "n": 61,
+      "critic": 84.2,
+      "user": 75.6
+    }
+  },
+  "korea_vs_global": {
+    "mean_gap": -3.65,
+    "harsher_share": 0.698,
+    "by_korean_supported": {
+      "한국어 미지원": {
+        "n": 193,
+        "mean": -2.94
+      },
+      "한국어 지원": {
+        "n": 723,
+        "mean": -3.84
+      }
+    }
+  },
+  "model": {
+    "평균값 (기준)": {
+      "mae": 10.25,
+      "r2": 0.0
+    },
+    "평론 점수만 (선형)": {
+      "mae": 9.52,
+      "r2": 0.082
+    },
+    "전체 요소 (선형)": {
+      "mae": 8.27,
+      "r2": 0.316
+    },
+    "전체 요소 (부스팅)": {
+      "mae": 7.99,
+      "r2": 0.328
+    }
+  },
+  "importance_top10": {
+    "평론 점수": 2.282,
+    "출시 연도": 1.895,
+    "한국어 리뷰 수(log)": 1.803,
+    "온라인": 0.803,
+    "장르:Indie": 0.746,
+    "최대 동접(log)": 0.694,
+    "연령 등급": 0.566,
+    "평론 수": 0.493,
+    "한국어 지원": 0.421,
+    "장르:Hack and slash/Beat 'em up": 0.2
+  },
+  "hidden_gems": [
+    "The Plan",
+    "7 Days to Die",
+    "Gal*Gun 2",
+    "House Flipper",
+    "Muse Dash"
+  ],
+  "overrated": [
+    "Starfield",
+    "Tekken 8",
+    "DNF Duel",
+    "Warhammer 40,000: Dawn of War III",
+    "Little Nightmares III"
+  ]
+}
