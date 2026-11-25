@@ -10,6 +10,8 @@ Steam ID를 연동하지 않았으면 400 STEAM_REQUIRED. 연동했지만 보유
 
 from collections import defaultdict
 from dataclasses import dataclass
+from statistics import median
+from typing import Literal
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -18,17 +20,21 @@ from app.core.errors import ApiError
 from app.db.models import (
     GameGenre,
     GameStoreId,
+    GameTimeToBeat,
     Genre,
     UserOwnedGame,
     Wishlist,
 )
 from app.schemas.game import RecommendationCard
 from app.schemas.me import TasteGenre, TasteOut
-from app.services import cards, profile, ratings
+from app.services import cards, profile, rankings, ratings
 
 TOP_GENRES = 5  # 취향 프로필에 보여 줄 장르 수
 RECOMMEND_FROM_GENRES = 3  # 추천 후보를 모을 상위 장르 수
 NO_DATA_STYLE = "아직 취향을 분석할 데이터가 부족해요"
+PREFERRED_LENGTH_MIN_GAMES = (
+    5  # 선호 플레이 길이를 판단하려면 클리어 시간이 있는 플레이한 게임이 이만큼 필요(임시)
+)
 
 
 @dataclass
@@ -38,6 +44,7 @@ class Taste:
     owned_game_ids: set[int]
     genre_minutes: dict[int, int]  # genre_id -> 플레이 분
     genre_names: dict[int, str]
+    minutes_by_game: dict[int, int]  # game_id -> 플레이 분 (games에 연결된 보유 게임만)
 
 
 def _require_steam(db: Session, user_id: int) -> None:
@@ -80,7 +87,31 @@ def _load(db: Session, user_id: int) -> Taste:
         owned_game_ids=set(minutes_by_game),
         genre_minutes=dict(genre_minutes),
         genre_names=names,
+        minutes_by_game=minutes_by_game,
     )
+
+
+def _preferred_length(db: Session, t: Taste) -> Literal["short", "medium", "long"] | None:
+    """플레이한 보유 게임(0분 초과)의 '보통' 클리어 시간 중앙값이 속한 구간.
+
+    평균은 수백 시간짜리 한두 게임에 크게 흔들려서 중앙값을 쓴다. 클리어 시간이 있는 게임이
+    PREFERRED_LENGTH_MIN_GAMES개 미만이면 판단하지 않고 None이다.
+    """
+    played = [gid for gid, minutes in t.minutes_by_game.items() if minutes > 0]
+    if not played:
+        return None
+    seconds = [
+        s
+        for s in db.scalars(
+            select(GameTimeToBeat.normally_sec).where(
+                GameTimeToBeat.game_id.in_(played), GameTimeToBeat.normally_sec > 0
+            )
+        )
+        if s
+    ]
+    if len(seconds) < PREFERRED_LENGTH_MIN_GAMES:
+        return None
+    return rankings.length_bucket(median(seconds))
 
 
 def _ranked_genres(t: Taste) -> list[int]:
@@ -107,6 +138,7 @@ def get_taste(db: Session, user_id: int) -> TasteOut:
         owned_games=t.owned_count,
         top_genres=top,
         style=style,
+        preferred_length=_preferred_length(db, t),
     )
 
 

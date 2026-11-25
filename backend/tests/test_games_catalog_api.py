@@ -1,6 +1,7 @@
 """#8 장르·태그, #6 자동완성, #5 검색, #7 상세."""
 
 from datetime import date, datetime
+from decimal import Decimal
 
 import pytest
 from app.db.models import (
@@ -10,6 +11,7 @@ from app.db.models import (
     GamePlatform,
     GameStoreId,
     GameTag,
+    GameTimeToBeat,
     Genre,
     PlayerCount,
     PriceCurrent,
@@ -197,6 +199,97 @@ def test_search_sort_popular_with_filters_and_without_any_signal(catalog) -> Non
     assert _ids(client, "/api/games?sort=popular&platform=PC&q=hades") == [11, 10]
 
 
+def _game(game_id, rating=None, count=None, **ttb) -> list:
+    """평론 점수·클리어 시간이 있는 시험용 게임 (ttb 인자가 없으면 시간 행을 만들지 않는다)."""
+    rows: list = [
+        Game(
+            game_id=game_id,
+            name=f"G{game_id}",
+            aggregated_rating=Decimal(str(rating)) if rating is not None else None,
+            aggregated_rating_count=count,
+            updated_at=NOW,
+        )
+    ]
+    if ttb:
+        rows.append(GameTimeToBeat(game_id=game_id, updated_at=NOW, **ttb))
+    return rows
+
+
+# ---------- 클리어 시간 3종·평론 점수 (#157) ----------
+def test_detail_and_card_have_time_to_beat_and_critic_fields(catalog) -> None:
+    client, engine, _ = catalog
+    with seed(engine) as s:
+        s.add_all(
+            _game(
+                40,
+                86.5,
+                24,
+                hastily_sec=30600,
+                normally_sec=43200,
+                completely_sec=91800,
+                ttb_count=842,
+            )
+            + _game(41, None, 5, hastily_sec=0, normally_sec=1800, completely_sec=None, ttb_count=0)
+        )
+    full = client.get("/api/games/40").json()
+    assert full["time_to_beat"] == {
+        "hastily_hours": 8.5,
+        "normally_hours": 12.0,
+        "completely_hours": 25.5,
+        "count": 842,
+    }
+    assert (full["critic_score"], full["critic_count"]) == (87, 24)  # 86.5는 올림
+    assert full["time_to_beat_hours"] == 12  # 카드의 기존 필드(보통, 정수)는 그대로
+
+    partial = client.get(
+        "/api/games/41"
+    ).json()  # 0이거나 없는 값만 null, 짧은 게임도 0시간이 아니다
+    assert partial["time_to_beat"] == {
+        "hastily_hours": None,
+        "normally_hours": 0.5,
+        "completely_hours": None,
+        "count": None,
+    }
+    assert (partial["critic_score"], partial["critic_count"]) == (None, None)  # 점수가 없으면 둘 다
+
+    assert client.get("/api/games/10").json()["time_to_beat"] is None  # 시간 행이 없으면 null
+    card = next(i for i in client.get("/api/games?size=100").json()["items"] if i["game_id"] == 40)
+    assert card["critic_score"] == 87 and "critic_count" not in card  # 개수는 상세에만
+
+
+def test_search_sort_rating_score_then_count_and_unrated_last(catalog) -> None:
+    client, engine, _ = catalog
+    with seed(engine) as s:
+        s.add_all(_game(40, 86.5, 24) + _game(41, 90, 3) + _game(42, 90, 50) + _game(43))
+    by_name = _ids(client, "/api/games?size=100")
+    by_rating = _ids(client, "/api/games?sort=rating&size=100")
+    assert by_rating[:3] == [42, 41, 40]  # 90(50명) > 90(3명) > 87
+    assert by_rating[3:] == [i for i in by_name if i not in (42, 41, 40)]  # 점수 없는 게임은 이름순
+    assert len(by_rating) == len(by_name)  # 제외되는 게임이 없다
+    assert _ids(client, "/api/games?sort=rating&genre=Action") == [10, 11]  # 점수 없으면 이름순
+
+
+def test_search_length_filter_buckets_and_combinations(catalog) -> None:
+    client, engine, _ = catalog
+    h = 3600
+    with seed(engine) as s:
+        s.add_all(
+            _game(40, 80, 5, normally_sec=10 * h)  # 정확히 10시간 = 짧게
+            + _game(41, 70, 5, normally_sec=10 * h + 1)  # 10시간 초과 = 보통
+            + _game(42, 60, 5, normally_sec=40 * h)  # 정확히 40시간 = 보통
+            + _game(43, 50, 5, normally_sec=40 * h + 1)  # 40시간 초과 = 길게
+            + _game(44, 40, 5, normally_sec=0)  # 시간 정보 없음(0): 어느 구간에도 없다
+            + _game(45, 30, 5)  # 시간 행 없음
+        )
+    assert _ids(client, "/api/games?length=short") == [40]
+    assert _ids(client, "/api/games?length=medium") == [41, 42]
+    assert _ids(client, "/api/games?length=long") == [43]
+    assert _ids(client, "/api/games?length=medium&sort=rating") == [41, 42]
+    assert _ids(client, "/api/games?length=medium&q=G42") == [42]
+    body = client.get("/api/games?length=medium&size=1&page=2").json()
+    assert body["total"] == 2 and [i["game_id"] for i in body["items"]] == [42]
+
+
 def test_search_paging(catalog) -> None:
     client, *_ = catalog
     p1 = client.get("/api/games?size=2&page=1").json()
@@ -205,7 +298,9 @@ def test_search_paging(catalog) -> None:
     assert client.get("/api/games?size=2&page=99").json()["items"] == []
 
 
-@pytest.mark.parametrize("query", ["sort=weird", "page=0", "size=0", "size=101", "q=" + "x" * 101])
+@pytest.mark.parametrize(
+    "query", ["sort=weird", "page=0", "size=0", "size=101", "length=weird", "q=" + "x" * 101]
+)
 def test_search_validation(catalog, query) -> None:
     client, *_ = catalog
     r = client.get(f"/api/games?{query}")

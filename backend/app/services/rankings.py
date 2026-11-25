@@ -4,7 +4,9 @@
 **기준값은 임시**이며 아래 상수만 고치면 된다 (팀 확정 전).
 """
 
-from sqlalchemy import func, select
+from typing import Literal
+
+from sqlalchemy import ColumnElement, and_, func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import Game, GameTimeToBeat, PlayerCount, Wishlist
@@ -12,8 +14,30 @@ from app.schemas.game import Card, WarningCard
 from app.services import cards, deals
 
 SHORT_MAX_SEC = 10 * 3600  # '짧게 끝낼 게임': 보통 플레이 시간이 10시간 이하
+MEDIUM_MAX_SEC = (
+    40 * 3600
+)  # 클리어 시간 구간: 10시간 초과~40시간 이하 = 보통, 초과 = 길게 (임시 기준)
 LOW_PLAYERS_MAX = 1000  # '접속자가 적다': 가장 최근 동접자가 이 값 미만
 LOW_PLAYERS_WARNING = "접속자가 적어 매칭이 어려울 수 있어요"
+
+
+def length_bucket(normally_sec: float | None) -> Literal["short", "medium", "long"] | None:
+    """'보통' 클리어 시간(초)이 속한 구간. 시간 정보가 없거나 0이면 None."""
+    if not normally_sec or normally_sec <= 0:
+        return None
+    if normally_sec <= SHORT_MAX_SEC:
+        return "short"
+    return "medium" if normally_sec <= MEDIUM_MAX_SEC else "long"
+
+
+def length_filter(length: str) -> ColumnElement[bool]:
+    """game_time_to_beat.normally_sec 구간 조건. 시간 정보가 없는 게임(없음·0)은 걸러진다."""
+    col = GameTimeToBeat.normally_sec
+    if length == "short":
+        return and_(col > 0, col <= SHORT_MAX_SEC)
+    if length == "medium":
+        return and_(col > SHORT_MAX_SEC, col <= MEDIUM_MAX_SEC)
+    return col > MEDIUM_MAX_SEC
 
 
 def latest_players(db: Session) -> dict[int, int]:

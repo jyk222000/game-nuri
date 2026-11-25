@@ -8,6 +8,7 @@ price_krw가 가장 낮은 것. 같으면 store, platform 이름순.
 """
 
 from collections.abc import Iterable
+from decimal import Decimal
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session
@@ -59,6 +60,13 @@ def lowest_new_prices(db: Session, game_ids: Iterable[int]) -> dict[int, PriceCu
         if row.platform == PRIMARY_PLATFORM:
             _keep_lowest(best_pc, row)
     return {**best_any, **best_pc}  # PC 가격이 있는 게임은 PC 값이 이긴다
+
+
+def critic_score(rating: Decimal | float | None) -> int | None:
+    """IGDB 평론가 집계 점수(0~100)를 정수로 반올림한다(.5는 올림). 값이 없으면 None."""
+    if rating is None:
+        return None
+    return int(Decimal(str(rating)) + Decimal("0.5"))
 
 
 def games_by_id(db: Session, game_ids: Iterable[int]) -> dict[int, Game]:
@@ -140,6 +148,7 @@ def build_cards(db: Session, game_ids: list[int], wished_ids: set[int]) -> list[
                 positive_ratio=ratio.get(gid),
                 concurrent_players=players.get(gid),
                 time_to_beat_hours=round(seconds / 3600) if seconds else None,
+                critic_score=critic_score(game.aggregated_rating),
                 wished=gid in wished_ids,
             )
         )

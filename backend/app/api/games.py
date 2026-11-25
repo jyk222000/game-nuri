@@ -49,11 +49,14 @@ def search_games(
     q: Annotated[str | None, Query(max_length=100)] = None,
     platform: Annotated[str | None, Query(max_length=16)] = None,
     genre: Annotated[str | None, Query(max_length=64)] = None,
-    sort: Literal["price", "discount", "popular"] | None = None,
+    sort: Literal["price", "discount", "popular", "rating"] | None = None,
+    length: Literal["short", "medium", "long"] | None = None,
     page: Annotated[int, Query(ge=1, le=10000)] = 1,
     size: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> SearchOut:
-    items, total = search.search(db, (q or "").strip() or None, platform, genre, sort, page, size)
+    items, total = search.search(
+        db, (q or "").strip() or None, platform, genre, sort, page, size, length
+    )
     return SearchOut(items=items, total=total, page=page, size=size)
 
 
