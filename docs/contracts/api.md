@@ -143,7 +143,7 @@
   "positive_ratio": 0.92, "concurrent_players": 412000, "time_to_beat_hours": 60, "wished": false }
 ```
 (목업의 `hue`는 ERD에 없어 `cover_url`로 대체한다, 아래 표 4번)
-`GET /api/games?q=&platform=&genre=&sort=price|discount&page=&size=` → `{ "items": [카드], "total": 1, "page": 1, "size": 20 }` (`platform` 값은 ERD 코드)
+`GET /api/games?q=&platform=&genre=&sort=price|discount|popular&page=&size=` → `{ "items": [카드], "total": 1, "page": 1, "size": 20 }` (`platform` 값은 ERD 코드. `popular`는 `/api/games/popular`와 같은 기준(찜한 사용자 수 → 최근 동접자 → game_id 순)으로 정렬하고, 찜·동접자가 없는 게임은 제외하지 않고 뒤에 이름순으로 둔다. 다른 조건과 함께 쓸 수 있다. 값이 틀리면 422)
 `GET /api/games/autocomplete?q=` → `{ "items": [ { "game_id": 119133, "name": "엘든 링", "name_en": "Elden Ring" } ] }`
 `GET /api/games/popular`, `deals`, `short`, `players/top` → `{ "items": [카드] }`. `players/low` 카드에는 `"warning": "접속자가 적어 매칭이 어려울 수 있어요"` 추가
 `GET /api/genres`, `/api/tags` → `{ "items": ["액션", "RPG"] }`
