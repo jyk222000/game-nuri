@@ -276,6 +276,7 @@ const routes = [
   ['PATCH', /^\/api\/me\/alerts\/(\d+)$/, (m, q, b) => {
     need(); const a = state.alerts.find((x) => x.alert_id === Number(m[1]));
     if (!a) throw new ApiError(404, 'NOT_FOUND', '알림을 찾을 수 없습니다');
+    if ('target_price_krw' in b && !(b.target_price_krw > 0)) throw new ApiError(400, 'INVALID_PRICE', '목표가를 입력해 주세요');
     Object.assign(a, b); save(); return a;
   }],
   ['DELETE', /^\/api\/me\/alerts\/(\d+)$/, (m) => {
