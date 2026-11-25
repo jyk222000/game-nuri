@@ -522,7 +522,7 @@ def test_words_found_in_second_review_are_dropped(word: str) -> None:
 
 def test_feeling_only_words_are_dropped_but_problem_words_stay() -> None:
     feeling = ["만족", "훌륭", "완벽", "감동", "수작", "짜증", "불쾌", "실망", "엉망", "구림"]
-    problems = ["버그", "지루", "불편", "반복", "환불"]  # 무엇이 문제인지 알려 주는 말은 남긴다
+    problems = ["버그", "지루", "불편", "반복", "서버"]  # 무엇이 문제인지 알려 주는 말은 남긴다
     d = rs.parse_digest(es_result(pros=feeling + ["스토리"], cons=feeling + problems))
     assert d.pros == ["스토리"]
     assert d.cons == problems
@@ -536,8 +536,8 @@ SECOND_REVIEW_FILTERED = [
     "다양", "부족", "기대", "취향", "해결", "중요", "심각", "특유", "불가", "필수",
 ]  # fmt: skip
 SECOND_REVIEW_KEPT = [
-    "스트레스", "답답", "여운", "행복", "사랑", "감성", "추억", "기분", "긴장감", "쾌감",
-    "흥미", "독특", "참신", "신선",
+    "스트레스", "답답", "여운", "행복", "감성", "추억", "긴장감", "쾌감",
+    "독특", "참신", "신선",
 ]  # fmt: skip
 
 
@@ -880,3 +880,47 @@ def test_main_logs_the_skip_value_when_stopped_by_failures(
     text = " ".join(caplog.messages)
     assert "연속 4번 실패해 멈췄다" in text
     assert "--skip 11" in text  # 건너뛴 10개 + 이미 처리한 1개 = 다음에는 11개를 건너뛴다
+
+
+# ---------- 전체 키워드(1,000개 게임) 재점검 4차 (2026-11-25) ----------
+@pytest.mark.parametrize(
+    "word",
+    [
+        "인생",
+        "타임",
+        "과제",
+        "유저",
+        "진행",
+        "환불",
+        "최적",
+        "시리즈",
+        "세계",
+        "아포",
+        "립스",
+        "임어",
+    ],
+)
+def test_generic_or_fragment_words_from_full_review_are_dropped(word: str) -> None:
+    d = rs.parse_digest(es_result(pros=[word, "그래픽"], cons=[word, "버그"]))
+    assert d.pros == ["그래픽"] and d.cons == ["버그"]
+
+
+def test_words_that_contain_dropped_words_are_kept() -> None:
+    # 정확히 같은 말만 거른다. 세계관·최적화·아포칼립스는 남는다
+    d = rs.parse_digest(es_result(pros=["세계관", "최적화", "아포칼립스", "시리즈물"], cons=()))
+    assert d.pros == ["세계관", "최적화", "아포칼립스", "시리즈물"]
+
+
+@pytest.mark.parametrize("word", ["발련"])
+def test_profane_fragments_cut_from_ssibal_are_dropped(word: str) -> None:
+    d = rs.parse_digest(es_result(pros=[word, "그래픽"], cons=[word, "버그"]))
+    assert d.pros == ["그래픽"] and d.cons == ["버그"]
+
+
+def test_jiru_and_difficulty_are_dropped_only_on_the_pros_side() -> None:
+    # 장점 쪽의 "지루"는 "안 지루하다", "어려움"은 문맥이 없다. 단점 쪽에서는 문제를 알려 준다.
+    pros = ["지루", "어려움", "그래픽"]
+    cons = ["지루", "어려움", "버그"]
+    d = rs.parse_digest(es_result(pros=pros, cons=cons))
+    assert d.pros == ["그래픽"]
+    assert d.cons == ["지루", "어려움", "버그"]
