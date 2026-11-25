@@ -6,7 +6,10 @@ GitHub 웹에서 바로 결과를 볼 수 있게 한다.
 
 | 파일 | 원본 | 실행 기준 |
 |---|---|---|
+| `02_A2_검색관심_실행결과.ipynb` | `../02_A2_검색관심.ipynb` | 2026-11-26, `price_history`·`games`(mariadb-re) 추출본 + 네이버 검색어 트렌드(NAVER API HUB), 게임 150개 후보 |
 | `08_A8_PC콘솔가격_실행결과.ipynb` | `../08_A8_PC콘솔가격.ipynb` | 2026-11-26, `prices_current`(mariadb-re) 추출본 |
+
+* A2 실행본은 차트 해상도를 `figure.dpi` 110 → 90으로 낮춰 용량(약 850KB)을 1MB 아래로 맞췄다. 원본 노트북은 110이다. 실행본은 네이버 응답 캐시(`analysis/data/naver_cache`)로 다시 실행했으므로 API를 새로 부르지 않았다.
 
 * 실행 결과를 고칠 때는 원본 노트북을 실행해서 이 폴더에 덮어쓴다. 여기 파일을 직접 편집하지 않는다.
 * 파일 하나가 1MB를 넘으면 커밋 훅(`check-added-large-files`)이 막는다. 차트가 많으면 `figure.dpi`를 낮춘다.
