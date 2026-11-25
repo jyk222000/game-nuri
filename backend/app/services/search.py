@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Game, GameAlias, GameGenre, GamePlatform, Genre
 from app.schemas.game import AutocompleteItem, Card
-from app.services import cards
+from app.services import cards, rankings
 
 
 def _escape(q: str) -> str:
@@ -91,6 +91,11 @@ def search(
                 i,
             )
         ids.sort(key=key)
+    elif sort == "popular":
+        # 인기 게임(#9)과 같은 순서. 찜·동접자가 없는 게임은 제외하지 않고 뒤에 이름순으로 둔다
+        # (ids는 이미 이름순이고 sort는 안정 정렬이라 같은 칸 안에서 그 순서가 유지된다).
+        rank = {gid: n for n, gid in enumerate(rankings.popularity_order(db))}
+        ids.sort(key=lambda i: rank.get(i, len(rank)))
 
     start = (page - 1) * size
     return cards.build_cards(db, ids[start : start + size], wished_ids=set()), total

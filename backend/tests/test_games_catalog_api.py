@@ -11,9 +11,11 @@ from app.db.models import (
     GameStoreId,
     GameTag,
     Genre,
+    PlayerCount,
     PriceCurrent,
     PriceHistory,
     Tag,
+    Wishlist,
 )
 
 from tests.conftest import NOW, seed
@@ -155,6 +157,44 @@ def test_search_sort_price_and_discount(catalog) -> None:
     assert _ids(client, "/api/games?sort=price")[:3] == [10, 11, 12]  # 가격 없는 게임은 뒤
     by_discount = _ids(client, "/api/games?sort=discount")
     assert by_discount[:2] == [10, 11]  # 할인 없는 게임(12 포함)은 뒤
+
+
+def test_search_sort_popular_matches_popular_ranking_and_keeps_unranked_last(catalog) -> None:
+    client, engine, _ = catalog
+    with seed(engine) as s:
+        s.add_all(
+            [
+                Wishlist(user_id=1, game_id=11, created_at=NOW),
+                Wishlist(user_id=2, game_id=11, created_at=NOW),
+                Wishlist(user_id=1, game_id=10, created_at=NOW),
+                PlayerCount(game_id=12, player_count=9000, collected_at=datetime(2026, 11, 20)),
+            ]
+        )
+    by_name = _ids(client, "/api/games?size=100")
+    popular = _ids(client, "/api/games?sort=popular&size=100")
+    assert _ids(client, "/api/games/popular") == [11, 10, 12]  # 같은 기준: 찜 2 > 찜 1 > 동접자
+    assert popular[:3] == [11, 10, 12]
+    # 찜도 동접자도 없는 게임은 빠지지 않고 뒤에 이름순으로 이어진다
+    assert popular[3:] == [i for i in by_name if i not in (11, 10, 12)]
+    body = client.get("/api/games?sort=popular&size=2&page=2").json()
+    assert body["total"] == len(by_name) and [i["game_id"] for i in body["items"]] == popular[2:4]
+
+
+def test_search_sort_popular_with_filters_and_without_any_signal(catalog) -> None:
+    client, engine, _ = catalog
+    by_name = _ids(client, "/api/games?size=100")
+    # 찜·동접자가 하나도 없으면 전체가 이름순 그대로다(인기 게임 API의 할인 대체 동작은 쓰지 않는다)
+    assert _ids(client, "/api/games?sort=popular&size=100") == by_name
+    with seed(engine) as s:
+        s.add_all(
+            [
+                Wishlist(user_id=1, game_id=11, created_at=NOW),
+                PlayerCount(game_id=12, player_count=500, collected_at=datetime(2026, 11, 20)),
+            ]
+        )
+    assert _ids(client, "/api/games?sort=popular&genre=Action") == [11, 10]
+    assert _ids(client, "/api/games?sort=popular&genre=RPG") == [12]
+    assert _ids(client, "/api/games?sort=popular&platform=PC&q=hades") == [11, 10]
 
 
 def test_search_paging(catalog) -> None:

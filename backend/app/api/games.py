@@ -49,7 +49,7 @@ def search_games(
     q: Annotated[str | None, Query(max_length=100)] = None,
     platform: Annotated[str | None, Query(max_length=16)] = None,
     genre: Annotated[str | None, Query(max_length=64)] = None,
-    sort: Literal["price", "discount"] | None = None,
+    sort: Literal["price", "discount", "popular"] | None = None,
     page: Annotated[int, Query(ge=1, le=10000)] = 1,
     size: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> SearchOut:
