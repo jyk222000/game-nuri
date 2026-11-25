@@ -12,7 +12,7 @@ from app.db.models import (
     Tag,
 )
 from app.schemas.game import GameDetail, TimeToBeat
-from app.services import cards, games
+from app.services import cards, game_extras, games
 
 
 def _lowest_krw(db: Session, game_id: int) -> int | None:
@@ -71,8 +71,22 @@ def get_detail(db: Session, game_id: int) -> GameDetail:
         .where(GameStoreId.game_id == game_id, GameStoreId.store == "steam")
         .order_by(GameStoreId.external_id)
     )
+    developers, publishers = game_extras.companies(db, game_id)
+    parent_game, version_parent, dlcs, editions = game_extras.relations(db, game)
     return GameDetail(
         **card.model_dump(),
+        user_score=game_extras.user_score(game.rating),
+        user_score_count=game.rating_count if game.rating is not None else None,
+        korean_supported=game.korean_supported,
+        age_rating=game.age_rating,
+        developers=developers,
+        publishers=publishers,
+        series=game_extras.series(db, game_id),
+        parent_game=parent_game,
+        version_parent=version_parent,
+        dlcs=dlcs,
+        editions=editions,
+        review_stats=game_extras.review_stats(db, game_id),
         time_to_beat=_time_to_beat(db, game_id),
         critic_count=game.aggregated_rating_count if game.aggregated_rating is not None else None,
         release_date=game.release_date.isoformat() if game.release_date else None,
