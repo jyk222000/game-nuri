@@ -101,3 +101,6 @@ class TasteOut(BaseModel):
     owned_games: int
     top_genres: list[TasteGenre]
     style: str
+    preferred_length: (
+        Literal["short", "medium", "long"] | None
+    )  # 선호 플레이 길이(데이터 부족이면 null)

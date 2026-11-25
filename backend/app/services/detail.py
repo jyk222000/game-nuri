@@ -3,8 +3,15 @@
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models import GameStoreId, GameTag, PriceCurrent, PriceHistory, Tag
-from app.schemas.game import GameDetail
+from app.db.models import (
+    GameStoreId,
+    GameTag,
+    GameTimeToBeat,
+    PriceCurrent,
+    PriceHistory,
+    Tag,
+)
+from app.schemas.game import GameDetail, TimeToBeat
 from app.services import cards, games
 
 
@@ -34,6 +41,23 @@ def _lowest_krw(db: Session, game_id: int) -> int | None:
     return pc if pc is not None else _min(None)
 
 
+def _hours(seconds: int | None) -> float | None:
+    """초 → 시간(소수 첫째 자리). 짧은 게임이 0시간으로 보이지 않게 한다. 0이거나 없으면 None."""
+    return round(seconds / 3600, 1) if seconds else None
+
+
+def _time_to_beat(db: Session, game_id: int) -> TimeToBeat | None:
+    row = db.get(GameTimeToBeat, game_id)
+    if row is None:
+        return None
+    return TimeToBeat(
+        hastily_hours=_hours(row.hastily_sec),
+        normally_hours=_hours(row.normally_sec),
+        completely_hours=_hours(row.completely_sec),
+        count=row.ttb_count or None,
+    )
+
+
 def get_detail(db: Session, game_id: int) -> GameDetail:
     game = games.ensure_exists(db, game_id)
     card = cards.build_cards(db, [game_id], wished_ids=set())[0]
@@ -49,6 +73,8 @@ def get_detail(db: Session, game_id: int) -> GameDetail:
     )
     return GameDetail(
         **card.model_dump(),
+        time_to_beat=_time_to_beat(db, game_id),
+        critic_count=game.aggregated_rating_count if game.aggregated_rating is not None else None,
         release_date=game.release_date.isoformat() if game.release_date else None,
         summary=game.summary,
         tags=sorted({ko or name for name, ko in tag_rows}),

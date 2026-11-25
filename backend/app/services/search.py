@@ -8,7 +8,7 @@ q는 영문명·한글명·별칭의 **부분 일치**(대소문자 무시)다. 
 from sqlalchemy import ColumnElement, case, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.db.models import Game, GameAlias, GameGenre, GamePlatform, Genre
+from app.db.models import Game, GameAlias, GameGenre, GamePlatform, GameTimeToBeat, Genre
 from app.schemas.game import AutocompleteItem, Card
 from app.services import cards, rankings
 
@@ -56,9 +56,17 @@ def search(
     sort: str | None,
     page: int,
     size: int,
+    length: str | None = None,
 ) -> tuple[list[Card], int]:
-    """(해당 페이지 카드, 전체 건수). sort가 없으면 q가 있을 때 접두 일치 먼저, 그다음 이름순."""
+    """(해당 페이지 카드, 전체 건수). sort가 없으면 q가 있을 때 접두 일치 먼저, 그다음 이름순.
+
+    length(short|medium|long)는 '보통' 클리어 시간 구간 조건이다. 시간 정보가 없는 게임은 빠진다.
+    """
     where: list[ColumnElement[bool]] = []
+    if length:
+        where.append(
+            Game.game_id.in_(select(GameTimeToBeat.game_id).where(rankings.length_filter(length)))
+        )
     if q:
         where.append(_matches(q))
     if platform:
@@ -96,6 +104,18 @@ def search(
         # (ids는 이미 이름순이고 sort는 안정 정렬이라 같은 칸 안에서 그 순서가 유지된다).
         rank = {gid: n for n, gid in enumerate(rankings.popularity_order(db))}
         ids.sort(key=lambda i: rank.get(i, len(rank)))
+    elif sort == "rating":
+        # 평론가 점수 높은 순(카드에 보이는 반올림 점수), 같으면 평론 수 많은 순.
+        # 점수가 없는 게임은 제외하지 않고 맨 뒤에 이름순(ids가 이미 이름순, 안정 정렬).
+        scores = {
+            gid: (cards.critic_score(rating), count or 0)
+            for gid, rating, count in db.execute(
+                select(Game.game_id, Game.aggregated_rating, Game.aggregated_rating_count).where(
+                    Game.game_id.in_(ids), Game.aggregated_rating.is_not(None)
+                )
+            )
+        }
+        ids.sort(key=lambda i: (i not in scores, *(-v for v in scores.get(i, (0, 0)))))
 
     start = (page - 1) * size
     return cards.build_cards(db, ids[start : start + size], wished_ids=set()), total

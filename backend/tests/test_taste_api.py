@@ -7,6 +7,7 @@ from app.db.models import (
     Game,
     GameGenre,
     GameStoreId,
+    GameTimeToBeat,
     Genre,
     ReviewSummary,
     User,
@@ -88,7 +89,65 @@ def test_taste_linked_but_no_owned_games(env) -> None:
         "owned_games": 0,
         "top_genres": [],
         "style": "아직 취향을 분석할 데이터가 부족해요",
+        "preferred_length": None,
     }
+
+
+def _ttb(game_id, hours) -> GameTimeToBeat:
+    return GameTimeToBeat(game_id=game_id, normally_sec=int(hours * 3600), updated_at=NOW)
+
+
+def _played_with_times(engine, hours_by_app: dict[int, float], user_id=1) -> None:
+    """앱 ID = 게임 ID * 10으로 연결된 보유 게임 (플레이 100분)과 그 '보통' 클리어 시간."""
+    with seed(engine) as s:
+        for gid, hours in hours_by_app.items():
+            s.add_all(
+                [
+                    Game(game_id=gid, name=f"T{gid}", updated_at=NOW),
+                    GameStoreId(game_id=gid, store="steam", external_id=str(gid * 10)),
+                    _own(user_id, gid * 10, 100),
+                    _ttb(gid, hours),
+                ]
+            )
+
+
+def test_preferred_length_is_median_not_mean(env) -> None:
+    client, engine, _ = env
+    _link_steam(engine)
+    # 평균(48시간)이면 길게지만, 한 게임이 200시간이라 그럴 뿐이다. 중앙값(12시간)은 보통.
+    _played_with_times(engine, {31: 5, 32: 8, 33: 12, 34: 15, 35: 200})
+    assert client.get("/api/me/taste").json()["preferred_length"] == "medium"
+
+
+def test_preferred_length_buckets(env) -> None:
+    client, engine, _ = env
+    _link_steam(engine)
+    _played_with_times(engine, {31: 2, 32: 3, 33: 4, 34: 6, 35: 10})  # 중앙값 4시간
+    assert client.get("/api/me/taste").json()["preferred_length"] == "short"
+
+
+def test_preferred_length_needs_enough_played_games_with_times(env) -> None:
+    client, engine, _ = env
+    _link_steam(engine)
+    _played_with_times(
+        engine, {31: 20, 32: 20, 33: 20, 34: 20}
+    )  # 4개: 5개 미만이라 판단하지 않는다
+    assert client.get("/api/me/taste").json()["preferred_length"] is None
+    with seed(engine) as s:  # 시간 정보가 없는 게임, 플레이 0분인 게임은 개수에 들어가지 않는다
+        s.add_all(
+            [
+                Game(game_id=36, name="T36", updated_at=NOW),
+                GameStoreId(game_id=36, store="steam", external_id="360"),
+                _own(1, 360, 100),  # 클리어 시간 행 없음
+                Game(game_id=37, name="T37", updated_at=NOW),
+                GameStoreId(game_id=37, store="steam", external_id="370"),
+                _own(1, 370, 0),  # 플레이하지 않음
+                _ttb(37, 20),
+            ]
+        )
+    assert client.get("/api/me/taste").json()["preferred_length"] is None
+    _played_with_times(engine, {38: 20})  # 5번째
+    assert client.get("/api/me/taste").json()["preferred_length"] == "medium"
 
 
 def test_taste_is_per_user(played) -> None:

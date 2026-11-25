@@ -16,6 +16,7 @@ class Card(BaseModel):
     positive_ratio: float | None
     concurrent_players: int | None
     time_to_beat_hours: int | None
+    critic_score: int | None  # IGDB 평론가 집계 점수(0~100, 반올림). 메타크리틱이 아니다
     wished: bool
 
 
@@ -44,9 +45,20 @@ class CardsOut(BaseModel):
     items: list[Card]
 
 
+class TimeToBeat(BaseModel):
+    """IGDB 클리어 시간 3종(시간, 소수 첫째 자리)과 집계 인원. 값이 0이거나 없으면 그 값만 null."""
+
+    hastily_hours: float | None  # 빠르게
+    normally_hours: float | None  # 보통
+    completely_hours: float | None  # 완벽하게
+    count: int | None  # 집계 인원
+
+
 class GameDetail(Card):
     """상세 = 카드 필드 + 아래 (docs/contracts/api.md)."""
 
+    time_to_beat: TimeToBeat | None  # game_time_to_beat 행이 없으면 null
+    critic_count: int | None  # IGDB 평론 집계 수(critic_score는 카드 필드)
     release_date: str | None  # YYYY-MM-DD
     summary: str | None
     tags: list[str]

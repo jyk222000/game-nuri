@@ -99,6 +99,7 @@ def test_wishlist_cards(seeded) -> None:
         "positive_ratio": 0.92,
         "concurrent_players": 412000,  # 가장 최근 값
         "time_to_beat_hours": 60,
+        "critic_score": None,
         "wished": True,
     }
     empty = body["items"][0]  # 데이터가 없는 게임도 카드가 나온다
