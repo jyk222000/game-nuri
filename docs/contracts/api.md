@@ -212,7 +212,7 @@
 `GET /api/games/119133/reviews?page=1&size=10&sort=helpful` (로그인 불필요) → `{ "items": [ { "review_id": "240839937", "source": "steam", "recommended": true, "text": "...", "playtime_hours": 42, "created_at": "...Z" } ], "total": 412, "page": 1, "size": 10 }`
 - `page` ≥ 1(기본 1), `size` 1~50(기본 10), `sort`: `helpful`(기본, 도움이 됐다는 반응(`votes_up`)이 많은 순, 같으면 최신순) | `recent`(최신순). 값이 틀리면 422 `INVALID_REQUEST`.
 - 필드: `review_id`=Steam `recommendationid`(문자열), `recommended`=`voted_up`, `playtime_hours`=리뷰를 쓸 때까지의 플레이 시간(Steam의 분 단위를 시간으로 **반올림**, 값이 없으면 `null`), `created_at`=UTC ISO 8601(`...Z`).
-- `text`는 **500자까지만** 보내고 더 길면 잘라 끝에 `…`을 붙인다.
+- `text`는 리뷰 원문 전체다(길이 제한 없음). Steam BBCode(`[b]`, `[h1]`, `[list]` 등)가 섞인 원문이며 변환은 Frontend가 한다.
 - 게임의 Steam 앱 ID(`game_store_ids`, store=`steam`)로 조회한다. **Steam 앱 ID가 없는 게임(콘솔 전용 등)은 `items: []`, `total: 0`** 이다. 없는 `game_id`는 404 `NOT_FOUND`.
 - ES 기본 한도 때문에 시작 위치(`(page-1)*size`) + `size`가 10,000을 넘는 페이지는 422 `INVALID_REQUEST`. ES를 못 읽으면 503 `UNAVAILABLE`.
 
