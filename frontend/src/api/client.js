@@ -73,7 +73,7 @@ export const api = {
   timing: (id) => request('GET', `/api/games/${id}/timing`),
   prediction: (id) => request('GET', `/api/games/${id}/prediction`),
   // 리뷰·사양
-  reviews: (id) => request('GET', `/api/games/${id}/reviews`),
+  reviews: (id, q) => request('GET', `/api/games/${id}/reviews${qs(q)}`),
   reviewSummary: (id) => request('GET', `/api/games/${id}/reviews/summary`),
   requirements: (id) => request('GET', `/api/games/${id}/requirements`),
   specCheck: (id) => request('GET', `/api/games/${id}/spec-check`),

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../auth.jsx';
@@ -6,6 +6,7 @@ import { useAsync } from '../lib/useAsync.js';
 import { State, Section, cover } from '../components/ui.jsx';
 import { byKey } from './analysis/meta.js';
 import PriceChart from '../components/PriceChart.jsx';
+import Bbcode from '../components/Bbcode.jsx';
 import { won, dateKST, dateTimeKST, platformName, storeName, editionLabel, CONDITION } from '../lib/format.js';
 
 const VERDICT = {
@@ -424,23 +425,92 @@ function Requirements({ id, user }) {
   );
 }
 
-function Reviews({ id }) {
-  const r = useAsync(() => api.reviews(id), [id]);
+// 긴 리뷰는 몇 줄만 보여 주고 "자세히 보기"로 펼친다. 넘치는 리뷰에만 버튼이 뜬다.
+// Steam 리뷰처럼 추천/비추천을 엄지 아이콘으로 보여 준다. (Material Icons thumb_up, Apache 2.0)
+function ThumbIcon({ up }) {
   return (
+    <span className={`rv-thumb ${up ? 'up' : 'down'}`} role="img" aria-label={up ? '추천' : '비추천'}>
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+        <path
+          transform={up ? undefined : 'rotate(180 12 12)'}
+          d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"
+        />
+      </svg>
+    </span>
+  );
+}
+
+function ReviewText({ children }) {
+  const ref = useRef(null);
+  const [open, setOpen] = useState(false);
+  const [overflow, setOverflow] = useState(false);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (el && !open) setOverflow(el.scrollHeight > el.clientHeight + 1);
+  }, [children, open]);
+
+  return (
+    <div className="rv-body">
+      <div ref={ref} className={open ? 'rv-text' : `rv-text rv-clamp${overflow ? ' rv-fade' : ''}`}>{children}</div>
+      {(overflow || open) && (
+        <button type="button" className="rv-more" onClick={() => setOpen(!open)}>
+          {open ? '접기' : '자세히 보기'}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function Reviews({ id }) {
+  const [page, setPage] = useState(1);
+  const top = useRef(null);
+  const first = useRef(true);
+  const [sort, setSort] = useState('helpful'); // helpful(가장 유용한 평가, 기본) | recent(최근 평가)
+  useEffect(() => setPage(1), [id]); // 다른 게임으로 가면 첫 페이지부터
+  const changeSort = (v) => { setSort(v); setPage(1); }; // 정렬을 바꾸면 첫 페이지부터
+  const r = useAsync(() => api.reviews(id, { page, size: 10, sort }), [id, page, sort]);
+  useEffect(() => { // 페이지를 넘기면 리뷰 목록 맨 위로 (처음 진입 때는 움직이지 않는다)
+    if (first.current) { first.current = false; return; }
+    top.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }, [page]);
+  return (
+    <div className="rv-section">
     <Section title="리뷰">
+      <div ref={top} style={{ scrollMarginTop: 12 }} />
+      <div className="seg rv-sort" role="group" aria-label="리뷰 정렬">
+        <button className={sort === 'helpful' ? 'on' : ''} onClick={() => changeSort('helpful')}>가장 유용한 평가</button>
+        <button className={sort === 'recent' ? 'on' : ''} onClick={() => changeSort('recent')}>최근 평가</button>
+      </div>
       <State s={r} isEmpty={(d) => !d.items.length}>
-        {(d) => (
+        {(d) => (<>
           <ul className="reviews">
             {d.items.map((v) => (
               <li key={v.review_id}>
-                <span className={v.recommended ? 'ok' : 'err'}>{v.recommended ? '👍 추천' : '👎 비추천'}</span>
-                <p>{v.text}</p>
-                <small className="muted">{v.source === 'steam' ? 'Steam' : '다나와'} · 플레이 {v.playtime_hours}시간 · {dateKST(v.created_at)}</small>
+                <div className="rv-head">
+                  <ThumbIcon up={v.recommended} />
+                  <div className="rv-verdict">
+                    <strong className={v.recommended ? 'ok' : 'err'}>{v.recommended ? '추천' : '비추천'}</strong>
+                    {v.playtime_hours != null && <small className="muted">플레이 {v.playtime_hours}시간</small>}
+                  </div>
+                </div>
+                <ReviewText>
+                  {v.source === 'steam' ? <Bbcode text={v.text} /> : <p>{v.text}</p>}
+                </ReviewText>
+                <small className="muted rv-foot">{v.source === 'steam' ? 'Steam' : '다나와'} · {dateKST(v.created_at)}</small>
               </li>
             ))}
           </ul>
-        )}
+          {d.total > d.size && (
+            <div className="pager pager-center">
+              <button className="btn" disabled={d.page <= 1} onClick={() => setPage(d.page - 1)}>← 이전</button>
+              <span className="muted">{d.page} / {Math.ceil(d.total / d.size)}</span>
+              <button className="btn" disabled={d.page * d.size >= d.total} onClick={() => setPage(d.page + 1)}>다음 →</button>
+            </div>
+          )}
+        </>)}
       </State>
     </Section>
+    </div>
   );
 }
