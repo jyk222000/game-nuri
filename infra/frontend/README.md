@@ -95,6 +95,8 @@ curl -s "localhost/api/games?size=2"                      # 게임 2건, total 1
 | `nginx: command not found`, `/etc/nginx/conf.d` 없음 | nginx가 설치돼 있지 않았다 | `dnf install nginx` |
 | nginx를 켜도 `/api`가 우리 설정으로 안 가고 기본 페이지가 나올 수 있음 | Rocky의 `nginx.conf`에 80포트 기본 `server`가 있고, 우리 설정(`conf.d`)보다 먼저 정의돼 기본 서버가 된다 (`nginx -T \| grep listen`에서 `listen 80`이 두 번 나옴) | `nginx.conf`의 기본 `server` 블록을 주석 처리 (위 순서) |
 | `restorecon: open(/var/www) failed` | `/var/www`가 아직 없었다 | `mkdir -p` 후 `cp`, `restorecon` |
+| frontend2에서 `cp: cannot stat '/home/admind/fe2.conf'` | `scp`로 `dist`만 올리고 `fe2.conf`를 올리지 않았다. 이 상태에서 기본 서버 블록을 주석 처리하고 nginx를 켜면 80포트에 응답할 서버가 없다 | `fe2.conf`를 올리고 `conf.d/game-nuri.conf`로 복사한 뒤 `nginx -t`, `reload` |
+| 서버 화면이 옛 버전 | 올린 `dist`가 옛 빌드였다(`assets`가 `index-DrnNiEl6.js`). `ls`로 새 파일 이름을 확인하지 않고 `cp`했다 | 새 `dist`를 `~/dist_new`로 다시 올려 파일 이름을 확인한 뒤 갱신. 폴더 중첩을 피하려고 `dist_new`처럼 새 이름을 쓴다 |
 
 ### 예상되는 문제 (이번에는 겪지 않음, Backend 배포에서 겪은 SELinux 사례로 미리 적음)
 | 증상 | 예상 원인 | 해결 |
@@ -108,12 +110,15 @@ curl -s "localhost/api/games?size=2"                      # 게임 2건, total 1
 | 2026-11-24 | frontend1 | nginx 1.26.3 설치, **hybrid 빌드**(당시) 배포. `/` 200, `/api/health`(server=backend1, db ok·valkey ok·es down), `/api/games`(total 1000). `gamenuri.store`에서 메인·상세 화면이 실제 데이터로 표시됨 |
 | 2026-11-24 | frontend1 | **real 기본 빌드**(main 1b7d66f 기준, `assets`는 `index-DLW11KPE.css`·`index-DWheRICh.js` 2개)로 재배포. 옛 `assets`를 비운 뒤 `cp`, `restorecon`. `/` 200, `/api/health` ok(server=backend1, db·valkey·es ok), `/api/games` 응답 확인 |
 | 2026-11-24 | frontend1·backend1 | 구글 로그인 확인(backend #99·#100 배포 후): `gamenuri.store`에서 로그인 → 마이페이지에 구글 계정 이메일·닉네임 표시. `AUTH_FAKE_USER=false`로 끈 상태 |
-| – | frontend2 | **미확인** (아직 같은 절차를 하지 않음) |
+| 2026-11-26 | frontend1 | 새 빌드(main cfd324d 기준, `assets`는 `index-DIr7GOr6.css`·`index-rI9v3tce.js`)로 재배포. 상세 화면 추가 정보(개발사·연령·시리즈·Steam 리뷰 수)와 분석 탭·할인 메뉴 제거가 들어갔다. 옛 `assets`를 비운 뒤 `cp`, `restorecon`. `curl localhost/`로 새 파일 이름 확인 |
+| 2026-11-26 | frontend2 | **처음 배포**. nginx 1.26.3 설치, 같은 빌드 배치, `fe2.conf`(`backend2:8000`) 적용, 기본 서버 블록 주석 처리. `/` 200, 새 파일 이름 확인, `/api/health` ok(server=backend2, db_write·db_read·valkey·es ok), `/api/games` total 1000 |
+| 2026-11-26 | proxy | `gamenuri.store/api/health`를 반복 호출해 `server`가 backend1·backend2로 번갈아 나오는 것 확인(HAProxy 라운드로빈, 두 서버 모두 투입) |
+| 2026-11-26 | backend1·2 | `SESSION_SECRET`이 같고, `gamenuri.store`에서 로그인 후 새로고침해도 로그인이 유지되는 것 확인 |
 
 ## 남은 일
 - [x] frontend1에 real 기본 빌드 올리기 (2026-11-24)
-- [ ] frontend2에 real 기본 빌드 올리기 (`fe2.conf` → `backend2:8000`, backend2 배포 후. 위 '새 빌드로 갱신할 때' 순서)
+- [x] frontend2에 real 기본 빌드 올리기 (`fe2.conf` → `backend2:8000`, 2026-11-26)
 - [ ] Backend에 없는 API(로그인·리뷰·사양 비교·검색어)를 만들고, 그 전까지 해당 화면이 오류가 아닌 빈 상태로 보이게 하기 (frontend, 한예찬)
 - [x] 구글 로그인이 동작하는지 확인하고 개발용 `AUTH_FAKE_USER`를 끈다 (backend1, 2026-11-24)
-- [ ] backend2에도 같은 `GOOGLE_*`·`SESSION_SECRET`을 넣고 `AUTH_FAKE_USER=false`인지 확인 (두 서버가 같은 `SESSION_SECRET`이어야 로그인이 서로 통한다)
+- [x] backend2에도 같은 `GOOGLE_*`·`SESSION_SECRET`을 넣고 `AUTH_FAKE_USER=false`인지 확인 (두 서버가 같은 `SESSION_SECRET`이어야 로그인이 서로 통한다, 2026-11-26)
 - [ ] 로그인 실패·취소 때 JSON 오류가 그대로 보이는 문제 (`/login?error=...` 방식은 프론트·백엔드 합의 필요)
