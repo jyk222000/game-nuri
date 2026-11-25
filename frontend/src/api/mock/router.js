@@ -39,9 +39,23 @@ function card(g) {
     game_id: g.game_id, name: g.name, name_en: g.name_en, genres: g.genres, platforms: g.platforms,
     cover_url: g.cover_url, price_krw: t.price_krw, regular_krw: g.regular_krw, discount_pct: t.discount_pct || null,
     positive_ratio: g.positive_ratio, concurrent_players: g.concurrent_players,
-    time_to_beat_hours: g.time_to_beat_hours, wished: state.wishlist.includes(g.game_id),
+    time_to_beat_hours: g.time_to_beat_hours, critic_score: critic(g).score, wished: state.wishlist.includes(g.game_id),
   };
 }
+
+// 목: 실제 Backend와 같은 모양. IGDB 평론가 점수(0~100)와 클리어 시간 3종(소수 첫째 자리).
+function critic(g) {
+  if (g.game_id % 9 === 0) return { score: null, count: null }; // 점수 없는 게임도 있다
+  return { score: 62 + ((g.game_id * 7) % 34), count: 8 + ((g.game_id * 13) % 60) };
+}
+function timeToBeat(g) {
+  const n = g.time_to_beat_hours;
+  if (n == null) return null;
+  const r1 = (x) => Math.round(x * 10) / 10;
+  return { hastily_hours: r1(n * 0.7), normally_hours: r1(n), completely_hours: r1(n * 1.8), count: 100 + ((g.game_id * 37) % 900) };
+}
+// api.md: length 구간은 '보통' 클리어 시간 기준. short ≤10h, medium ≤40h, long 그 초과(없으면 제외)
+const lengthOf = (h) => (h == null ? null : h <= 10 ? 'short' : h <= 40 ? 'medium' : 'long');
 
 // 기준 이력은 PC·새 상품. PC가 없으면(콘솔 전용) 판단할 수 없다 (api.md '구매 타이밍').
 const noPcHistory = (g) => !g.platforms.includes('PC');
@@ -129,7 +143,10 @@ function search(q) {
   if (q.platform) list = list.filter((g) => g.platforms.includes(q.platform));
   if (q.genre) list = list.filter((g) => g.genres.includes(q.genre));
   if (q.tag) list = list.filter((g) => g.tags.includes(q.tag));
+  if (q.length) list = list.filter((g) => lengthOf(g.time_to_beat_hours) === q.length);
+  if (q.sort === 'rating') list = [...list].sort((a, b) => (critic(b).score ?? -1) - (critic(a).score ?? -1) || (critic(b).count ?? 0) - (critic(a).count ?? 0));
   if (q.sort === 'price') list = [...list].sort((a, b) => today(a).price_krw - today(b).price_krw);
+  if (q.sort === 'popular') list = [...list].sort((a, b) => b.concurrent_players - a.concurrent_players || b.positive_ratio - a.positive_ratio);
   if (q.sort === 'discount') list = [...list].sort((a, b) => (today(b).discount_pct || 0) - (today(a).discount_pct || 0));
   return list;
 }
@@ -179,7 +196,7 @@ const routes = [
     const g = game(m[1]);
     const { history, ...rest } = g;
     // insights: analysis/ 파이썬 분석이 만든 게임별 태그 (B). 실제로는 Backend가 같은 모양으로 내려준다.
-    return { ...rest, ...card(g), lowest_krw: lowestOf(g).price_krw, insights: insights.items[String(g.game_id)] || [] };
+    return { ...rest, ...card(g), lowest_krw: lowestOf(g).price_krw, time_to_beat: timeToBeat(g), critic_count: critic(g).count, insights: insights.items[String(g.game_id)] || [] };
   }],
   ['GET', /^\/api\/games\/(\d+)\/prices$/, (m) => {
     const g = game(m[1]); const items = currentPrices(g);
@@ -278,6 +295,7 @@ const routes = [
       total_playtime_hours: 1840, owned_games: 126,
       top_genres: [{ genre: '액션', pct: 38 }, { genre: 'RPG', pct: 27 }, { genre: '인디', pct: 18 }, { genre: '시뮬레이션', pct: 10 }, { genre: '전략', pct: 7 }],
       style: '긴 호흡의 액션·RPG를 즐기는 탐험가형',
+      preferred_length: 'medium',
     };
   }],
   ['GET', /^\/api\/me\/recommendations$/, () => {

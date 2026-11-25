@@ -67,13 +67,32 @@ input:focus, select:focus, button:focus-visible { outline: 2px solid var(--brand
 .hero { margin: 28px 0 8px; padding: 36px 28px; border-radius: 16px; color: #fff; background: linear-gradient(120deg, #4636c8, #8b7cff 60%, #c07cff); }
 .hero h1 { font-size: 34px; } .hero p { margin: 10px 0 0; opacity: .92; }
 .h1 { font-size: 24px; margin: 24px 0 12px; } .h1 small { font-size: 14px; font-weight: 400; margin-left: 8px; }
-.two { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; } /* 게임 상세: 본문 + 오른쪽 패널 */
+/* 메인: 할인 목록은 전체 폭, 실시간 검색어(aside)는 아래 미디어쿼리에서 본문 바깥 오른쪽으로 뺀다 */
+.home-two { position: relative; }
+/* 본문(1120px) 양옆 여백에 맞춰 패널 폭이 180~260px로 줄었다 늘었다 한다.
+   여백 = (화면폭 - 스크롤바15 - 본문1088) / 2. 패널 폭 = 여백 - 간격24 - 여유8 = (100vw - 1167px) / 2.
+   180px이 들어가는 1530px부터 오른쪽에 두고, 그보다 좁으면 본문 아래로 내려간다. */
+@media (min-width: 1530px) {
+  /* 스크롤을 따라오도록 화면에 고정. 본문(1088px) 오른쪽 끝에서 24px 띄운다. 헤더(sticky) 아래 84px에서 시작 */
+  .home-two > aside { position: fixed; top: 84px; left: calc(50% + 544px + 24px); width: clamp(180px, calc((100vw - 1167px) / 2), 260px); max-height: calc(100vh - 100px); overflow-y: auto; }
+}
+
 .sec { margin: 24px 0; background: transparent; }
 .sec-h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
 .sec-h h2 { font-size: 18px; } .sec-h small { margin-left: 8px; color: var(--muted); font-weight: 400; font-size: 13px; }
 aside .sec { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-top: 0; margin-bottom: 16px; }
 
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+/* 한 줄 칸 수를 화면 폭별로 고정(6·4·3·2). 모두 24의 약수라서 24개씩 보여 주면 마지막 줄까지 꽉 찬다. */
+.grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 1000px) { .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 720px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* 한 줄만: 칸 수(6·4·3·2)를 넘는 카드는 숨긴다 */
+.grid-one > :nth-child(n+7) { display: none; }
+@media (max-width: 1000px) { .grid-one > :nth-child(n+5) { display: none; } }
+@media (max-width: 720px) { .grid-one > :nth-child(n+4) { display: none; } }
+@media (max-width: 480px) { .grid-one > :nth-child(n+3) { display: none; } }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; color: var(--text); box-shadow: var(--shadow); transition: transform .12s; }
 .card:hover { transform: translateY(-2px); text-decoration: none; }
 .cover { position: relative; aspect-ratio: 264 / 374; display: flex; align-items: flex-end; padding: 10px; color: #fff; }
@@ -94,6 +113,17 @@ aside .sec { background: var(--panel); border: 1px solid var(--line); border-rad
 .detail-h { display: grid; grid-template-columns: 220px 1fr; gap: 24px; margin: 24px 0; padding: 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; }
 .big-cover { aspect-ratio: 264 / 374; border-radius: 12px; display: flex; align-items: flex-end; padding: 16px; color: #fff; font-size: 20px; font-weight: 800; text-shadow: 0 1px 6px rgba(0,0,0,.5); }
 .detail-h h1 { font-size: 26px; } .detail-h p { margin: 8px 0; }
+.lp-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; } /* 탭(왼쪽) + 전체 보기(오른쪽)를 같은 줄에 */
+.lp-bar > a { white-space: nowrap; flex: none; }
+.lp-tabs { width: fit-content; max-width: 100%; overflow-x: auto; }
+.lp-tabs button small { font-size: 11px; opacity: .75; }
+.lp-mine { font-style: normal; font-size: 10px; margin-left: 6px; padding: 1px 6px; border-radius: 99px; background: var(--brand-2); color: #fff; }
+.seg .on .lp-mine { background: #fff; color: var(--brand); }
+.ttb-act { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 16px; margin: 4px 0 12px; } /* 클리어까지 걸리는 시간(왼쪽) + 찜하기(오른쪽), 좁으면 줄바꿈 */
+.ttb { margin: 0; } .ttb-h { font-weight: 600; font-size: 14px; }
+.ttb-row { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+.ttb-item { display: grid; gap: 2px; min-width: 96px; padding: 8px 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; } .ttb-item b { font-size: 16px; }
+.facts small { margin-left: 4px; }
 .facts { display: flex; gap: 20px; list-style: none; padding: 0; margin: 12px 0; flex-wrap: wrap; color: var(--muted); } .facts b { color: var(--text); font-size: 17px; }
 
 .verdict { padding: 14px 16px; border-radius: 12px; margin-bottom: 10px; border: 1px solid transparent; }
@@ -112,6 +142,7 @@ aside .sec { background: var(--panel); border: 1px solid var(--line); border-rad
 .spec th { width: 72px; color: var(--muted); font-weight: 500; } .spec td { font-size: 12px; }
 
 .seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.hist-period { margin-left: auto; } /* 기간 선택(1개월~2년)은 줄의 오른쪽 끝에 붙인다 */
 .hist-ctl { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .seg button { white-space: nowrap; border: 0; background: var(--panel); color: var(--muted); padding: 4px 10px; cursor: pointer; font: inherit; font-size: 13px; } .seg .on { background: var(--brand); color: #fff; }
 .chart { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
@@ -237,3 +268,17 @@ a.pill:hover { text-decoration: none; filter: brightness(.95); }
 .rv-more { display: block; background: none; border: 0; padding: 6px 0 0; color: var(--brand); cursor: pointer; font: inherit; font-size: .9em; }
 .rv-more:hover { text-decoration: underline; }
 .rv-foot { display: block; margin-top: 8px; }
+
+/* 게임 상세(넓은 화면): 본문 열(900px)과 오른쪽 패널(300px, 간격 24px)을 한 덩어리(1224px)로 보고 그 덩어리를 화면 가운데에 둔다.
+   헤더 패널·경고·본문 섹션·리뷰는 같은 열 폭으로 맞추고, 목표가 알림·리뷰 요약·PC 사양(aside)은 열 오른쪽에 붙여 스크롤을 따라오게 한다.
+   열의 왼쪽 위치: 본문 컨테이너(1088px) 안에서 덩어리가 가운데 오도록 margin-left = 544px - 1224px/2 = -68px.
+   패널의 왼쪽 위치(화면 기준): 50% + (900 + 24 - 300)/2 = 50% + 312px.
+   덩어리(1224)+양옆 여유+스크롤바가 들어가는 1300px부터 적용하고, 그보다 좁으면 위의 기본 배치(본문+오른쪽 패널 두 칸, 모바일은 한 칸)를 쓴다. */
+@media (min-width: 1300px) {
+  .detail-h, .low-banner, .two, .rv-section { max-width: 900px; margin-left: -68px; margin-right: 0; }
+  .two { display: block; position: relative; }
+  /* 헤더(sticky) 아래 84px에 고정해서 스크롤을 따라오게 한다. */
+  .two > aside { position: fixed; top: 84px; left: calc(50% + 312px); width: 300px; }
+  /* 패널이 화면보다 길면(GameDetail.jsx가 판단) 고정을 풀고 열 오른쪽에 붙여 페이지와 같이 스크롤한다. 패널 안 스크롤바는 만들지 않는다. */
+  .two > aside.aside-flow { position: absolute; top: 0; left: calc(100% + 24px); }
+}

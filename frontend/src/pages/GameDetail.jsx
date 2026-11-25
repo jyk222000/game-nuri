@@ -21,6 +21,24 @@ const SPEC_VERDICT = {
   below_min: { label: '최소 사양 미달', cls: 'bad' },
 };
 
+// IGDB 클리어 시간 3종 (빠르게 / 보통 / 완벽하게). 값이 없는 항목은 '–'.
+function TimeToBeat({ t }) {
+  const items = [['빠르게', t.hastily_hours], ['보통', t.normally_hours], ['완벽하게', t.completely_hours]];
+  return (
+    <div className="ttb" aria-label="클리어까지 걸리는 시간">
+      <span className="ttb-h">클리어까지 걸리는 시간 <small className="muted">IGDB{t.count != null ? ` · ${t.count.toLocaleString('ko-KR')}명 집계` : ''}</small></span>
+      <div className="ttb-row">
+        {items.map(([label, h]) => (
+          <div key={label} className="ttb-item">
+            <small className="muted">{label}</small>
+            <b>{h != null ? `${h}시간` : '–'}</b>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function GameDetail() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -30,6 +48,20 @@ export default function GameDetail() {
   const wished = !!wl.data?.items.some((x) => x.game_id === Number(id));
 
   useEffect(() => { api.event('view_game', { game_id: Number(id) }); }, [id]);
+
+  // 오른쪽 패널이 화면보다 길면 고정(따라오기)을 풀고 페이지와 같이 스크롤되게 한다. 패널 안에 스크롤바를 만들지 않는다.
+  const asideRef = useRef(null);
+  const [tall, setTall] = useState(false);
+  useEffect(() => {
+    const el = asideRef.current;
+    if (!el) return undefined;
+    const measure = () => setTall(el.scrollHeight > window.innerHeight - 100); // 고정 위치(위 84px)와 아래 여백 16px을 뺀 높이
+    measure();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    ro?.observe(el);
+    window.addEventListener('resize', measure);
+    return () => { ro?.disconnect(); window.removeEventListener('resize', measure); };
+  }, [game.data]);
 
   return (
     <State s={game}>
@@ -44,7 +76,7 @@ export default function GameDetail() {
               <Lowest id={id} />
               <History id={id} user={user} platforms={g.platforms} />
             </div>
-            <aside>
+            <aside ref={asideRef} className={tall ? 'aside-flow' : undefined}>
               <AlertBox g={g} user={user} />
               <ReviewSummary id={id} />
               <Requirements id={id} user={user} />
@@ -90,9 +122,14 @@ function Head({ g, user, wished0 }) {
         <p>{g.summary}</p>
         <ul className="facts">
           {g.positive_ratio != null && <li><b>{Math.round(g.positive_ratio * 100)}%</b> 긍정 리뷰</li>}
-          {g.time_to_beat_hours != null && <li><b>{g.time_to_beat_hours}시간</b> 클리어(IGDB)</li>}
+          {g.critic_score != null && <li><b>{g.critic_score}점</b> 평론가 점수<small>(IGDB 집계{g.critic_count != null ? ` · ${g.critic_count}명` : ''})</small></li>}
+          {!g.time_to_beat && g.time_to_beat_hours != null && <li><b>{g.time_to_beat_hours}시간</b> 클리어까지 걸리는 시간(IGDB)</li>}
           {g.concurrent_players != null && g.concurrent_players > 0 && <li><b>{g.concurrent_players.toLocaleString('ko-KR')}</b> 명 접속 중</li>}
         </ul>
+        <div className="ttb-act">
+          {g.time_to_beat && <TimeToBeat t={g.time_to_beat} />}
+          <button className={wished ? 'btn on' : 'btn'} onClick={toggle}>{wished ? '♥ 찜함' : '♡ 찜하기'}</button>
+        </div>
         {g.insights?.length > 0 && (
           <ul className="insights" aria-label="분석 태그">
             {g.insights.map((t) => (
@@ -105,7 +142,6 @@ function Head({ g, user, wished0 }) {
             ))}
           </ul>
         )}
-        <button className={wished ? 'btn on' : 'btn'} onClick={toggle}>{wished ? '♥ 찜함' : '♡ 찜하기'}</button>
       </div>
     </section>
   );
@@ -219,6 +255,8 @@ function Prices({ id }) {
 
 // 가격 이력은 "가격이 바뀐 날"만 기록된다. 바뀌지 않은 날은 스토어별 직전 가격을 이어서 채운 뒤,
 // 하루에 점 하나 = 그날 모든 스토어 중 가장 싼 값으로 만든다. 마지막 날은 오늘(UTC)까지 이어 붙인다.
+// 가격 이력 기간 버튼: [일수, 표시 이름]
+const PERIODS = [[30, '1개월'], [90, '3개월'], [180, '6개월'], [365, '1년'], [730, '2년']];
 // 전체 이력으로 계산한 다음 마지막 `days`일만 잘라 쓴다(기간 안에 안 바뀐 스토어도 빠지지 않게).
 const DAY_MS = 86400000;
 const isoDay = (t) => new Date(t).toISOString().slice(0, 10);
@@ -283,8 +321,8 @@ function History({ id, user, platforms }) {
         <div className="seg" role="group" aria-label="상품 상태" style={platform === 'PC' ? { visibility: 'hidden' } : undefined} aria-hidden={platform === 'PC'}>
           {['new', 'used'].map((c) => <button key={c} tabIndex={platform === 'PC' ? -1 : 0} className={c === cond ? 'on' : ''} onClick={() => setCond(c)}>{CONDITION[c]}</button>)}
         </div>
-        <div className="seg" role="group" aria-label="기간">
-          {[30, 90, 180, 365].map((d) => <button key={d} className={d === days ? 'on' : ''} onClick={() => setDays(d)}>{d}일</button>)}
+        <div className="seg hist-period" role="group" aria-label="기간">
+          {PERIODS.map(([d, label]) => <button key={d} className={d === days ? 'on' : ''} onClick={() => setDays(d)}>{label}</button>)}
         </div>
       </div>
       <State s={h} isEmpty={() => !mine.length} emptyMsg="아직 모인 가격 이력이 없어요.">
