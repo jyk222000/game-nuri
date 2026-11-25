@@ -100,11 +100,12 @@
 { "game_id": 119133,
   "items": [
     { "store": "steam", "edition": "digital", "platform": "PC", "item_condition": "new",
-      "price_krw": 47900, "regular_krw": 64800, "discount_pct": 26, "url": "https://...", "variant_name": null, "collected_at": "2026-11-19T02:30:00Z" },
+      "price_krw": 47900, "regular_krw": 64800, "discount_pct": 26, "url": "https://...", "variant_name": null, "price_original": 59.99, "currency_original": "USD", "collected_at": "2026-11-19T02:30:00Z" },
     { "store": "danawa", "edition": "physical", "platform": "PS5", "item_condition": "used",
-      "price_krw": 38000, "regular_krw": null, "discount_pct": null, "url": "https://...", "variant_name": "얼티밋 에디션", "collected_at": "2026-11-19T02:30:00Z" } ],
+      "price_krw": 38000, "regular_krw": null, "discount_pct": null, "url": "https://...", "variant_name": "얼티밋 에디션", "price_original": null, "currency_original": null, "collected_at": "2026-11-19T02:30:00Z" } ],
   "lowest": { "store": "steam", "edition": "digital", "platform": "PC", "item_condition": "new", "price_krw": 47900, "variant_name": null } }
 ```
+- `prices`의 `items`에는 `price_original`(스토어가 준 원래 통화 가격, 환산 전)과 `currency_original`(예: `USD`)이 있고 없으면 `null`이다. 금액의 기준은 계속 원화 정수 `price_krw`이고, 원래 통화 값은 참고용 표시(예: "$59.99")에만 쓴다. `history`·`lowest`에는 넣지 않는다.
 `GET /api/games/119133/history?days=180&platform=PC&item_condition=new`
 ```json
 { "game_id": 119133, "days": 180, "platform": "PC", "item_condition": "new",
@@ -157,11 +158,22 @@
 { "release_date": "2022-02-25", "summary": "...", "tags": ["오픈월드", "소울라이크"], "online_only": false,
   "steam_app_id": 1245620, "lowest_krw": 38900,
   "time_to_beat": { "hastily_hours": 8.5, "normally_hours": 12.0, "completely_hours": 25.5, "count": 842 },
-  "critic_count": 24,
+  "critic_count": 24, "user_score": 78, "user_score_count": 120,
+  "korean_supported": true, "age_rating": 0,
+  "developers": ["FromSoftware"], "publishers": ["Bandai Namco"],
+  "series": [ { "kind": "franchise", "name": "Souls", "games": [ { "game_id": 1, "name": "...", "cover_url": "https://..." } ] } ],
+  "parent_game": null, "version_parent": null, "dlcs": [ { "game_id": 2, "name": "...", "cover_url": null } ], "editions": [],
+  "review_stats": { "label_ko": "매우 긍정적", "count_ko": 120, "positive_pct_ko": 91, "score_ko": 8, "label_all": "대체로 긍정적", "count_all": 5000, "positive_pct_all": 88 },
   "insights": [ { "...": "analysis/가 만든 게임별 태그 (모양은 analysis 담당과 확정)" } ] }
 ```
 - `time_to_beat`는 IGDB 클리어 시간 3종(빠르게·보통·완벽하게, 시간 단위 소수 첫째 자리)과 집계 인원이다. `game_time_to_beat` 행이 없으면 `null`이고, 값이 0이거나 없으면 그 값만 `null`이다. 카드의 `time_to_beat_hours`(보통, 정수)는 그대로다.
 - `critic_score`(카드 필드)와 `critic_count`(IGDB 평론 집계 수)는 점수가 없으면 둘 다 `null`이다. `critic_count`는 상세에만 있다.
+- `user_score`·`user_score_count`: IGDB 사용자 평점(0~100, 정수 반올림)과 평가 수. 평점이 없으면 둘 다 `null`.
+- `korean_supported`: Steam 지원 언어에 한국어가 있는지(`games.korean_supported`). `age_rating`: Steam `required_age`(정수, 0=제한 없음, `games.age_rating`). 값을 모르면 `null`.
+- `developers`·`publishers`: 개발사·배급사 이름(이름순, 없으면 `[]`). `game_companies`·`companies`.
+- `series`: 이 게임이 속한 시리즈(`kind`: `collection`|`franchise`). 각 시리즈의 `games`는 같은 시리즈의 **다른** 게임(최대 12개, 출시일순·출시일 없는 게임은 뒤, `name`은 한글명 우선). 없으면 `[]`.
+- `parent_game`(DLC·확장이면 본편), `version_parent`(에디션이면 원본)는 `games`에 있는 게임만 채우고 아니면 `null`. `dlcs`(이 게임을 `parent_game_id`로 가리키는 게임)·`editions`(`version_parent_id`로 가리키는 게임)는 최대 20개, 없으면 `[]`.
+- `review_stats`: Steam 스토어 리뷰 등급·수(`game_review_stats`). 한국어(`*_ko`, 스토어 표시값)와 전체 언어(`*_all`)를 따로 준다. `score_ko`는 Steam 등급 1~9. 행이 없으면 `null`. 카드의 `positive_ratio`와 별개다.
 
 ### 구매 타이밍
 `GET /api/games/119133/timing`
@@ -207,7 +219,7 @@
 (목업의 `price_alert`, `weekly_deals`는 프런트에서 뺀다. API 개수는 38개 그대로, #22 경로가 `GET·PUT`이 된다.)
 
 ### 추천 (✓)
-`GET /api/me/taste` → `{ "total_playtime_hours": 1840, "owned_games": 126, "top_genres": [ { "genre": "액션", "pct": 38 } ], "style": "긴 호흡의 액션·RPG를 즐기는 탐험가형", "preferred_length": "long" }`. `preferred_length`는 `"short"|"medium"|"long"|null`이다. 플레이한(`playtime_forever_min` > 0) 보유 게임 중 클리어 시간이 있는 게임의 "보통" 클리어 시간 **중앙값**을 위 `length` 구간(10시간·40시간 기준)에 대입한 값이고, 그런 게임이 5개 미만이면 `null`이다(5개는 임시 기준)
+`GET /api/me/taste` → `{ "total_playtime_hours": 1840, "owned_games": 126, "top_genres": [ { "genre": "액션", "pct": 38 } ], "style": "긴 호흡의 액션·RPG를 즐기는 탐험가형", "preferred_length": "long", "recent_games": [ { "game_id": 119133, "name": "엘든 링", "cover_url": "https://...", "last_played_at": "2026-11-20T09:30:00Z", "playtime_hours": 60 } ] }`. `preferred_length`는 `"short"|"medium"|"long"|null`이다. 플레이한(`playtime_forever_min` > 0) 보유 게임 중 클리어 시간이 있는 게임의 "보통" 클리어 시간 **중앙값**을 위 `length` 구간(10시간·40시간 기준)에 대입한 값이고, 그런 게임이 5개 미만이면 `null`이다(5개는 임시 기준). `recent_games`는 Steam 마지막 플레이 시각(`user_owned_games.rtime_last_played`)이 있는 보유 게임 중 최근 5개(최근 순, `playtime_hours`는 누적 시간)이고, 기록이 없으면 `[]`이다. `games`에 연결되지 않은 앱은 뺀다
 `GET /api/me/recommendations` → `{ "items": [카드 + "reason": "RPG 장르를 많이 플레이했어요"] }` (`reason`은 `"<장르> 장르를 많이 플레이했어요"` 형식)
 
 ### 리뷰
