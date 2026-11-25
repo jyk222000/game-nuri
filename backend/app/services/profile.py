@@ -68,6 +68,7 @@ def set_steam_id(db: Session, user_id: int, steam_id: str) -> tuple[str, int]:
             user_id=user_id,
             steam_appid=g.appid,
             playtime_forever_min=g.playtime_forever_min,
+            rtime_last_played=g.rtime_last_played,
             updated_at=now,
         )
         for g in owned

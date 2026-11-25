@@ -1,5 +1,7 @@
 """#3 내 정보, #4 Steam ID 연동, #30 내 PC 사양 등록·조회."""
 
+from datetime import datetime
+
 import httpx
 import pytest
 from app.clients import steam
@@ -268,3 +270,30 @@ def test_profile_requires_login(method, path) -> None:
     app.dependency_overrides.clear()
     r = getattr(TestClient(app), method)(path, **({"json": {}} if method != "get" else {}))
     assert r.status_code == 401 and r.json()["error"]["code"] == "UNAUTHORIZED"
+
+
+def test_steam_client_parses_last_played_time(steam_key, monkeypatch) -> None:
+    payload = {
+        "response": {
+            "game_count": 4,
+            "games": [
+                {"appid": 1, "playtime_forever": 60, "rtime_last_played": 1795000000},
+                {"appid": 2, "playtime_forever": 0, "rtime_last_played": 0},  # 0 = 플레이한 적 없음
+                {"appid": 3, "rtime_last_played": "abc"},  # 이상한 값은 None
+                {"appid": 4},  # 필드가 없으면 None
+            ],
+        }
+    }
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: _Resp(payload))
+    games = {g.appid: g.rtime_last_played for g in steam.get_owned_games(STEAM_ID)}
+    assert games == {1: datetime(2026, 11, 18, 11, 6, 40), 2: None, 3: None, 4: None}
+
+
+def test_put_steam_stores_last_played_time(env, monkeypatch) -> None:
+    client, engine, _ = env
+    when = datetime(2026, 11, 20, 9, 30)
+    _fake_steam(monkeypatch, [steam.OwnedGame(500, 120, when), steam.OwnedGame(730, 0)])
+    assert client.put("/api/me/steam", json={"steam_id": STEAM_ID}).status_code == 200
+    with Session(engine) as s:
+        rows = {r.steam_appid: r.rtime_last_played for r in s.scalars(select(UserOwnedGame))}
+    assert rows == {500: when, 730: None}
