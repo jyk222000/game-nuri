@@ -85,6 +85,8 @@ def test_prices_items_and_lowest(priced) -> None:
         "discount_pct": 26,
         "url": "https://example.com/steam",
         "variant_name": None,
+        "price_original": None,
+        "currency_original": None,
         "collected_at": "2026-11-23T00:00:00Z",
     }
     # 중고(30000)가 더 싸도 현재가(lowest)는 새 상품 기준
@@ -183,3 +185,14 @@ def test_lowest_for_console_only_game_uses_console(env, fake) -> None:
         )
     lowest = client.get("/api/games/5/prices").json()["lowest"]
     assert lowest["platform"] == "PS5" and lowest["price_krw"] == 42800
+
+
+def test_prices_expose_original_currency_price(env, fake) -> None:
+    client, engine, _ = env
+    row = _row(119133, "steam", "PC", "new", 83000, regular=83000)
+    row.price_original, row.currency_original = 59.99, "USD"
+    with seed(engine) as s:
+        s.add_all([row, _row(119133, "epic", "PC", "new", 90000)])
+    items = {i["store"]: i for i in client.get("/api/games/119133/prices").json()["items"]}
+    assert (items["steam"]["price_original"], items["steam"]["currency_original"]) == (59.99, "USD")
+    assert (items["epic"]["price_original"], items["epic"]["currency_original"]) == (None, None)

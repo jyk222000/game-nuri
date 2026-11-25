@@ -6,6 +6,7 @@
 """
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 import httpx
 from gamenuri_common.config import get_settings
@@ -26,6 +27,7 @@ class SteamPrivateProfile(Exception):
 class OwnedGame:
     appid: int
     playtime_forever_min: int
+    rtime_last_played: datetime | None = None  # 마지막 플레이 시각(UTC, naive). 기록이 없으면 None
 
 
 def get_owned_games(steam_id: str) -> list[OwnedGame]:
@@ -49,10 +51,21 @@ def get_owned_games(steam_id: str) -> list[OwnedGame]:
         raise SteamUnavailable(type(exc).__name__) from None  # 주소(키 포함)가 새지 않게 끊는다
     if "game_count" not in body:  # 비공개는 빈 응답. 공개인데 게임이 0개면 game_count가 0이다.
         raise SteamPrivateProfile
-    games: dict[int, int] = {}
+    games: dict[int, OwnedGame] = {}
     for g in body.get("games", []):
         try:
-            games[int(g["appid"])] = max(int(g.get("playtime_forever", 0)), 0)
+            appid = int(g["appid"])
+            minutes = max(int(g.get("playtime_forever", 0)), 0)
         except (KeyError, TypeError, ValueError):
             continue
-    return [OwnedGame(appid, minutes) for appid, minutes in games.items()]
+        games[appid] = OwnedGame(appid, minutes, _last_played(g.get("rtime_last_played")))
+    return list(games.values())
+
+
+def _last_played(value: object) -> datetime | None:
+    """Steam의 rtime_last_played(유닉스 초)를 UTC naive 시각으로. 0·없음·이상한 값은 None."""
+    try:
+        seconds = int(value)  # type: ignore[call-overload]
+        return datetime.fromtimestamp(seconds, UTC).replace(tzinfo=None) if seconds > 0 else None
+    except (TypeError, ValueError, OverflowError, OSError):
+        return None

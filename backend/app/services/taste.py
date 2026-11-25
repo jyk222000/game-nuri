@@ -10,6 +10,7 @@ Steam ID를 연동하지 않았으면 400 STEAM_REQUIRED. 연동했지만 보유
 
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import datetime
 from statistics import median
 from typing import Literal
 
@@ -26,9 +27,10 @@ from app.db.models import (
     Wishlist,
 )
 from app.schemas.game import RecommendationCard
-from app.schemas.me import TasteGenre, TasteOut
+from app.schemas.me import RecentGame, TasteGenre, TasteOut
 from app.services import cards, profile, rankings, ratings
 
+RECENT_GAMES = 5  # 취향 화면에 보여 줄 최근 플레이 게임 수
 TOP_GENRES = 5  # 취향 프로필에 보여 줄 장르 수
 RECOMMEND_FROM_GENRES = 3  # 추천 후보를 모을 상위 장르 수
 NO_DATA_STYLE = "아직 취향을 분석할 데이터가 부족해요"
@@ -45,6 +47,7 @@ class Taste:
     genre_minutes: dict[int, int]  # genre_id -> 플레이 분
     genre_names: dict[int, str]
     minutes_by_game: dict[int, int]  # game_id -> 플레이 분 (games에 연결된 보유 게임만)
+    last_played: dict[int, datetime]  # game_id -> 마지막 플레이 시각 (UTC, 기록이 있는 것만)
 
 
 def _require_steam(db: Session, user_id: int) -> None:
@@ -54,11 +57,14 @@ def _require_steam(db: Session, user_id: int) -> None:
 
 def _load(db: Session, user_id: int) -> Taste:
     owned = db.execute(
-        select(UserOwnedGame.steam_appid, UserOwnedGame.playtime_forever_min).where(
-            UserOwnedGame.user_id == user_id
-        )
+        select(
+            UserOwnedGame.steam_appid,
+            UserOwnedGame.playtime_forever_min,
+            UserOwnedGame.rtime_last_played,
+        ).where(UserOwnedGame.user_id == user_id)
     ).all()
-    minutes_by_app = {app: minutes or 0 for app, minutes in owned}
+    minutes_by_app = {app: minutes or 0 for app, minutes, _ in owned}
+    last_by_app = {app: when for app, _, when in owned if when is not None}
 
     game_by_app: dict[int, int] = {}
     if minutes_by_app:
@@ -70,6 +76,7 @@ def _load(db: Session, user_id: int) -> Taste:
         ):
             game_by_app[int(ext)] = gid
     minutes_by_game = {game_by_app[a]: m for a, m in minutes_by_app.items() if a in game_by_app}
+    last_played = {game_by_app[a]: w for a, w in last_by_app.items() if a in game_by_app}
 
     genre_minutes: dict[int, int] = defaultdict(int)
     names: dict[int, str] = {}
@@ -88,7 +95,25 @@ def _load(db: Session, user_id: int) -> Taste:
         genre_minutes=dict(genre_minutes),
         genre_names=names,
         minutes_by_game=minutes_by_game,
+        last_played=last_played,
     )
+
+
+def _recent_games(db: Session, t: Taste) -> list[RecentGame]:
+    """마지막으로 플레이한 게임 RECENT_GAMES개(최근 순). 마지막 플레이 기록이 없는 게임은 뺀다."""
+    ids = sorted(t.last_played, key=lambda g: (t.last_played[g], g), reverse=True)[:RECENT_GAMES]
+    games = cards.games_by_id(db, ids)
+    return [
+        RecentGame(
+            game_id=gid,
+            name=cards.game_name(games[gid]),
+            cover_url=games[gid].cover_url,
+            last_played_at=t.last_played[gid],
+            playtime_hours=round(t.minutes_by_game.get(gid, 0) / 60),
+        )
+        for gid in ids
+        if gid in games
+    ]
 
 
 def _preferred_length(db: Session, t: Taste) -> Literal["short", "medium", "long"] | None:
@@ -139,6 +164,7 @@ def get_taste(db: Session, user_id: int) -> TasteOut:
         top_genres=top,
         style=style,
         preferred_length=_preferred_length(db, t),
+        recent_games=_recent_games(db, t),
     )
 
 

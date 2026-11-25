@@ -5,10 +5,15 @@ from decimal import Decimal
 
 import pytest
 from app.db.models import (
+    Company,
     Game,
     GameAlias,
+    GameCompany,
     GameGenre,
     GamePlatform,
+    GameReviewStats,
+    GameSeries,
+    GameSeriesMap,
     GameStoreId,
     GameTag,
     GameTimeToBeat,
@@ -361,3 +366,87 @@ def test_static_routes_not_shadowed_by_detail(catalog) -> None:
     client, *_ = catalog
     assert client.get("/api/games/autocomplete?q=h").status_code == 200
     assert "total" not in client.get("/api/games/deals").json()  # deals는 detail로 해석되지 않는다
+
+
+# ---------- DB에 있던 칸을 상세로 내린 것 ----------
+def _g(game_id, **kw) -> Game:
+    return Game(game_id=game_id, name=f"Game {game_id}", updated_at=NOW, **kw)
+
+
+def test_detail_exposes_stored_columns_companies_series_relations_and_review_stats(catalog) -> None:
+    client, engine, _ = catalog
+    with seed(engine) as s:
+        s.add_all(
+            [
+                _g(
+                    50,
+                    korean_supported=True,
+                    age_rating=0,
+                    rating=Decimal("77.6"),
+                    rating_count=120,
+                ),
+                _g(51, release_date=date(2011, 4, 5), cover_url="https://img/51"),
+                _g(52),  # 출시일 없음: 시리즈 목록에서 뒤로
+                _g(53, parent_game_id=50),  # 50의 DLC
+                _g(54, version_parent_id=50),  # 50의 에디션
+                Company(company_id=1, name="FromSoftware"),
+                Company(company_id=2, name="Bandai Namco"),
+                GameCompany(game_id=50, company_id=1, role="developer"),
+                GameCompany(game_id=50, company_id=2, role="publisher"),
+                GameSeries(series_id=9, kind="franchise", name="Souls"),
+                GameSeriesMap(game_id=50, series_id=9, kind="franchise"),
+                GameSeriesMap(game_id=51, series_id=9, kind="franchise"),
+                GameSeriesMap(game_id=52, series_id=9, kind="franchise"),
+                GameReviewStats(
+                    game_id=50,
+                    review_count_ko=120,
+                    positive_pct_ko=91,
+                    review_score_ko=8,
+                    review_label_ko="매우 긍정적",
+                    review_count_all=5000,
+                    positive_pct_all=88,
+                    review_label_all="대체로 긍정적",
+                    updated_at=NOW,
+                ),
+            ]
+        )
+    body = client.get("/api/games/50").json()
+    assert (body["korean_supported"], body["age_rating"]) == (True, 0)
+    assert (body["user_score"], body["user_score_count"]) == (78, 120)  # 77.6 반올림
+    assert body["developers"] == ["FromSoftware"] and body["publishers"] == ["Bandai Namco"]
+    assert body["series"] == [
+        {
+            "kind": "franchise",
+            "name": "Souls",
+            "games": [  # 자기 자신은 빠지고, 출시일 있는 게임이 먼저
+                {"game_id": 51, "name": "Game 51", "cover_url": "https://img/51"},
+                {"game_id": 52, "name": "Game 52", "cover_url": None},
+            ],
+        }
+    ]
+    assert body["parent_game"] is None and body["version_parent"] is None
+    assert [d["game_id"] for d in body["dlcs"]] == [53]
+    assert [e["game_id"] for e in body["editions"]] == [54]
+    assert body["review_stats"] == {
+        "label_ko": "매우 긍정적",
+        "count_ko": 120,
+        "positive_pct_ko": 91,
+        "score_ko": 8,
+        "label_all": "대체로 긍정적",
+        "count_all": 5000,
+        "positive_pct_all": 88,
+    }
+
+    dlc = client.get("/api/games/53").json()
+    assert dlc["parent_game"]["game_id"] == 50 and dlc["version_parent"] is None
+    assert client.get("/api/games/54").json()["version_parent"]["game_id"] == 50
+
+
+def test_detail_extras_are_empty_or_null_when_data_is_missing(catalog) -> None:
+    client, *_ = catalog
+    body = client.get("/api/games/10").json()  # catalog의 Hades: 부가 정보가 하나도 없다
+    assert (body["korean_supported"], body["age_rating"]) == (None, None)
+    assert (body["user_score"], body["user_score_count"]) == (None, None)
+    assert body["developers"] == [] and body["publishers"] == [] and body["series"] == []
+    assert body["parent_game"] is None and body["version_parent"] is None
+    assert body["dlcs"] == [] and body["editions"] == [] and body["review_stats"] is None

@@ -16,6 +16,8 @@ class PriceItem(BaseModel):
     discount_pct: int | None
     url: str | None
     variant_name: str | None  # 본편이 아닌 에디션 가격이면 이름, 본편은 null
+    price_original: float | None  # 스토어가 준 원래 통화 가격(환산 전). 없으면 null
+    currency_original: str | None  # 예: USD, KRW
     collected_at: UtcDatetime
 
 

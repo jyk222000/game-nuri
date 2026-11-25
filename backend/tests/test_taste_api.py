@@ -1,5 +1,6 @@
 """#24 내 취향 프로필, #23 플레이타임 기반 추천 (Steam 연동 필요)."""
 
+from datetime import datetime
 from decimal import Decimal
 
 import pytest
@@ -90,6 +91,7 @@ def test_taste_linked_but_no_owned_games(env) -> None:
         "top_genres": [],
         "style": "아직 취향을 분석할 데이터가 부족해요",
         "preferred_length": None,
+        "recent_games": [],
     }
 
 
@@ -238,3 +240,29 @@ def test_requires_login(path) -> None:
     app.dependency_overrides.clear()
     r = TestClient(app).get(path)
     assert r.status_code == 401 and r.json()["error"]["code"] == "UNAUTHORIZED"
+
+
+def test_taste_recent_games_by_last_played(played) -> None:
+    client, engine, _ = played
+    with Session(engine) as s:
+        s.get(UserOwnedGame, (1, 500)).rtime_last_played = datetime(2026, 11, 1, 3, 0)
+        s.get(UserOwnedGame, (1, 700)).rtime_last_played = datetime(2026, 11, 20, 9, 30)
+        s.commit()  # 앱 999는 games에 연결되지 않았고, 마지막 플레이 기록이 없는 게임은 빠진다
+    recent = client.get("/api/me/taste").json()["recent_games"]
+    assert [g["game_id"] for g in recent] == [7, 5]  # 최근 순
+    assert recent[0]["last_played_at"] == "2026-11-20T09:30:00Z"
+    assert recent[0]["playtime_hours"] == 20 and recent[1]["playtime_hours"] == 60
+    assert set(recent[0]) == {"game_id", "name", "cover_url", "last_played_at", "playtime_hours"}
+
+
+def test_taste_recent_games_empty_without_last_played_and_capped_at_five(env) -> None:
+    client, engine, _ = env
+    _link_steam(engine)
+    _played_with_times(engine, {31: 5, 32: 5, 33: 5, 34: 5, 35: 5, 36: 5})
+    assert client.get("/api/me/taste").json()["recent_games"] == []  # 마지막 플레이 기록이 없다
+    with Session(engine) as s:
+        for n, gid in enumerate((31, 32, 33, 34, 35, 36), start=1):
+            s.get(UserOwnedGame, (1, gid * 10)).rtime_last_played = datetime(2026, 11, n)
+        s.commit()
+    recent = client.get("/api/me/taste").json()["recent_games"]
+    assert [g["game_id"] for g in recent] == [36, 35, 34, 33, 32]  # 최대 5개, 최근 순

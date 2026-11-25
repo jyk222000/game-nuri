@@ -96,6 +96,16 @@ class TasteGenre(BaseModel):
     pct: int
 
 
+class RecentGame(BaseModel):
+    """최근 플레이한 보유 게임 (Steam 마지막 플레이 시각 기준)."""
+
+    game_id: int
+    name: str  # name_ko 우선, 없으면 games.name
+    cover_url: str | None
+    last_played_at: UtcDatetime
+    playtime_hours: int  # 누적 플레이 시간(시간, 반올림)
+
+
 class TasteOut(BaseModel):
     total_playtime_hours: int
     owned_games: int
@@ -104,3 +114,4 @@ class TasteOut(BaseModel):
     preferred_length: (
         Literal["short", "medium", "long"] | None
     )  # 선호 플레이 길이(데이터 부족이면 null)
+    recent_games: list[RecentGame]  # 최근 플레이한 게임(최근 순, 기록이 없으면 빈 목록)

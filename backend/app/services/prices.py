@@ -74,6 +74,8 @@ def get_prices(db: Session, game_id: int) -> PricesOut:
             discount_pct=r.discount_pct,
             url=r.url,
             variant_name=r.variant_name,
+            price_original=r.price_original,
+            currency_original=r.currency_original,
             collected_at=r.collected_at,
         )
         for r in rows
