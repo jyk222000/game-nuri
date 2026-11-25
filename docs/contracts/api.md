@@ -55,6 +55,7 @@
 - 목록: `{"items": [...], "total": 123, "page": 1, "size": 20}`. 페이지가 없는 목록(`genres`, `popular` 등)은 `{"items": [...]}`.
 - **현재가**: `prices_current`에서 `item_condition='new'`인 행 중 `price_krw`가 가장 낮은 값(**PC 가격이 있는 게임은 PC 행 안에서만**, PC 가격이 없는 콘솔 전용 게임은 전체 플랫폼에서). 같으면 `store`·`platform` 이름순. 목록·카드·알림의 `price_krw`, `current_krw`가 이 값이다. 콘솔 가격은 `/prices`·`/lowest`의 플랫폼별 값으로 본다.
 - `time_to_beat_hours`는 값이 없으면 `null`.
+- `critic_score`는 IGDB 평론가 집계 점수(`aggregated_rating`, 0~100)를 정수로 반올림한 값이고 없으면 `null`이다. **메타크리틱 점수가 아니다**(화면에는 "평론가 점수(IGDB 집계)"로 표기한다).
 - 할인 목록(`GET /api/games/deals`): **할인 중 = 새 상품 최저가의 `discount_pct` > 0**, 할인율 큰 순, `size` 기본 20 / 최대 100. 로그인 없이 보는 목록이라 `wished`는 항상 `false`.
 - 역대 최저가(`GET /api/games/{id}/lowest`) 동점: 가장 이른 날짜 → `store`·`edition` 이름순.
 - 가격 이력(`GET /api/games/{id}/history`)의 항목에는 `platform`·`item_condition`이 들어 있어, 필터 없이 불러도 플랫폼·상태를 구분할 수 있다.
@@ -140,10 +141,10 @@
 ```json
 { "game_id": 119133, "name": "엘든 링", "name_en": "Elden Ring", "genres": ["액션", "RPG"], "platforms": ["PC", "PS5", "XboxSeries"],
   "cover_url": "https://...", "price_krw": 47900, "regular_krw": 64800, "discount_pct": 26,
-  "positive_ratio": 0.92, "concurrent_players": 412000, "time_to_beat_hours": 60, "wished": false }
+  "positive_ratio": 0.92, "concurrent_players": 412000, "time_to_beat_hours": 60, "critic_score": 87, "wished": false }
 ```
 (목업의 `hue`는 ERD에 없어 `cover_url`로 대체한다, 아래 표 4번)
-`GET /api/games?q=&platform=&genre=&sort=price|discount|popular&page=&size=` → `{ "items": [카드], "total": 1, "page": 1, "size": 20 }` (`platform` 값은 ERD 코드. `popular`는 `/api/games/popular`와 같은 기준(찜한 사용자 수 → 최근 동접자 → game_id 순)으로 정렬하고, 찜·동접자가 없는 게임은 제외하지 않고 뒤에 이름순으로 둔다. 다른 조건과 함께 쓸 수 있다. 값이 틀리면 422)
+`GET /api/games?q=&platform=&genre=&sort=price|discount|popular|rating&length=short|medium|long&page=&size=` → `{ "items": [카드], "total": 1, "page": 1, "size": 20 }` (`platform` 값은 ERD 코드. `popular`는 `/api/games/popular`와 같은 기준(찜한 사용자 수 → 최근 동접자 → game_id 순)으로 정렬하고, 찜·동접자가 없는 게임은 제외하지 않고 뒤에 이름순으로 둔다. 다른 조건과 함께 쓸 수 있다. `rating`은 `critic_score` 높은 순, 같으면 평론 수(`critic_count`) 많은 순이고 점수가 없는 게임은 제외하지 않고 맨 뒤에 이름순이다. `length`는 "보통" 클리어 시간(`game_time_to_beat.normally_sec`) 구간 조건으로 `short` 10시간 이하, `medium` 10시간 초과~40시간 이하, `long` 40시간 초과이며 클리어 시간 정보가 없는(없거나 0) 게임은 제외한다(40시간은 임시 기준). `sort`·`length`는 `q`·`platform`·`genre`와 함께 쓸 수 있고 값이 틀리면 422 `INVALID_REQUEST`)
 `GET /api/games/autocomplete?q=` → `{ "items": [ { "game_id": 119133, "name": "엘든 링", "name_en": "Elden Ring" } ] }`
 `GET /api/games/popular`, `deals`, `short`, `players/top` → `{ "items": [카드] }`. `players/low` 카드에는 `"warning": "접속자가 적어 매칭이 어려울 수 있어요"` 추가
 `GET /api/genres`, `/api/tags` → `{ "items": ["액션", "RPG"] }`
@@ -155,8 +156,12 @@
 ```json
 { "release_date": "2022-02-25", "summary": "...", "tags": ["오픈월드", "소울라이크"], "online_only": false,
   "steam_app_id": 1245620, "lowest_krw": 38900,
+  "time_to_beat": { "hastily_hours": 8.5, "normally_hours": 12.0, "completely_hours": 25.5, "count": 842 },
+  "critic_count": 24,
   "insights": [ { "...": "analysis/가 만든 게임별 태그 (모양은 analysis 담당과 확정)" } ] }
 ```
+- `time_to_beat`는 IGDB 클리어 시간 3종(빠르게·보통·완벽하게, 시간 단위 소수 첫째 자리)과 집계 인원이다. `game_time_to_beat` 행이 없으면 `null`이고, 값이 0이거나 없으면 그 값만 `null`이다. 카드의 `time_to_beat_hours`(보통, 정수)는 그대로다.
+- `critic_score`(카드 필드)와 `critic_count`(IGDB 평론 집계 수)는 점수가 없으면 둘 다 `null`이다. `critic_count`는 상세에만 있다.
 
 ### 구매 타이밍
 `GET /api/games/119133/timing`
@@ -202,7 +207,7 @@
 (목업의 `price_alert`, `weekly_deals`는 프런트에서 뺀다. API 개수는 38개 그대로, #22 경로가 `GET·PUT`이 된다.)
 
 ### 추천 (✓)
-`GET /api/me/taste` → `{ "total_playtime_hours": 1840, "owned_games": 126, "top_genres": [ { "genre": "액션", "pct": 38 } ], "style": "긴 호흡의 액션·RPG를 즐기는 탐험가형" }`
+`GET /api/me/taste` → `{ "total_playtime_hours": 1840, "owned_games": 126, "top_genres": [ { "genre": "액션", "pct": 38 } ], "style": "긴 호흡의 액션·RPG를 즐기는 탐험가형", "preferred_length": "long" }`. `preferred_length`는 `"short"|"medium"|"long"|null`이다. 플레이한(`playtime_forever_min` > 0) 보유 게임 중 클리어 시간이 있는 게임의 "보통" 클리어 시간 **중앙값**을 위 `length` 구간(10시간·40시간 기준)에 대입한 값이고, 그런 게임이 5개 미만이면 `null`이다(5개는 임시 기준)
 `GET /api/me/recommendations` → `{ "items": [카드 + "reason": "RPG 장르를 많이 플레이했어요"] }` (`reason`은 `"<장르> 장르를 많이 플레이했어요"` 형식)
 
 ### 리뷰
