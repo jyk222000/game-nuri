@@ -7,7 +7,7 @@
 | `raw.price` / `price` (ITAD 가격) | `rules/price.py` | `refined.prices` | 완료 |
 | `raw.igdb` / `game_info` | `rules/game.py` | `refined.games` | 완료 (Steam 파생 컬럼은 비어 있음) |
 | `raw.steam` / `app_details` | `rules/requirements.py` | `refined.requirements` | 완료 |
-| `raw.console` / `console_price` (다나와) | `rules/console.py` | `refined.prices` | 플랫폼·신품/중고 구분, 상품명 매칭은 정확 일치만 |
+| `raw.console` / `console_price` (다나와) | `rules/console.py` | `refined.prices` | 플랫폼·신품/중고 구분, 상품명 매칭은 정확 일치만. 신품은 출시가로 정가·할인율(#132) |
 | 그 밖의 kind (review, player_count, time_to_beat 등) | 없음 | — | 건너뜀 |
 | 매칭 실패·깨진 메시지 | — | `refined.unmatched` | 버리지 않고 기록 |
 

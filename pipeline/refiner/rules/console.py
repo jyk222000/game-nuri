@@ -11,6 +11,10 @@ item_condition 은 condition(new|used), 없으면 new.
 LastPrices.console_keep() 으로 정한다.
 매칭 순서: 정확한 별칭 → 상품명 안의 별칭(TitleMatcher) → 수집 때 검색한 게임(request.params
 igdb_id, 검색어가 상품명 안에 있을 때만).
+
+정가(#132): 다나와는 정가 대신 출시가(release_price_text "/출시가: 72,000원")를 준다.
+신품에만 출시가를 regular_krw 로 쓰고 discount_pct = (1 - 최저가/출시가) × 100 (반올림, 0 미만은 0).
+중고는 출시가 대비 할인이 아니므로 비워 둔다. 출시가가 없으면 지금처럼 비워 둔다.
 """
 
 from __future__ import annotations
@@ -62,6 +66,28 @@ def infer_platform(payload: dict[str, Any]) -> str | None:
     return None
 
 
+_RELEASE_PRICE = re.compile(r"출시가\s*:?\s*([\d,]+)\s*원")
+
+
+def release_price(text: str | None) -> int | None:
+    """'/출시가: 72,000원' → 72000. 없거나 0이면 None."""
+    m = _RELEASE_PRICE.search(text or "")
+    if not m:
+        return None
+    value = int(m.group(1).replace(",", "") or 0)
+    return value or None
+
+
+def regular_and_discount(
+    price: int, condition: str, text: str | None
+) -> tuple[int | None, int | None]:
+    """신품 + 출시가가 있을 때만 (정가, 할인율). 그 밖에는 (None, None)."""
+    regular = release_price(text) if condition == "new" else None
+    if regular is None:
+        return None, None
+    return regular, max(0, round((1 - price / regular) * 100))
+
+
 def infer_edition(payload: dict[str, Any]) -> str:
     """edition 이 비어 있으면 상품명으로 추정 (R07)."""
     ed = payload.get("edition")
@@ -108,6 +134,7 @@ def refine_console_price(
     if platform is None:
         return unmatched("플랫폼을 알 수 없음")
     condition = p.get("condition") if p.get("condition") in ("new", "used") else "new"
+    regular, discount = regular_and_discount(int(price), condition, p.get("release_price_text"))
     game_id = resolve_game_id(normalize_title(title))
     why = "상품명 → IGDB ID 매칭 실패"
     if game_id is None and matcher is not None:
@@ -127,8 +154,8 @@ def refine_console_price(
             "platform": platform,
             "item_condition": condition,
             "price_krw": int(price),
-            "regular_krw": None,
-            "discount_pct": None,
+            "regular_krw": regular,
+            "discount_pct": discount,
             "price_original": float(price),
             "currency_original": "KRW",
             "url": p.get("url"),
