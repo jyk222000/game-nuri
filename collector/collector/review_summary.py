@@ -440,8 +440,58 @@ STOPWORDS = frozenset(
         "결과",
         "이유",
         "문제",
+        # 전체 키워드(1,000개 게임)를 다시 훑어 찾은 말 (2026-11-25 네 번째 점검)
+        # 평가·감정·뜻이 빈 일반어
+        "인생",
+        "추가",
+        "기분",
+        "익숙",
+        "현실",
+        "사랑",
+        "경험",
+        "존재",
+        "이만",
+        "오랜만",
+        "비슷",
+        "실제",
+        "시절",
+        "순간",
+        "구간",
+        "긍정",
+        "흥미",
+        "애매",
+        "합리",
+        "개연",
+        "유기",
+        "할만",
+        # 쪼개진 말의 조각 (도전과제·플레이타임·아포칼립스)
+        "타임",
+        "과제",
+        "아포",
+        "립스",
+        # 다른 작품·대상 이야기, 모든 게임에 붙는 말
+        "전작",
+        "후속작",
+        "원작",
+        "시리즈",
+        "유저",
+        "진행",
+        "유튜브",
+        "회사",
+        "인물",
+        # 이유를 알려 주지 않거나 뜻이 약한 말
+        "환불",
+        "최적",
+        "세상",
+        "세계",
+        "시대",
+        "인간",
+        "남자",
     ]
 )
+# 장점 쪽에서만 거르는 말. 장점 키워드로 나오면 "안 지루하다"처럼 뜻이 거꾸로이거나 문맥이 없다.
+# 단점 쪽에서는 문제를 알려 주는 말이라 남긴다.
+PROS_ONLY_STOPWORDS = frozenset({"지루", "어려움"})
 # 영어 속어(goat 등)는 버리고, 게임 용어로 쓰이는 약어만 남긴다
 ASCII_KEEP = frozenset({"dlc", "fps", "ui", "npc", "ai", "pc", "rpg", "vr", "2d", "3d"})
 
@@ -527,6 +577,9 @@ SENSITIVE_WORDS = frozenset(
         "능지",
         "북괴",
         "자살",
+        # 욕설이 잘린 조각 (씨발련 등)
+        "발련",
+        "임어",
     ]
 )
 # 욕설이 글자로는 들어 있지만 보통 말인 경우. 검사 전에 지운다.
@@ -547,7 +600,11 @@ def name_tokens(name: str) -> frozenset[str]:
     return frozenset(w for w in words if len(w) >= 2)
 
 
-def _clean_keyword(word: str, exclude: frozenset[str] = frozenset()) -> str | None:
+def _clean_keyword(
+    word: str,
+    exclude: frozenset[str] = frozenset(),
+    extra_stopwords: frozenset[str] = frozenset(),
+) -> str | None:
     """키워드로 쓸 수 있는 모양인지 확인한다.
 
     한 글자·숫자뿐·너무 긴 것·일반어·영어 속어·게임 이름 조각은 버린다.
@@ -562,7 +619,7 @@ def _clean_keyword(word: str, exclude: frozenset[str] = frozenset()) -> str | No
         return None
     if not re.fullmatch(r"[0-9a-z가-힣]+", low):  # 러시아어 등 다른 글자·기호가 든 말은 쓰지 않는다
         return None
-    if low in STOPWORDS or (low.isascii() and low not in ASCII_KEEP):
+    if low in STOPWORDS or low in extra_stopwords or (low.isascii() and low not in ASCII_KEEP):
         return None
     if low in SENSITIVE_WORDS:
         return None
@@ -573,10 +630,14 @@ def _clean_keyword(word: str, exclude: frozenset[str] = frozenset()) -> str | No
     return word
 
 
-def _keywords(agg: dict, exclude: frozenset[str] = frozenset()) -> list[str]:
+def _keywords(
+    agg: dict,
+    exclude: frozenset[str] = frozenset(),
+    extra_stopwords: frozenset[str] = frozenset(),
+) -> list[str]:
     out: list[str] = []
     for bucket in agg.get("kw", {}).get("buckets", []):
-        word = _clean_keyword(str(bucket.get("key", "")), exclude)
+        word = _clean_keyword(str(bucket.get("key", "")), exclude, extra_stopwords)
         if word and word not in out:
             out.append(word)
         if len(out) == KEYWORDS_PER_SIDE:
@@ -598,7 +659,7 @@ def parse_digest(result: dict, exclude: frozenset[str] = frozenset()) -> Digest 
     return Digest(
         total=total,
         positive_ratio=round(positive / counted, 3),
-        pros=_keywords(aggs["pros"], exclude),
+        pros=_keywords(aggs["pros"], exclude, PROS_ONLY_STOPWORDS),
         cons=_keywords(aggs["cons"], exclude),
     )
 
