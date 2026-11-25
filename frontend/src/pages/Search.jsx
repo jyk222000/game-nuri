@@ -47,7 +47,7 @@ export default function Search() {
           <>
             <Grid items={d.items} />
             {d.total > d.size && (
-              <div className="pager">
+              <div className="pager pager-center">
                 <button className="btn" disabled={d.page <= 1} onClick={() => set('page', d.page > 2 ? String(d.page - 1) : '')}>← 이전</button>
                 <span className="muted">{d.page} / {Math.ceil(d.total / d.size)}</span>
                 <button className="btn" disabled={d.page * d.size >= d.total} onClick={() => set('page', String(d.page + 1))}>다음 →</button>
