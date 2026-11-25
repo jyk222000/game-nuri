@@ -196,7 +196,18 @@ const routes = [
     const g = game(m[1]);
     const { history, ...rest } = g;
     // insights: analysis/ 파이썬 분석이 만든 게임별 태그 (B). 실제로는 Backend가 같은 모양으로 내려준다.
-    return { ...rest, ...card(g), lowest_krw: lowestOf(g).price_krw, time_to_beat: timeToBeat(g), critic_count: critic(g).count, insights: insights.items[String(g.game_id)] || [] };
+    // 개발사·시리즈·연령·Steam 리뷰 수는 api.md 상세 응답과 같은 모양의 더미 값이다.
+    const sameGenre = GAMES.filter((o) => o.game_id !== g.game_id && o.genres[0] === g.genres[0]).slice(0, 4);
+    const series = sameGenre.length
+      ? [{ kind: 'franchise', name: `${g.genres[0]} 컬렉션`, games: sameGenre.map((o) => ({ game_id: o.game_id, name: o.name, cover_url: o.cover_url || null })) }]
+      : [];
+    const reviewCount = 100 + ((Number(g.game_id) * 37) % 5000);
+    return {
+      ...rest, ...card(g), lowest_krw: lowestOf(g).price_krw, time_to_beat: timeToBeat(g), critic_count: critic(g).count,
+      developers: ['더미 스튜디오'], publishers: ['더미 퍼블리싱'], age_rating: [0, 12, 15, 18][Number(g.game_id) % 4], series,
+      review_stats: { label_ko: '매우 긍정적', count_ko: reviewCount, positive_pct_ko: 91, score_ko: 8, label_all: '대체로 긍정적', count_all: reviewCount * 5, positive_pct_all: 88 },
+      insights: insights.items[String(g.game_id)] || [],
+    };
   }],
   ['GET', /^\/api\/games\/(\d+)\/prices$/, (m) => {
     const g = game(m[1]); const items = currentPrices(g);
