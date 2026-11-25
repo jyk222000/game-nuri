@@ -39,8 +39,9 @@ export function GameCard({ g, extra }) {
   );
 }
 
-export const Grid = ({ items, extra }) => (
-  <div className="grid">{items.map((g) => <GameCard key={g.game_id} g={g} extra={extra?.(g)} />)}</div>
+// oneRow: 한 줄만 보여 준다(칸 수만큼만 남기고 나머지는 CSS로 숨김)
+export const Grid = ({ items, extra, oneRow }) => (
+  <div className={oneRow ? 'grid grid-one' : 'grid'}>{items.map((g) => <GameCard key={g.game_id} g={g} extra={extra?.(g)} />)}</div>
 );
 
 export const Section = ({ title, sub, right, children }) => (
