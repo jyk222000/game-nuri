@@ -885,7 +885,20 @@ def test_main_logs_the_skip_value_when_stopped_by_failures(
 # ---------- 전체 키워드(1,000개 게임) 재점검 4차 (2026-11-25) ----------
 @pytest.mark.parametrize(
     "word",
-    ["인생", "타임", "과제", "유저", "진행", "환불", "최적", "시리즈", "세계", "아포", "립스"],
+    [
+        "인생",
+        "타임",
+        "과제",
+        "유저",
+        "진행",
+        "환불",
+        "최적",
+        "시리즈",
+        "세계",
+        "아포",
+        "립스",
+        "임어",
+    ],
 )
 def test_generic_or_fragment_words_from_full_review_are_dropped(word: str) -> None:
     d = rs.parse_digest(es_result(pros=[word, "그래픽"], cons=[word, "버그"]))
@@ -898,7 +911,7 @@ def test_words_that_contain_dropped_words_are_kept() -> None:
     assert d.pros == ["세계관", "최적화", "아포칼립스", "시리즈물"]
 
 
-@pytest.mark.parametrize("word", ["발련", "임어"])
+@pytest.mark.parametrize("word", ["발련"])
 def test_profane_fragments_cut_from_ssibal_are_dropped(word: str) -> None:
     d = rs.parse_digest(es_result(pros=[word, "그래픽"], cons=[word, "버그"]))
     assert d.pros == ["그래픽"] and d.cons == ["버그"]
