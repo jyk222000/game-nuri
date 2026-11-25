@@ -3,7 +3,6 @@ import Header from './components/Header.jsx';
 import Home from './pages/Home.jsx';
 import Search from './pages/Search.jsx';
 import GameDetail from './pages/GameDetail.jsx';
-import { AnalysisIndex, AnalysisPage } from './pages/Analysis.jsx';
 import Login from './pages/Login.jsx';
 import MyPage from './pages/MyPage.jsx';
 import { useAuth } from './auth.jsx';
@@ -24,8 +23,6 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/search" element={<Search />} />
           <Route path="/games/:id" element={<GameDetail />} />
-          <Route path="/analysis" element={<AnalysisIndex />} />
-          <Route path="/analysis/:key" element={<AnalysisPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/me" element={<Private><MyPage /></Private>} />
           <Route path="*" element={<p className="muted pad">페이지를 찾을 수 없어요.</p>} />

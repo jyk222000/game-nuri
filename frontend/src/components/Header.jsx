@@ -55,8 +55,6 @@ export default function Header() {
           )}
         </form>
         <nav className="menu">
-          <NavLink to="/search?sort=discount">할인</NavLink>
-          <NavLink to="/analysis">분석</NavLink>
           {user ? (
             <>
               <NavLink to="/me">마이페이지</NavLink>

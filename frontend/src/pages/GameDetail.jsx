@@ -4,7 +4,6 @@ import { api } from '../api/client.js';
 import { useAuth } from '../auth.jsx';
 import { useAsync } from '../lib/useAsync.js';
 import { State, Section, cover } from '../components/ui.jsx';
-import { byKey } from './analysis/meta.js';
 import PriceChart from '../components/PriceChart.jsx';
 import Bbcode from '../components/Bbcode.jsx';
 import { won, dateKST, dateTimeKST, platformName, storeName, editionLabel, CONDITION } from '../lib/format.js';
@@ -36,6 +35,62 @@ function TimeToBeat({ t }) {
         ))}
       </div>
     </div>
+  );
+}
+
+// Steam 연령 제한 값(required_age). 한국 등급(전체이용가 등)과는 다른 값이라 그 이름은 쓰지 않는다.
+// 0은 "제한 없음"으로 적혀 있지만 성인 게임도 0인 경우가 있어(레드 데드 리뎀션 2 등) 0이면 아예 보여 주지 않는다.
+const ageLabel = (n) => `${n}세 이상`;
+
+// Steam 리뷰 등급·수. 한국어 리뷰 수가 있으면 그것을, 없으면 전체 언어 값을 쓴다. 보여 줄 값이 없으면 null.
+function steamReview(rs) {
+  if (!rs) return null;
+  if (rs.count_ko > 0) return { label: rs.label_ko || null, count: rs.count_ko, lang: '한국어' };
+  if (rs.count_all > 0) return { label: rs.label_all || null, count: rs.count_all, lang: '전체 언어' };
+  return null;
+}
+
+// 같은 시리즈의 다른 게임 (게임 상세 응답의 series). 시리즈가 없으면 아무것도 그리지 않는다.
+function Series({ list }) {
+  // 같은 시리즈가 collection·franchise로 따로 오거나 이름이 대소문자만 다르게 오는 경우가 있다
+  // (예: "Sonic the Hedgehog" / "Sonic The Hedgehog"). 이름을 소문자·공백 정리로 비교해 하나로 합치고(게임은 game_id로 중복 제거),
+  // 게임 목록이 완전히 같은 시리즈는 먼저 온 것만 남기고, 다른 게임이 없는 시리즈는 뺀다.
+  const norm = (n) => n.toLowerCase().replace(/\s+/g, ' ').trim();
+  const merged = new Map();
+  for (const s of list || []) {
+    const k = norm(s.name);
+    const m = merged.get(k) || { name: s.name, games: new Map() };
+    for (const x of s.games) m.games.set(x.game_id, x);
+    merged.set(k, m);
+  }
+  const seen = new Set();
+  const groups = [];
+  for (const m of merged.values()) {
+    const ids = [...m.games.keys()].sort((a, b) => a - b).join(',');
+    if (m.games.size === 0 || seen.has(ids)) continue;
+    seen.add(ids);
+    groups.push({ name: m.name, games: [...m.games.values()] });
+  }
+  if (groups.length === 0) return null;
+  // 시리즈가 여러 개여도 섹션 제목은 하나만 두고, 시리즈 이름은 그 안의 소제목으로 나눈다.
+  return (
+    <Section title="같은 시리즈 게임">
+      {groups.map((s) => (
+        <div key={s.name} className="rel-group">
+          <h3 className="rel-title">{s.name}</h3>
+          <ul className="rel-list">
+            {s.games.map((x) => (
+              <li key={x.game_id}>
+                <Link to={`/games/${x.game_id}`} className="rel">
+                  <span className={`rel-cover${x.cover_url ? ' has-img' : ''}`} style={cover(x)} />
+                  <span className="rel-name">{x.name}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </Section>
   );
 }
 
@@ -96,6 +151,7 @@ export default function GameDetail() {
               <Prices id={id} />
               <Lowest id={id} />
               <History id={id} user={user} platforms={g.platforms} />
+              <Series list={g.series} />
             </div>
             <aside ref={asideRef}>
               <AlertBox g={g} user={user} />
@@ -103,7 +159,7 @@ export default function GameDetail() {
               <Requirements id={id} user={user} />
             </aside>
           </div>
-          <Reviews id={id} />
+          <Reviews id={id} stats={g.review_stats} />
         </>
       )}
     </State>
@@ -136,15 +192,22 @@ function Head({ g, user, wished0 }) {
       <div>
         <h1>{g.name}</h1>
         <p className="muted">{g.name_en} · 출시 {dateKST(g.release_date)}</p>
+        {(g.developers?.length > 0 || g.publishers?.length > 0) && (
+          <p className="muted credits">
+            {g.developers?.length > 0 && <span>개발 <b>{g.developers.join(', ')}</b></span>}
+            {g.publishers?.length > 0 && <span>배급 <b>{g.publishers.join(', ')}</b></span>}
+          </p>
+        )}
         <div className="chips">
           {g.platforms.map((p) => <i key={p}>{platformName(p)}</i>)}
           {g.genres.map((x) => <i key={x} className="g">{x}</i>)}
+          {g.age_rating > 0 && <i className="age" title="Steam 스토어의 연령 제한 값이에요">{ageLabel(g.age_rating)}</i>}
         </div>
         <p>{g.summary}</p>
         <ul className="facts">
           {g.positive_ratio != null && <li><b>{Math.round(g.positive_ratio * 100)}%</b> 긍정 리뷰</li>}
           {g.critic_score != null && <li><b>{g.critic_score}점</b> 평론가 점수<small>(IGDB 집계{g.critic_count != null ? ` · ${g.critic_count}명` : ''})</small></li>}
-          {!g.time_to_beat && g.time_to_beat_hours != null && <li><b>{g.time_to_beat_hours}시간</b> 클리어까지 걸리는 시간(IGDB)</li>}
+          {!g.time_to_beat && g.time_to_beat_hours != null &&<li><b>{g.time_to_beat_hours}시간</b> 클리어까지 걸리는 시간(IGDB)</li>}
           {g.concurrent_players != null && g.concurrent_players > 0 && <li><b>{g.concurrent_players.toLocaleString('ko-KR')}</b> 명 접속 중</li>}
         </ul>
         <div className="ttb-act">
@@ -155,9 +218,7 @@ function Head({ g, user, wished0 }) {
           <ul className="insights" aria-label="분석 태그">
             {g.insights.map((t) => (
               <li key={t.code}>
-                {byKey(t.analysis)
-                  ? <Link to={`/analysis/${t.analysis}`} className={`pill tone-${t.tone}`}>{t.label}</Link>
-                  : <span className={`pill tone-${t.tone}`}>{t.label}</span>}
+                <span className={`pill tone-${t.tone}`}>{t.label}</span>
                 <small className="muted">{t.detail}</small>
               </li>
             ))}
@@ -388,7 +449,7 @@ function AlertBox({ g, user }) {
 function ReviewSummary({ id }) {
   const s = useAsync(() => api.reviewSummary(id), [id]);
   return (
-    <Section title="리뷰 요약" right={<span className="tag-ai">AI 요약</span>}>
+    <Section title="리뷰 요약" right={<span className="tag-ai has-tip" tabIndex={0} data-tip="리뷰에서 자주 나온 키워드로 AI가 요약한 내용이에요.">AI 요약</span>}>
       <State s={s}>
         {(d) => (
           <>
@@ -521,7 +582,8 @@ function ReviewText({ children }) {
   );
 }
 
-function Reviews({ id }) {
+function Reviews({ id, stats }) {
+  const sr = steamReview(stats); // Steam 스토어의 리뷰 등급·수. 제목 옆에 작게 보여 준다.
   const [page, setPage] = useState(1);
   const top = useRef(null);
   const first = useRef(true);
@@ -535,7 +597,7 @@ function Reviews({ id }) {
   }, [page]);
   return (
     <div className="rv-section">
-    <Section title="리뷰">
+    <Section title="리뷰" sub={sr ? `Steam ${sr.lang} 리뷰 ${sr.count.toLocaleString('ko-KR')}개${sr.label ? ` · 종합 평가 ${sr.label}` : ''}` : undefined}>
       <div ref={top} style={{ scrollMarginTop: 12 }} />
       <div className="seg rv-sort" role="group" aria-label="리뷰 정렬">
         <button className={sort === 'helpful' ? 'on' : ''} onClick={() => changeSort('helpful')}>가장 유용한 평가</button>
