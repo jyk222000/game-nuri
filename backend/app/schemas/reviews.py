@@ -11,7 +11,7 @@ class ReviewItem(BaseModel):
     review_id: str  # Steam recommendationid
     source: str  # 지금은 steam뿐
     recommended: bool  # voted_up
-    text: str  # 길면 잘라서(…) 보낸다
+    text: str  # 리뷰 원문 전체(길이 제한 없음, Steam BBCode 포함)
     playtime_hours: int | None  # 리뷰를 쓸 때까지의 플레이 시간(시간, 반올림)
     created_at: UtcDatetime
 
