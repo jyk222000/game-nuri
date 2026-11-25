@@ -217,7 +217,7 @@ function Rates() {
 function Lowest({ id }) {
   const s = useAsync(() => api.lowest(id), [id]);
   return (
-    <Section title="역대 최저가">
+    <Section title="역대 최저가" sub={s.data?.items?.some((i) => i.platform !== 'PC') ? '콘솔 가격은 겜누리에서 수집을 시작한 이후의 최저가예요.' : undefined}>
       <State s={s} isEmpty={(d) => !d.items.length} emptyMsg="아직 모인 가격이 없어요.">
         {(d) => (
           <>
@@ -227,7 +227,7 @@ function Lowest({ id }) {
                   <td>{platformName(i.platform)} · {CONDITION[i.item_condition]}</td>
                   <td>{storeName(i.store)} · {editionLabel(i)}</td>
                   <td className="num"><b>{won(i.price_krw)}</b> {i.discount_pct > 0 && <em className="badge s">-{i.discount_pct}%</em>}</td>
-                  <td className="muted">{dateKST(i.date)}{i.platform !== 'PC' && ' (수집 이후)'}</td>
+                  <td className="muted">{dateKST(i.date)}</td>
                 </tr>
               ))}
             </tbody></table>
@@ -352,7 +352,7 @@ function History({ id, user, platforms }) {
       {/* 콘솔(다나와)은 과거 이력을 받을 곳이 없어 수집을 시작한 날부터만 기록이 있다. 첫 기록 날짜는 데이터에서 가져온다. */}
       {platform !== 'PC' && mine.length > 0 && (
         <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>
-          콘솔 가격은 {mine.map((r) => r.collected_at.slice(0, 10)).sort()[0].replaceAll('-', '.')}부터 수집한 기록입니다.
+          이 게임의 {platformName(platform)}{itemCondition === 'used' ? ' 중고' : ''} 가격은 {dateKST(mine.map((r) => r.collected_at).sort()[0])}부터 수집한 기록입니다.
         </p>
       )}
     </Section>
@@ -397,7 +397,7 @@ function ReviewSummary({ id }) {
             <p>{d.summary}</p>
             <div className="kw"><span className="ok">👍</span>{d.pros.map((k) => <i key={k} className="pro">{k}</i>)}</div>
             <div className="kw"><span className="err">👎</span>{d.cons.map((k) => <i key={k} className="con">{k}</i>)}</div>
-            <small className="muted">{dateTimeKST(d.updated_at)} 갱신 · 하루 1회 생성</small>
+            <small className="muted">{dateTimeKST(d.updated_at)} 갱신</small>
           </>
         )}
       </State>
