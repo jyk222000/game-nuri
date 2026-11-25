@@ -19,7 +19,7 @@
 
 숨은 명작 후보(유저가 훨씬 후함): The Plan, 7 Days to Die, Gal*Gun 2, House Flipper, Muse Dash
 과대평가 후보(평론이 훨씬 후함): Starfield, Tekken 8, DNF Duel, Dawn of War III, Little Nightmares III
-→ `gap_top.csv` (위아래 10개씩)
+→ 위아래 10개씩은 스크립트를 돌리면 `gap_top.csv`로 나온다 (csv는 레포에 올리지 않음)
 
 ## 서비스에 쓰는 법
 - 게임 상세에 "평론보다 유저 평가가 높은 게임(숨은 명작)" / "평론보다 유저 평가가 낮은 게임" 꼬리표
