@@ -32,17 +32,26 @@ def latest_players(db: Session) -> dict[int, int]:
     return {gid: n for gid, n in rows}
 
 
-def popular(db: Session, size: int) -> list[Card]:
-    """인기 = 찜한 사용자 수가 많은 순, 같으면 동접자 많은 순.
+def popularity_order(db: Session) -> list[int]:
+    """인기 순서의 게임 ID. 찜한 사용자 수가 많은 순, 같으면 동접자 많은 순, 그다음 game_id 순.
 
-    찜도 동접자도 있는 게임이 하나도 없으면 최근 할인 게임(할인율 큰 순)으로 대신한다.
+    찜도 동접자도 없는 게임은 담지 않는다(호출하는 쪽이 뒤에 붙인다).
+    인기 게임(#9)과 게임 목록의 sort=popular가 같은 기준을 쓰도록 한 곳에 둔다.
     """
     wishes = dict(
         db.execute(select(Wishlist.game_id, func.count()).group_by(Wishlist.game_id)).all()
     )
     players = latest_players(db)
     ids = {i for i in set(wishes) | set(players) if wishes.get(i, 0) > 0 or players.get(i, 0) > 0}
-    ranked = sorted(ids, key=lambda i: (-wishes.get(i, 0), -players.get(i, 0), i))
+    return sorted(ids, key=lambda i: (-wishes.get(i, 0), -players.get(i, 0), i))
+
+
+def popular(db: Session, size: int) -> list[Card]:
+    """인기 = 찜한 사용자 수가 많은 순, 같으면 동접자 많은 순.
+
+    찜도 동접자도 있는 게임이 하나도 없으면 최근 할인 게임(할인율 큰 순)으로 대신한다.
+    """
+    ranked = popularity_order(db)
     if not ranked:  # 찜도 동접자도 없으면 최근 할인 게임으로 대신 채운다
         return deals.get_deals(db, size)
     return cards.build_cards(db, ranked[:size], wished_ids=set())
