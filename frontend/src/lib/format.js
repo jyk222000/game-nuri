@@ -22,3 +22,10 @@ export const EDITION = { digital: '다운로드', physical: '패키지', code: '
 export const CONDITION = { new: '새 상품', used: '중고' };
 // edition + item_condition 을 한 줄 라벨로 (예: 패키지 · 중고)
 export const editionLabel = (i) => `${EDITION[i.edition] || i.edition}${i.item_condition === 'used' ? ' · 중고' : ''}`;
+
+// 클리어까지 걸리는 시간 구간 (api.md: '보통' 클리어 시간 기준, 10시간·40시간은 임시 기준). 메인·마이페이지가 같은 이름을 쓴다.
+export const CLEAR_LENGTHS = [
+  { key: 'short', label: '짧게', range: '10시간 이하', desc: '짧게 끝나는 게임을 즐기는 성향이에요' },
+  { key: 'medium', label: '보통', range: '10~40시간', desc: '적당한 분량의 게임을 즐기는 성향이에요' },
+  { key: 'long', label: '길게', range: '40시간 초과', desc: '긴 호흡의 게임을 즐기는 성향이에요' },
+];

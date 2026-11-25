@@ -49,18 +49,39 @@ export default function GameDetail() {
 
   useEffect(() => { api.event('view_game', { game_id: Number(id) }); }, [id]);
 
-  // 오른쪽 패널이 화면보다 길면 고정(따라오기)을 풀고 페이지와 같이 스크롤되게 한다. 패널 안에 스크롤바를 만들지 않는다.
+  // 오른쪽 패널(넓은 화면에서는 화면에 고정)이 스크롤을 따라오게 한다. 패널이 화면보다 길어도 패널 안에 스크롤바를 만들지 않는다.
+  // 내리면 패널이 페이지와 같이 올라가다가 맨 아래가 화면 아래에 닿으면 멈추고, 올리면 거꾸로 내려가다가 맨 위가 처음 자리(TOP)에 닿으면 멈춘다.
+  // 짧은 패널은 TOP에 그대로 고정된다. 좁은 화면(CSS가 고정을 쓰지 않을 때)에서는 top 값이 무시된다.
   const asideRef = useRef(null);
-  const [tall, setTall] = useState(false);
   useEffect(() => {
     const el = asideRef.current;
     if (!el) return undefined;
-    const measure = () => setTall(el.scrollHeight > window.innerHeight - 100); // 고정 위치(위 84px)와 아래 여백 16px을 뺀 높이
-    measure();
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    const TOP = 84; // 처음 자리: 고정 헤더 아래 = 게임 정보 패널 맨 위
+    const GAP = 16; // 패널 아래 여백
+    let top = TOP;
+    let lastY = window.scrollY;
+    const apply = () => {
+      const min = Math.min(TOP, window.innerHeight - el.offsetHeight - GAP); // 긴 패널이면 음수
+      top = Math.max(min, Math.min(TOP, top));
+      el.style.top = `${top}px`;
+    };
+    const onScroll = () => {
+      const y = window.scrollY;
+      top = y <= 0 ? TOP : top - (y - lastY);
+      lastY = y;
+      apply();
+    };
+    apply();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(apply) : null;
     ro?.observe(el);
-    window.addEventListener('resize', measure);
-    return () => { ro?.disconnect(); window.removeEventListener('resize', measure); };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', apply);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', apply);
+      el.style.top = '';
+    };
   }, [game.data]);
 
   return (
@@ -76,7 +97,7 @@ export default function GameDetail() {
               <Lowest id={id} />
               <History id={id} user={user} platforms={g.platforms} />
             </div>
-            <aside ref={asideRef} className={tall ? 'aside-flow' : undefined}>
+            <aside ref={asideRef}>
               <AlertBox g={g} user={user} />
               <ReviewSummary id={id} />
               <Requirements id={id} user={user} />

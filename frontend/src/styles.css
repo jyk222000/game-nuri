@@ -276,9 +276,43 @@ a.pill:hover { text-decoration: none; filter: brightness(.95); }
    덩어리(1224)+양옆 여유+스크롤바가 들어가는 1300px부터 적용하고, 그보다 좁으면 위의 기본 배치(본문+오른쪽 패널 두 칸, 모바일은 한 칸)를 쓴다. */
 @media (min-width: 1300px) {
   .detail-h, .low-banner, .two, .rv-section { max-width: 900px; margin-left: -68px; margin-right: 0; }
-  .two { display: block; position: relative; }
-  /* 헤더(sticky) 아래 84px에 고정해서 스크롤을 따라오게 한다. */
+  .two { display: block; }
+  /* 헤더(sticky) 아래 84px에 고정. 스크롤을 따라오는 위치(top)는 GameDetail.jsx가 스크롤 방향에 맞춰 조절한다(긴 패널도 따라옴). */
   .two > aside { position: fixed; top: 84px; left: calc(50% + 312px); width: 300px; }
-  /* 패널이 화면보다 길면(GameDetail.jsx가 판단) 고정을 풀고 열 오른쪽에 붙여 페이지와 같이 스크롤한다. 패널 안 스크롤바는 만들지 않는다. */
-  .two > aside.aside-flow { position: absolute; top: 0; left: calc(100% + 24px); }
 }
+
+/* 마이페이지 목표가 목록: 숫자 칸은 머리글도 오른쪽 정렬, 상태 배지, 알림 켜기/끄기 스위치, 삭제 버튼 */
+.al-tbl td, .al-tbl th { vertical-align: middle; white-space: nowrap; }
+.al-tbl td:first-child { white-space: normal; }
+.al-tbl .c { text-align: center; width: 1%; }
+.al-tbl thead th.num { text-align: right; }
+.al-tbl tbody tr:hover { background: var(--bg); }
+.al-tbl tr.off td:not(.c) { opacity: .5; }
+.al-state { display: inline-block; font-size: 12px; padding: 2px 9px; border-radius: 99px; }
+.al-state.hit { background: var(--ok-bg); color: var(--ok); font-weight: 600; }
+.al-state.wait { color: var(--muted); }
+.switch { position: relative; display: inline-block; width: 38px; height: 22px; cursor: pointer; vertical-align: middle; }
+.switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.switch span { position: absolute; inset: 0; border-radius: 99px; background: var(--line); transition: background .15s; pointer-events: none; }
+.switch span::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .25); transition: transform .15s; }
+.switch input:checked + span { background: var(--brand); }
+.switch input:checked + span::after { transform: translateX(16px); }
+.switch input:focus-visible + span { outline: 2px solid var(--brand); outline-offset: 2px; }
+.al-del { font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); cursor: pointer; }
+.al-del:hover { color: var(--bad); border-color: var(--bad); background: var(--bad-bg); }
+
+/* 목표가 그 자리에서 수정 */
+.al-target { display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.al-edit { font: inherit; font-size: 12px; padding: 2px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); cursor: pointer; }
+.al-edit:hover { color: var(--brand); border-color: var(--brand); }
+.al-edit-form { display: grid; gap: 4px; justify-items: end; }
+.al-edit-row { display: inline-flex; align-items: center; gap: 6px; }
+.al-edit-row input { width: 110px; text-align: right; padding: 5px 8px; }
+.btn.sm { padding: 4px 10px; font-size: 13px; }
+.lt-phrase { color: var(--text); font-weight: 600; } /* 마이페이지 취향 한 줄의 성향 문구 */
+
+/* 마이페이지: 연동한 Steam ID */
+.steam-link { display: grid; gap: 8px; margin-bottom: 14px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.steam-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.steam-row code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; padding: 2px 8px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line); }
+.steam-row input { flex: 1 1 220px; min-width: 0; }
