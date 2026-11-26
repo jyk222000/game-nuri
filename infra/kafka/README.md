@@ -106,6 +106,8 @@ curl -s http://kafka1:9100/metrics | grep 'node_systemd_unit_state{name="kafka.s
 
 - JMX는 쓰지 않는다. `kafka-run-class.sh`는 `KAFKA_JMX_OPTS`가 비어 있으면 인증 없는 JMX를 켜고 `0.0.0.0`의 임의 포트를 연다(11/23 확인: 5대 모두). 서비스 파일에서 `KAFKA_JMX_OPTS`를 채워 막는다. 지표는 kafka_exporter와 Connect 상태 스크립트로 모은다.
 
+- `controller.quorum.fetch.timeout.ms=5000` (기본 2000). Kafka 3.8에는 Pre-Vote(KIP-996, 4.0부터)가 없어, 투표 노드 하나가 몇 초 끊겼다 돌아와도 선거 번호(epoch)가 올라 멀쩡한 리더가 바뀐다. 11/26 로그: 하루 4~5번, backup(03:00 백업 중 등)·monitoring이 먼저 끊김. 5초로 늘려 짧은 끊김은 넘긴다. 대신 진짜 리더 장애를 알아채는 데 최대 5초가 걸린다.
+
 ## 6. 장애 시험 결과 (11/20~21)
 
 | 시나리오 | 결과 |
