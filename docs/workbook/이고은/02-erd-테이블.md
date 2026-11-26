@@ -37,7 +37,7 @@
 # 스키마 적용. CREATE TABLE 29개가 만들어진다
 [root@mariadb-pr ~]# mariadb -h 10.0.2.101 -u gamenuri -p < /opt/game-nuri/repo/docs/contracts/erd.sql
 
-# stores 에 판매처 기본값 8곳 넣기 (INSERT IGNORE 라 여러 번 실행해도 안전)
+# stores 에 판매처 기본값 8곳 넣기
 [root@mariadb-pr ~]# mysql -u root -p gamenuri < /opt/game-nuri/repo/docs/contracts/erd_seed_stores_1123.sql
 ```
 만들어졌는지 확인합니다.
@@ -55,35 +55,7 @@ MariaDB [gamenuri]> SHOW CREATE TABLE prices_current\G
 MariaDB [gamenuri]> EXIT;
 ```
 
-## 2-3. 설계가 바뀔 때 (이미 만든 서버를 바꾸기)
-**순서는 항상 ALTER(테이블) → Connect 설정(`pk.fields`) → refiner입니다.** 컬럼이 없는데 새 필드가 들어오면 JDBC Sink가 멈추기 때문입니다.
-
-| 변경 | 이유 | 파일 |
-|---|---|---|
-| 가격 테이블에 `platform`, `item_condition`, PK 5개 컬럼. `games`에 `aggregated_rating`(·count), `game_platforms`에 `release_date` | 같은 게임의 플랫폼·신품/중고가 덮어쓰지 않게. 평론 점수·플랫폼별 출시일이 분석에 필요 | `erd_alter_1122.sql` |
-| `game_review_stats` 추가 (29개째) | Steam 리뷰 수·긍정률을 `review_summaries`와 따로 보관 | `erd_alter_1123.sql` |
-| `stores` 기본값 8곳 | 빠져 있던 시드 | `erd_seed_stores_1123.sql` |
-| `variant_name` 추가 | 본편 상품이 없는 플랫폼의 에디션 가격 이름 표시(#93) | `erd_alter_1124.sql` |
-
-```
-# 1) 가격 테이블이 비어 있는지 확인. 둘 다 0 이어야 한다
-#    행이 있으면 새 NOT NULL 칸이 빈 문자열로 채워지므로 실행하지 말고 팀장과 상의
-[root@mariadb-pr ~]# mysql -u root -p gamenuri -e "SELECT COUNT(*) FROM prices_current; SELECT COUNT(*) FROM price_history;"
-
-# 2) 둘 다 0 일 때만: platform, item_condition 추가와 PK 변경 (한 번만. DROP PRIMARY KEY 포함, 되돌릴 수 없음)
-[root@mariadb-pr ~]# mysql -u root -p gamenuri < /opt/game-nuri/repo/docs/contracts/erd_alter_1122.sql
-
-# 3) Steam 리뷰 수·긍정률 테이블 추가 (이미 있으면 아무 일도 하지 않음)
-[root@mariadb-pr ~]# mysql -u root -p gamenuri < /opt/game-nuri/repo/docs/contracts/erd_alter_1123.sql
-
-# 4) 에디션 가격 이름 칸 추가. 정제기를 새 코드로 바꾸기 전에 먼저
-[root@mariadb-pr ~]# mysql -u root -p gamenuri < /opt/game-nuri/repo/docs/contracts/erd_alter_1124.sql
-
-# 5) 칸이 생겼는지 확인
-[root@mariadb-pr ~]# mysql -u root -p gamenuri -e "SHOW COLUMNS FROM prices_current LIKE 'variant_name';"
-```
-
-## 2-4. 복제 확인 (mariadb-re, 읽기만)
+## 2-3. 복제 확인 (mariadb-re, 읽기만)
 ```
 # 서버 이름 확인 (mariadb-re 여야 한다)
 [root@mariadb-re ~]# hostname
@@ -96,4 +68,3 @@ MariaDB [gamenuri]> EXIT;
 [root@mariadb-re ~]# mysql -u root -p -e "SHOW REPLICA STATUS\G"
 ```
 - Replica에 쓰면 복제가 어긋납니다. `read_only`는 root를 막지 못하므로 읽기 명령만 입력합니다.
-- 칸을 추가하는 코드(refiner, Backend)를 배포하기 **전에** DB에 칸을 먼저 추가합니다. 반대 순서면 조회가 오류가 납니다.

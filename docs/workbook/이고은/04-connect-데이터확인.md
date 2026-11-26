@@ -7,9 +7,9 @@
 | 파일 | 읽는 토픽 | 저장 위치 / 방식 |
 |---|---|---|
 | `jdbc-sink-games.json` | refined.games | games / upsert (game_id) |
-| `jdbc-sink-prices-current.json` | refined.prices | prices_current / upsert (5개 키). `erd_alter_1122.sql` 적용 후 |
+| `jdbc-sink-prices-current.json` | refined.prices | prices_current / upsert (5개 키) |
 | `jdbc-sink-price-history.json` | refined.price_history | price_history / insert (가격이 바뀐 때만) |
-| `jdbc-sink-review-stats.json` | refined.review_stats | game_review_stats / upsert. `erd_alter_1123.sql` 적용 후 |
+| `jdbc-sink-review-stats.json` | refined.review_stats | game_review_stats / upsert |
 | `jdbc-sink-game-links.json` | refined.game_genres 등 4개 | 연결 테이블 / upsert (모든 컬럼이 키) |
 | `mongo-sink-raw.json` | raw.* | MongoDB raw_* 컬렉션. 리뷰(kind=review)는 제외 (#127) |
 | `mongo-sink-unmatched.json` | refined.unmatched | MongoDB unmatched |
@@ -44,7 +44,6 @@ kafka1의 레포 루트에 `.env`가 있어야 합니다(chmod 600, 커밋 금�
 - `auto.create: false`: 테이블은 `erd.sql`로만 만든다. 커넥터가 마음대로 테이블을 만들지 못하게 한다.
 - `value.converter.schemas.enable: true`: JDBC Sink는 컬럼 타입을 알아야 해서 `refined.*`는 JSON+schema 형식으로 보낸다.
 - 시간 형식: TimestampConverter 패턴은 `yyyy-MM-dd'T'HH:mm:ss`이고 끝에 `X`를 붙이지 않는다. 소수 초가 붙은 UTC 값도 받기 위해서다.
-- 커넥터의 `pk.fields`는 메시지 형식의 키와 같아야 한다.
 
 ## 4-2. 단계별 데이터 확인 (읽기만)
 데이터가 단계마다 잘 들어갔는지 보고, 문제가 있으면 **어느 단계에서 막혔는지** 찾습니다.
@@ -58,23 +57,12 @@ kafka1의 레포 루트에 `.env`가 있어야 합니다(chmod 600, 커밋 금�
 # 3) 저장: 주요 테이블 행 수
 [root@mariadb-pr ~]# mysql -u root -p gamenuri -e "SELECT COUNT(*) FROM games; SELECT COUNT(*) FROM prices_current; SELECT COUNT(*) FROM price_history;"
 
-# 4) 저장: 다나와 신품·중고별로 정가와 할인율이 채워졌는지
-[root@mariadb-pr ~]# mysql -u root -p gamenuri -e "SELECT item_condition, COUNT(*), SUM(regular_krw IS NOT NULL), SUM(discount_pct>0) FROM prices_current WHERE store='danawa' GROUP BY item_condition;"
-
-# 5) 저장: 에디션 가격(variant_name)이 들어갔는지 5개만
-[root@mariadb-pr ~]# mysql -u root -p gamenuri -e "SELECT game_id, store, platform, variant_name, price_krw FROM prices_current WHERE variant_name IS NOT NULL LIMIT 5;"
-
-# 6) 복제: Replica 가 따라오고 있는지
+# 4) 복제: Replica 가 따라오고 있는지
 [root@mariadb-re ~]# mysql -u root -p -e "SHOW REPLICA STATUS\G"
 ```
 | 단계 | 어디서 | 무엇을 | 정상 기준 |
 |---|---|---|---|
 | 정제 | kafka1 | `journalctl -u refiner` | 오류 없음, unmatched는 일부만 |
 | 적재 | kafka1 | Connect 상태 | RUNNING (FAILED 없음) |
-| 저장 | mariadb-pr | 테이블 행 수, 컬럼 값 | 기대한 컬럼이 채워짐 |
+| 저장 | mariadb-pr | 테이블 행 수 | 행이 쌓임 |
 | 복제 | mariadb-re | `SHOW REPLICA STATUS` | IO·SQL 모두 Yes |
-
-## 4-3. 지킬 것
-- 테이블 변경 순서: ALTER → Connect 설정 → refiner. 반대로 하면 JDBC Sink가 멈춘다.
-- 테이블은 `docs/contracts/erd.sql`로만 만들고, 바꿀 때는 contracts PR로 올린다. 몰래 필드 이름을 바꾸지 않는다.
-- Replica(mariadb-re)에는 쓰지 않는다. DROP·TRUNCATE·토픽 삭제는 팀장 확인 후에만 한다.
