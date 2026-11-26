@@ -58,12 +58,12 @@ MariaDB [gamenuri]> EXIT;
 ## 2-3. 설계가 바뀔 때 (이미 만든 서버를 바꾸기)
 **순서는 항상 ALTER(테이블) → Connect 설정(`pk.fields`) → refiner입니다.** 컬럼이 없는데 새 필드가 들어오면 JDBC Sink가 멈추기 때문입니다.
 
-| 날짜 | 변경 | 이유 | 파일 |
-|---|---|---|---|
-| 11/22 | 가격 테이블에 `platform`, `item_condition`, PK 5개 컬럼. `games`에 `aggregated_rating`(·count), `game_platforms`에 `release_date` | 같은 게임의 플랫폼·신품/중고가 덮어쓰지 않게. 평론 점수·플랫폼별 출시일이 분석에 필요 | `erd_alter_1122.sql` |
-| 11/23 | `game_review_stats` 추가 (29개째) | Steam 리뷰 수·긍정률을 `review_summaries`와 따로 보관 | `erd_alter_1123.sql` |
-| 11/23 | `stores` 기본값 8곳 | 빠져 있던 시드 | `erd_seed_stores_1123.sql` |
-| 11/24 | `variant_name` 추가 | 본편 상품이 없는 플랫폼의 에디션 가격 이름 표시(#93) | `erd_alter_1124.sql` |
+| 변경 | 이유 | 파일 |
+|---|---|---|
+| 가격 테이블에 `platform`, `item_condition`, PK 5개 컬럼. `games`에 `aggregated_rating`(·count), `game_platforms`에 `release_date` | 같은 게임의 플랫폼·신품/중고가 덮어쓰지 않게. 평론 점수·플랫폼별 출시일이 분석에 필요 | `erd_alter_1122.sql` |
+| `game_review_stats` 추가 (29개째) | Steam 리뷰 수·긍정률을 `review_summaries`와 따로 보관 | `erd_alter_1123.sql` |
+| `stores` 기본값 8곳 | 빠져 있던 시드 | `erd_seed_stores_1123.sql` |
+| `variant_name` 추가 | 본편 상품이 없는 플랫폼의 에디션 가격 이름 표시(#93) | `erd_alter_1124.sql` |
 
 ```
 # 1) 가격 테이블이 비어 있는지 확인. 둘 다 0 이어야 한다
