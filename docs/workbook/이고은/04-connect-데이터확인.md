@@ -44,7 +44,7 @@ kafka1의 레포 루트에 `.env`가 있어야 합니다(chmod 600, 커밋 금�
 - `auto.create: false`: 테이블은 `erd.sql`로만 만든다. 커넥터가 마음대로 테이블을 만들지 못하게 한다.
 - `value.converter.schemas.enable: true`: JDBC Sink는 컬럼 타입을 알아야 해서 `refined.*`는 JSON+schema 형식으로 보낸다.
 - 시간 형식: TimestampConverter 패턴은 `yyyy-MM-dd'T'HH:mm:ss`이고 끝에 `X`를 붙이지 않는다. 소수 초가 붙은 UTC 값도 받기 위해서다.
-- 커넥터의 `pk.fields`는 메시지 형식의 키와 같아야 하고, `pipeline/tests/test_connect_configs.py`가 확인한다.
+- 커넥터의 `pk.fields`는 메시지 형식의 키와 같아야 한다.
 
 ## 4-2. 단계별 데이터 확인 (읽기만)
 데이터가 단계마다 잘 들어갔는지 보고, 문제가 있으면 **어느 단계에서 막혔는지** 찾습니다.
