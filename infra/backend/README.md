@@ -51,6 +51,7 @@ sudo -u backend -H git -C /opt/game-nuri/repo pull --rebase origin main
 sudo systemctl restart backend && journalctl -u backend -n 30 --no-pager
 curl -s http://localhost:8000/api/health
 ```
+- **두 서버가 같은 커밋인지 확인**: backend1·backend2 각각에서 `sudo -u backend -H git -C /opt/game-nuri/repo log -1 --oneline`을 실행해 해시를 비교한다. `admina`로 `git`을 실행하면 소유자가 달라 `dubious ownership`이 난다.
 - **`sudo git pull`을 쓰지 않는 이유**: root로 실행하면 `.git`과 작업 파일의 소유자가 root로 바뀌어 이후 `backend` 계정의 `git pull`이 권한 오류로 막힐 수 있다.
 - `backend/requirements.txt`가 바뀐 배포일 때만 패키지를 다시 설치한다: `sudo -u backend -H /opt/game-nuri/repo/.venv/bin/pip install -e shared -r backend/requirements.txt` (이 줄은 아직 서버에서 실행해 확인하지 않았다).
 - DB 칸이 늘어나는 변경(예: `variant_name`)은 **DB에 칸을 먼저 추가한 뒤** 코드를 배포한다. 반대 순서면 조회가 오류를 낸다.
@@ -104,8 +105,37 @@ systemctl list-timers 'backend-alerts*' --no-pager
 - 프로세스를 1개로 띄운다(`--workers` 없음). `/metrics`가 워커별로 갈라져 API 사용 순위(#37)가 틀어지는 것을 피하려는 것이다.
 - `/api/stats/api-ranking`은 `infra/monitoring/prometheus.yml`에 `backend1:8000`, `backend2:8000` `/metrics` 수집 job이 있어야 값이 나온다(없으면 `degraded`, 남현식 폴더).
 - 종료할 때 Kafka에 아직 안 나간 clickstream 메시지를 보내느라 최대 5초 걸린다(`TimeoutStopSec=15`).
-- 아직 backend1·frontend1만 운영한다. backend2·frontend2는 기능이 갖춰진 뒤 배포한다(팀 합의).
+- backend1·backend2, frontend1·frontend2를 모두 운영한다(backend2는 2026-11-26 배포, 아래 '확인 기록'). 메일 타이머(`backend-alerts`)만 backend1에서 켠다.
+
+## 확인 기록
+| 날짜 | VM | 내용 |
+|---|---|---|
+| 2026-11-26 | backend2 | 새로 설치(아래 'backend2 설치 기록'). `/api/health`: `ok`, `server=backend2`, `db_write`·`db_read`·`valkey`·`es` 모두 `ok`. 쿠키 없는 `/api/me`는 401(`AUTH_FAKE_USER=false`), `/api/games` 정상. `backend-alerts.timer`는 없음(`inactive`). 패키지 `elasticsearch` 8.19.3 |
+| 2026-11-26 | backend1·backend2 | 두 서버 모두 main `cfd324d`(같은 커밋). 00:20~00:22 두 분 동안 Frontend를 거친 사용자 요청이 backend1 54건 : backend2 60건으로 나뉨. 한 화면의 요청이 두 서버로 갈라지는 것을 확인(`/api/games/19130`은 backend1, 같은 화면의 다른 요청은 backend2). 표본이 작아 균등하다는 증거는 아니다 |
+| 2026-11-26 | backend2 | monitoring VM(192.168.0.223)이 backend2 `:8000/metrics`를 읽는 요청이 backend2 로그에 보임. 레포의 `infra/monitoring/prometheus.yml`에는 `:8000` job이 보이지 않아 실제 설정과 레포가 다를 수 있다(남현식 폴더) |
+
+## backend2 설치 기록 (2026-11-26)
+위 '설치'와 같은 순서이고, backend2에서만 다른 값은 `.env`의 `SERVER_NAME=backend2`뿐이다. 이번에 겪었거나 미리 피한 것:
+| 문제 | 원인 | 해결 |
+|---|---|---|
+| `install: invalid group 'backend'` | 환경 파일을 만들 때 `backend` 계정·그룹이 아직 없었다(계정 생성 단계를 건너뜀) | `useradd` → `/opt/game-nuri` 소유권 → `/etc/game-nuri/backend.env` 순서로 한다 |
+| (예방) 환경 파일을 `/tmp`에서 `mv` | `mv`는 SELinux 라벨(`user_tmp_t`)을 그대로 가져가 systemd가 읽지 못할 수 있다 | `install -m 0640 -o root -g backend`로 만들고 `restorecon -v` 뒤 `ls -lZ`로 `etc_t` 확인 |
+| (예방) `admina`로 `git log` | 레포 소유자가 `backend`라 `dubious ownership` 오류 | `sudo -u backend -H git -C /opt/game-nuri/repo ...` |
+
+환경 파일을 backend1에서 복사해 올 때(값 오타를 피하는 방법. 비밀값은 화면·대화에 붙이지 않는다):
+```bash
+# backend1
+sudo install -m 0600 -o admina -g admina /etc/game-nuri/backend.env /tmp/backend.env.copy
+# backend2 (backend 계정·그룹을 먼저 만든 뒤)
+scp admina@backend1:/tmp/backend.env.copy /tmp/backend.env.copy
+sudo install -m 0640 -o root -g backend /tmp/backend.env.copy /etc/game-nuri/backend.env
+sudo restorecon -v /etc/game-nuri/backend.env
+sudoedit /etc/game-nuri/backend.env      # SERVER_NAME=backend2, AUTH_FAKE_USER=false 확인, SMTP_* 는 backend1 전용이라 backend2에서는 비운다
+# 서비스가 뜬 것을 확인한 뒤 두 서버의 /tmp 임시 파일을 지운다
+```
+`SESSION_SECRET`·구글 값·DB·Valkey 값은 backend1과 같아야 한다. 패키지 설치는 `sudo -u backend ... pip install --no-cache-dir -e shared -r backend/requirements.txt`로 했다(`-H` 없이 실행하면 `backend` 계정이 쓸 수 없는 캐시 위치를 쓰려 해서 `--no-cache-dir`로 피한다).
 
 ## 확인되지 않은 것
 - **backend1**: 구글 로그인, 구매 타이밍, 리뷰 API가 서버에서 동작하는 것을 확인했다.
-- **미확인**: AI 사양 판정(서버의 `GEMINI_API_KEY`·`AI_MODEL`과 Google AI로 나가는 연결), backend2 전체, 위의 `pip install` 줄을 `backend` 계정으로 실행했을 때의 권한.
+- **backend2**: 두 서버를 오가며 **로그인이 유지되는지**는 아직 확인하지 않았다. `SESSION_SECRET`·구글 값은 backend1 파일을 복사했고 값을 하나씩 대조하지는 않았다. 알림·Steam 새로고침 같은 로그인 기능을 backend2를 거쳐 눌러 본 기록도 아직 없다.
+- **미확인**: AI 사양 판정(서버의 `GEMINI_API_KEY`·`AI_MODEL`과 Google AI로 나가는 연결), 위 '코드를 업데이트할 때'의 `pip install -e shared ...` 줄을 `-H`를 붙여 실행했을 때의 결과.

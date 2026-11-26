@@ -108,12 +108,13 @@ curl -s "localhost/api/games?size=2"                      # 게임 2건, total 1
 | 2026-11-24 | frontend1 | nginx 1.26.3 설치, **hybrid 빌드**(당시) 배포. `/` 200, `/api/health`(server=backend1, db ok·valkey ok·es down), `/api/games`(total 1000). `gamenuri.store`에서 메인·상세 화면이 실제 데이터로 표시됨 |
 | 2026-11-24 | frontend1 | **real 기본 빌드**(main 1b7d66f 기준, `assets`는 `index-DLW11KPE.css`·`index-DWheRICh.js` 2개)로 재배포. 옛 `assets`를 비운 뒤 `cp`, `restorecon`. `/` 200, `/api/health` ok(server=backend1, db·valkey·es ok), `/api/games` 응답 확인 |
 | 2026-11-24 | frontend1·backend1 | 구글 로그인 확인(backend #99·#100 배포 후): `gamenuri.store`에서 로그인 → 마이페이지에 구글 계정 이메일·닉네임 표시. `AUTH_FAKE_USER=false`로 끈 상태 |
-| – | frontend2 | **미확인** (아직 같은 절차를 하지 않음) |
+| 2026-11-26 | frontend2 | frontend1과 **같은 빌드**가 올라가 있음(`index.html`이 가리키는 `assets/index-rI9v3tce.js`·`index-DIr7GOr6.css`가 frontend1과 같음). backend2 배포 뒤 frontend2 경유 `/api/health`가 통과(backend2 로그에 `10.0.1.102`의 요청이 찍힘). 사용자 요청이 frontend1·2로 나뉨(backend1 54건 : backend2 60건, 2분 표본) |
+| 2026-11-26 | frontend1·2 | 분석 탭·할인 메뉴 제거(main `cfd324d`, #169)가 이 빌드에 들어갔는지는 **미확인**. 빌드 파일 시각은 frontend1 00:05, frontend2 00:13이고 #169 머지는 11/25 23:58 |
 
 ## 남은 일
 - [x] frontend1에 real 기본 빌드 올리기 (2026-11-24)
-- [ ] frontend2에 real 기본 빌드 올리기 (`fe2.conf` → `backend2:8000`, backend2 배포 후. 위 '새 빌드로 갱신할 때' 순서)
+- [x] frontend2에 빌드 올리기 (2026-11-26, frontend1과 같은 빌드. `fe2.conf` → `backend2:8000`, backend2 배포 후)
 - [ ] Backend에 없는 API(로그인·리뷰·사양 비교·검색어)를 만들고, 그 전까지 해당 화면이 오류가 아닌 빈 상태로 보이게 하기 (frontend, 한예찬)
 - [x] 구글 로그인이 동작하는지 확인하고 개발용 `AUTH_FAKE_USER`를 끈다 (backend1, 2026-11-24)
-- [ ] backend2에도 같은 `GOOGLE_*`·`SESSION_SECRET`을 넣고 `AUTH_FAKE_USER=false`인지 확인 (두 서버가 같은 `SESSION_SECRET`이어야 로그인이 서로 통한다)
+- [ ] 두 서버를 오가도 로그인이 유지되는지 확인 (backend2에는 backend1의 `.env`를 복사했고 `AUTH_FAKE_USER=false`는 확인했다, 2026-11-26. 두 서버가 같은 `SESSION_SECRET`이어야 로그인이 서로 통한다. 브라우저에서 로그인한 뒤 새로고침을 여러 번 해 보는 확인은 아직 안 했다)
 - [ ] 로그인 실패·취소 때 JSON 오류가 그대로 보이는 문제 (`/login?error=...` 방식은 프론트·백엔드 합의 필요)
