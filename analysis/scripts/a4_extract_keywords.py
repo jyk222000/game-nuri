@@ -29,7 +29,8 @@ import time
 import urllib.request
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+_PARENTS = Path(__file__).resolve().parents
+ROOT = _PARENTS[2] if len(_PARENTS) > 2 else _PARENTS[-1]  # 저장소 밖(/tmp)에서도 돌아가게
 GAMES_FILE = ROOT / "analysis" / "game_list" / "games_1000.csv"
 OUT_DIR = ROOT / "analysis" / "data"
 INDEX = "reviews"
