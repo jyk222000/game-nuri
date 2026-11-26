@@ -29,7 +29,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from matplotlib import font_manager  # noqa: E402
-from review_types import aggregate, labels, load_dict  # noqa: E402
+from review_types import aggregate, is_ignored, labels, load_dict  # noqa: E402
 
 SRC, OUT = Path(sys.argv[1]), Path(sys.argv[2])
 OUT.mkdir(parents=True, exist_ok=True)
@@ -56,8 +56,30 @@ plt.rcParams.update(
     }
 )
 INK, MUTED, GRID, BG = "#0b0b0b", "#52514e", "#e8e7e3", "#fcfcfb"
-NEG_COLORS = ["#eb6834", "#2a78d6", "#7a5bd0", "#009688", "#c9a400", "#a3a29d"]
-POS_COLORS = ["#2a78d6", "#009688", "#eb6834", "#c9a400", "#7a5bd0"]
+NEG_COLORS = [
+    "#8a5a00",
+    "#6c757d",
+    "#eb6834",
+    "#2a78d6",
+    "#7a5bd0",
+    "#009688",
+    "#c9a400",
+    "#a3a29d",
+    "#d6336c",
+    "#5c7cfa",
+    "#2f9e44",
+]
+POS_COLORS = [
+    "#2a78d6",
+    "#009688",
+    "#eb6834",
+    "#c9a400",
+    "#7a5bd0",
+    "#a3a29d",
+    "#d6336c",
+    "#5c7cfa",
+    "#2f9e44",
+]
 
 
 def frame(ax, grid="x"):
@@ -80,12 +102,12 @@ games = pd.read_csv(GAMES, encoding="utf-8-sig")
 games = games.drop_duplicates("game_id").set_index("game_id")
 
 # ---------- 키워드 → 유형 ----------
-kw = pd.read_csv(SRC, sep="\t")
+kw = pd.read_csv(SRC, sep="\t", keep_default_na=False, dtype={"keyword": str})
 rows, unknown_all = [], defaultdict(int)
 for (gid, side), g in kw.groupby(["game_id", "side"]):
     pairs = list(zip(g.keyword.astype(str), g.doc_count.astype(int), strict=True))
     counts, unknown = aggregate(pairs, d, side)
-    total_all = sum(n for _, n in pairs)
+    total_all = sum(n for w, n in pairs if not is_ignored(w, d))
     for w, n in unknown:
         unknown_all[(side, w)] += n
     classified = sum(counts.values())
@@ -155,7 +177,11 @@ def stacked(ax, t: pd.DataFrame, lab: dict, colors: list[str], title: str):
     ax.set_xlabel("유형 비중 (%)")
     ax.set_title(title, loc="left", color=INK, fontweight="bold")
     ax.legend(
-        ncol=len(keys), loc="upper center", bbox_to_anchor=(0.5, -0.12), frameon=False, fontsize=9
+        ncol=4,
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.12),
+        frameon=False,
+        fontsize=9,
     )
     frame(ax)
 
@@ -197,7 +223,7 @@ dom = (
     .groupby("dominant")
     .positive_pct_ko.agg(["mean", "count"])
 )
-dom = dom[dom["count"] >= 5].sort_values("mean")
+dom = dom[dom["count"] >= 10].sort_values("mean")
 fig, ax = plt.subplots(figsize=(8.5, 4.6))
 ax.barh(
     [f"{neg_labels[k]} (n={int(dom['count'][k])})" for k in dom.index],
@@ -215,19 +241,37 @@ ax.set_title(
 frame(ax)
 save(fig, "a4_4_dominant_vs_rating.png")
 
+
 # ---------- 요약 ----------
+def _game_name(row) -> str:
+    ko = row["name_ko"]
+    return ko if isinstance(ko, str) and ko.strip() else str(row["name"])
+
+
 examples = {}
 for k in neg_labels:
     top = neg.sort_values(k, ascending=False).head(5)
     examples[neg_labels[k]] = [
         {
-            "game": str(r.name_ko if isinstance(r.name_ko, str) else r.name),
+            "game": _game_name(r),
             "비중": round(float(r[k]), 2),
         }
         for _, r in top.iterrows()
     ]
+price_ok = (
+    neg[neg.positive_pct_ko >= 80].sort_values("price", ascending=False).head(10)
+)  # 가격 불만이 비중 큰데 평가는 좋은 게임 = 할인 때 사면 만족할 게임
+bug_risk = neg[neg.positive_pct_ko < 70].sort_values("bug", ascending=False).head(10)
+
+
+def _names(df):
+    return [_game_name(r) for _, r in df.iterrows()]
+
+
 summary = {
     "대상": coverage,
+    "할인 때 사면 좋은 게임(가격 불만 비중 큼, 긍정률 80%+)": _names(price_ok),
+    "버그 불만이 큰 저평가 게임(긍정률 70% 미만)": _names(bug_risk),
     "전체 불만 비중(%)": {neg_labels[k]: round(float(neg[k].mean() * 100), 1) for k in neg_labels},
     "전체 만족 비중(%)": {pos_labels[k]: round(float(pos[k].mean() * 100), 1) for k in pos_labels},
     "주된 불만 유형별 게임 수": {
@@ -251,7 +295,9 @@ summary = {
 with open(OUT / "unknown_top.csv", "w", encoding="utf-8-sig", newline="") as f:
     w = csv.writer(f)
     w.writerow(["side", "keyword", "doc_count_sum"])
-    for (side, word), n in sorted(unknown_all.items(), key=lambda x: -x[1])[:200]:
-        w.writerow([side, word, n])
+    for side in ("negative", "positive"):
+        items = [(k[1], n) for k, n in unknown_all.items() if k[0] == side]
+        for word, n in sorted(items, key=lambda x: -x[1])[:300]:
+            w.writerow([side, word, n])
 print(json.dumps(summary["대상"], ensure_ascii=False))
 print("저장:", OUT)
