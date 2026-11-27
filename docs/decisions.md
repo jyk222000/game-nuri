@@ -1,6 +1,8 @@
 # 결정 기록
 형식: `YYYY-MM-DD | 결정 | 이유`
 
+- 2026-11-27 | 별칭 검색용 ES 인덱스 `game_aliases`: `refined.game_aliases` → Mongo Sink `mongo-sink-game-aliases` → MongoDB `game_aliases` → Monstache → ES (MariaDB에서 직접 복사하지 않음) | ES 색인은 Monstache만 한다는 구조 유지 (PR #182). MariaDB와 건수 차이 115는 대소문자·공백 비교 규칙 차이 (`infra/monstache/README.md` 4장)
+- 2026-11-27 | Monstache `resume = false` | 오래 변경이 없다가 재시작하면 재개 위치가 oplog 밖이라 `ChangeStreamHistoryLost`로 실시간 반영이 멈춤. 시작 때 direct-read로 전체를 맞추므로 빠지는 데이터 없음 (`infra/monstache/README.md` 6장)
 - 2026-11-23 | Elasticsearch·Kibana **8.19.25** (공식 RPM, 노드 1대, 힙 2GB, 데이터 `/DATA/elasticsearch`, 복사본 0) | Confluent ES Sink 16.0.1이 8.x·9.x 지원, Monstache 호환 가능성이 9보다 높음, elk RAM 5.5Gi (`infra/elk/README.md`)
 - 2026-11-23 | ES 보안(로그인)은 켜고 **HTTP TLS는 끔** (`http://elk:9200`) | 내부망, Connect·Monstache·Backend 설정을 단순하게. 노드 간 TLS는 자동 설정 그대로
 - 2026-11-23 | ES 계정은 **`elastic` 하나**로 Connect·Monstache·Backend가 같이 씀 (사람용·프로그램별 계정 없음) | 학습 프로젝트·내부망, 계정마다 권한 요청·설명하는 비용이 큼. `elastic` 비밀번호를 바꾸면 kafka1·elk·backend `.env`를 같이 바꾼다. 나중에 계정을 나눠도 데이터는 그대로
