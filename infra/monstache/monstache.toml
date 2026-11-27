@@ -1,11 +1,14 @@
-# Monstache: MongoDB gamenuri_raw.games·reviews → Elasticsearch games·reviews
+# Monstache: MongoDB gamenuri_raw.games·reviews·game_aliases → Elasticsearch games·reviews·game_aliases
 # elk VM에서 systemd로 실행한다 (monstache.service). 설치 위치 /etc/monstache/monstache.toml
 # 접속 정보·비밀번호는 이 파일에 쓰지 않는다. /etc/monstache/monstache.env(600)의 환경 변수로 받는다
 #   MONSTACHE_MONGO_URL, MONSTACHE_ES_USER, MONSTACHE_ES_PASS (monstache.env.example)
 elasticsearch-urls = ["http://elk:9200"]
-direct-read-namespaces = ["gamenuri_raw.games", "gamenuri_raw.reviews"]   # 시작 시 기존 데이터 한 번 복사
-change-stream-namespaces = ["gamenuri_raw.games", "gamenuri_raw.reviews"] # 이후 변경 실시간 반영 (복제 세트 필요)
-resume = true      # 진행 위치를 MongoDB monstache DB에 기록 (monstache 계정에 readWrite 필요)
+direct-read-namespaces = ["gamenuri_raw.games", "gamenuri_raw.reviews", "gamenuri_raw.game_aliases"]   # 시작할 때마다 전체 복사
+change-stream-namespaces = ["gamenuri_raw.games", "gamenuri_raw.reviews", "gamenuri_raw.game_aliases"] # 이후 변경 실시간 반영 (복제 세트 필요)
+# resume = false (11/27): 시작 때 direct-read로 전체를 맞추고 그 시점부터 실시간 반영한다.
+# true였을 때 감시 컬렉션에 오래 변경이 없으면 저장된 위치가 oplog 밖으로 밀려
+# 재시작 때 ChangeStreamHistoryLost로 실시간 반영이 멈췄다 (README 6장).
+resume = false
 verbose = false
 
 [[mapping]]
@@ -15,6 +18,12 @@ index = "games"
 [[mapping]]
 namespace = "gamenuri_raw.reviews"
 index = "reviews"
+
+# game_aliases: refined.game_aliases → mongo-sink-game-aliases → MongoDB → ES (Backend 검색 #5, PR #182)
+# 인덱스(nori)는 Monstache보다 먼저 만든다: game-aliases-index.json
+[[mapping]]
+namespace = "gamenuri_raw.game_aliases"
+index = "game_aliases"
 
 # reviews: MongoDB에는 raw.steam 봉투 그대로(payload 안에 리뷰) 저장된다 (mongo-sink-reviews).
 # ES에는 필요한 필드만 최상위로 펼쳐 보낸다 (reviews-index.json과 같은 필드).

@@ -4,6 +4,7 @@ shared는 팀 공통이라 건드리지 않는다. 환경 변수는 여전히 Se
 """
 
 from functools import lru_cache
+from typing import Literal
 
 from gamenuri_common.config import Settings
 
@@ -24,6 +25,13 @@ class BackendSettings(Settings):
     mail_from_name: str = "겜누리"
     # 메일 속 게임 링크의 앞부분(예: https://gamenuri.store). 비면 링크를 넣지 않는다.
     public_base_url: str = ""
+    # 게임 검색(#5) 방식 스위치. db = MariaDB만(기본), es = Elasticsearch를 더해 오타·형태소까지.
+    # es여도 ES가 죽거나 늦으면 db 검색으로 자동 대체한다. 환경 변수 SEARCH_BACKEND.
+    search_backend: Literal["db", "es"] = "db"
+    es_games_index: str = "games"  # Monstache가 만드는 게임 인덱스 이름
+    # 별칭 인덱스(문서 1개 = 별칭 1개: game_id, alias, source, reviewed). 없으면 별칭은 건너뛰고
+    # MariaDB 별칭 검색이 그대로 맡는다.
+    es_aliases_index: str = "game_aliases"
 
 
 @lru_cache

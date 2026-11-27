@@ -23,6 +23,7 @@
 | `jdbc-sink-game-links.json` | refined.game_genres·game_companies·game_tags·game_series_map | 토픽 이름에서 `refined.`를 뗀 테이블 | upsert (모든 컬럼이 키) | 바로 |
 | `mongo-sink-raw.json` | raw.* | MongoDB `raw_itad`·`raw_danawa`·`raw_steam`·`raw_igdb` (토픽별) | 원본 그대로 + `ingested_at` | 등록됨 |
 | `mongo-sink-games.json` | refined.games | MongoDB `games` (→ Monstache → ES) | game_id 기준 교체 | 등록됨 |
+| `mongo-sink-game-aliases.json` | refined.game_aliases | MongoDB `game_aliases` (→ Monstache → ES `game_aliases`, Backend 검색 #5) | `game_id + alias` 기준 교체 (MariaDB PK와 같다) | 등록됨 (11/27). MariaDB 3,712 / MongoDB 3,827 차이는 `infra/monstache/README.md` 4장 |
 | `mongo-sink-unmatched.json` | refined.unmatched | MongoDB `unmatched` | 그대로 + `ingested_at` | 바로 |
 | `mongo-sink-reviews.json` | raw.steam 중 `kind=review`만 | MongoDB `reviews` (→ Monstache → ES) | 봉투 그대로 + `ingested_at`, `payload.recommendationid` 기준 upsert | `reviews`에 `payload.recommendationid` 고유 인덱스(김준영) 후. 플러그인: Confluent connect-transforms 1.6.2 (Filter SMT) |
 | `es-sink-clickstream.json` | clickstream | ES `clickstream-YYYY.MM.dd` (날짜별) | 이벤트 저장 (문서 ID = 토픽+파티션+오프셋이라 중복 없음) | ES 설치·계정 후. 플러그인: Confluent Elasticsearch Sink 16.0.1 (ES 8.x·9.x) |
