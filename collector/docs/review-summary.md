@@ -84,7 +84,7 @@ tail -4 /tmp/review_summary_ai<번호>.log         # 끝난 뒤: "이어서 하�
 - 17:1x `--ai-only --skip 828 --max-ai-calls 200`(로그 `ai8`): 172건 전송, 미전송 0, 쉰 횟수 0. 호출 173회, 약 2분 반. 503은 1번뿐이었다. 목록 끝까지 처리했다.
 - **1,000개 전부 새 필터 키워드와 AI 요약으로 채워졌다.** 11/25~27 3일간 호출 합계는 약 490 + 500 + 173회.
 - 확인 SQL(proxy가 아니라 mariadb-pr에서): `sudo mysql gamenuri -e "SELECT generated_by, COUNT(*) FROM review_summaries GROUP BY generated_by;"`
-  리뷰 30건 미만이라 AI를 못 쓴 게임은 `fallback`으로 남는다.
+  결과(11/27): `ai` 1,000 / `fallback` 0. 1,000개 전부 AI 요약이 들어 있다.
 
 ## 6. 앞으로 할 일
 1. **하루 호출 상한을 지킨다.** 하루 약 400회 이내, 사양 판정용으로 **100회 이상 남긴다.** 돌리기 전에 Google AI Studio의 비율 제한 화면에서 RPD(오늘 사용량)를 확인한다.
@@ -97,7 +97,7 @@ tail -4 /tmp/review_summary_ai<번호>.log         # 끝난 뒤: "이어서 하�
    ```
    나온 번호를 `--ai-only --game-ids <번호들>`로 다시 돌린다.
 4. 발표 전 마감: 11/27에 1,000개 전부 채웠다(완료). **11/29·11/30에는 돌리지 않는다**(사양 판정 시연이 한도를 써야 한다).
-5. 끝까지 못 채운 게임은 키워드만 보인다. 화면에 "요약 준비 중" 안내가 필요하다(프런트 작업).
+5. ~~"요약 준비 중" 안내~~ → 1,000개 전부 `ai`라 필요 없다(11/27 확인). 이후 새 게임이 추가되면 다시 본다.
 6. 확인할 것: DB 개수 `SELECT generated_by, COUNT(*) FROM review_summaries GROUP BY generated_by;`
 
 ## 7. 하지 말 것
