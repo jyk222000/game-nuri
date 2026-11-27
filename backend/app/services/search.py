@@ -1,8 +1,9 @@
 """게임 자동완성(#6)·검색(#5).
 
 기본(`SEARCH_BACKEND=db`)은 MariaDB `games`·`game_aliases`만 읽는다. q는 영문명·한글명·별칭의
-**부분 일치**(대소문자 무시)다. 별칭은 AI가 만든 것(source='llm')을 검수 여부와 상관없이
-검색에 쓰지 않는다(팀 결정). igdb·manual 별칭만 쓴다.
+**부분 일치**(대소문자 무시)이고, 띄어쓰기·기호를 뺀 형태로도 한 번 더 비교한다(`dead lock` ~
+`Deadlock`). 별칭은 AI가 만든 것(source='llm')을 검수 여부와 상관없이 검색에 쓰지 않는다
+(팀 결정). igdb·manual 별칭만 쓴다.
 
 `SEARCH_BACKEND=es`이면 검색(#5)에 한해 Elasticsearch `games` 인덱스(nori 형태소·오타 허용)를
 **더한다.** ES가 찾은 game_id를 MariaDB 부분 일치 결과에 합치므로 결과가 db 방식보다 줄지
@@ -12,9 +13,10 @@ ES가 꺼져 있거나 늦거나(요청 2초 제한) 응답이 이상하면 경�
 """
 
 import logging
+import re
 
 from elasticsearch import ApiError, TransportError
-from sqlalchemy import ColumnElement, case, func, or_, select
+from sqlalchemy import ColumnElement, case, false, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.clients.es import get_es
@@ -27,6 +29,14 @@ log = logging.getLogger(__name__)
 
 ES_MAX_HITS = 500  # ES에서 받는 후보 수 (그 안에서 MariaDB가 필터·정렬·페이지를 처리한다)
 
+# 오타 허용 기준: 4글자 이하는 정확히 일치, 5~7글자는 1글자, 8글자 이상은 2글자까지.
+# 기본 AUTO는 3글자부터 1글자를 허용해서 "cat"이 "chat"(VRChat)에 걸렸다.
+ES_FUZZINESS = "AUTO:5,8"
+
+# 띄어쓰기·기호가 달라도 찾기 위해 비교 전에 지우는 글자 ("dead lock" ~ "Deadlock", "Hollow-Knight")
+SQUASH_CHARS = (" ", "\t", "-", ":", "'", "’", ".", ",", "!", "?", "&", "·")
+_SQUASH_RE = re.compile(r"[\s\-:'’.,!?&·]")
+
 
 def _escape(q: str) -> str:
     return q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
@@ -36,12 +46,36 @@ def _contains(column, q: str) -> ColumnElement[bool]:  # noqa: ANN001
     return column.ilike(f"%{_escape(q)}%", escape="\\")
 
 
+def squash(q: str) -> str:
+    """띄어쓰기·기호를 뺀 검색어. "dead lock" → "deadlock"."""
+    return _SQUASH_RE.sub("", q)
+
+
+def _squashed(column):  # noqa: ANN001, ANN202
+    """DB 열에서 같은 글자를 지운 식 (REPLACE 중첩)."""
+    for ch in SQUASH_CHARS:
+        column = func.replace(column, ch, "")
+    return column
+
+
+def _contains_ignoring_spaces(column, q: str) -> ColumnElement[bool]:  # noqa: ANN001
+    """이름과 검색어 양쪽의 띄어쓰기·기호를 뺀 부분 일치. 검색어가 기호뿐이면 아무것도 안 맞춘다."""
+    flat = squash(q)
+    if not flat:
+        return false()
+    return _squashed(column).ilike(f"%{_escape(flat)}%", escape="\\")
+
+
+def _either(column, q: str) -> ColumnElement[bool]:  # noqa: ANN001
+    return or_(_contains(column, q), _contains_ignoring_spaces(column, q))
+
+
 def _matches(q: str) -> ColumnElement[bool]:
     # AI가 만든 별칭(source='llm')은 검수 여부와 상관없이 검색에 쓰지 않는다 (팀 결정)
     usable_alias = select(GameAlias.game_id).where(
-        _contains(GameAlias.alias, q), GameAlias.source != "llm"
+        _either(GameAlias.alias, q), GameAlias.source != "llm"
     )
-    return or_(_contains(Game.name, q), _contains(Game.name_ko, q), Game.game_id.in_(usable_alias))
+    return or_(_either(Game.name, q), _either(Game.name_ko, q), Game.game_id.in_(usable_alias))
 
 
 def _prefix_rank(q: str):  # noqa: ANN202
@@ -68,7 +102,14 @@ def _es_ranked_ids(q: str) -> list[int] | None:
                 "bool": {
                     "should": [
                         # 형태소 단위 일치 + 오타 허용 ("엘든링을" ~ "엘든 링", "elden rnig")
-                        {"multi_match": {"query": q, "fields": fields, "fuzziness": "AUTO"}},
+                        {
+                            "multi_match": {
+                                "query": q,
+                                "fields": fields,
+                                "fuzziness": ES_FUZZINESS,
+                                "prefix_length": 1,  # 첫 글자는 정확히 (후보와 잡음 감소)
+                            }
+                        },
                         # 입력 중인 마지막 단어 접두 일치 ("elden r" → "Elden Ring")
                         {"multi_match": {"query": q, "fields": fields, "type": "phrase_prefix"}},
                     ],

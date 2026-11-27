@@ -5,8 +5,11 @@ env 게임: 5 Five, 7 Seven, 119133 Elden Ring(엘든 링).
 
 import pytest
 from app.core import config
+from app.db.models import Game
 from app.services import search
 from elastic_transport import ConnectionError as EsConnectionError
+
+from tests.conftest import NOW, seed
 
 
 class FakeEs:
@@ -97,3 +100,41 @@ def test_es_not_called_without_q_and_autocomplete_stays_on_db(env, monkeypatch) 
     assert client.get("/api/games").status_code == 200
     assert client.get("/api/games/autocomplete?q=elden").status_code == 200
     assert es.calls == []
+
+
+def test_es_fuzziness_does_not_allow_typos_in_short_words(env, monkeypatch) -> None:  # noqa: ANN001
+    """ "cat"이 "chat"(VRChat)에 걸리던 문제: 4글자 이하는 정확히, 첫 글자는 반드시 일치."""
+    client, _, _ = env
+    es = use(monkeypatch, "es", FakeEs(ids=[]))
+    ids(client, "cat")
+    fuzzy = es.calls[0]["query"]["bool"]["should"][0]["multi_match"]
+    assert fuzzy["fuzziness"] == "AUTO:5,8"
+    assert fuzzy["prefix_length"] == 1
+
+
+def test_squash_removes_spaces_and_symbols() -> None:
+    assert search.squash("dead lock") == "deadlock"
+    assert search.squash("Hollow-Knight: Silksong") == "HollowKnightSilksong"
+    assert search.squash("  엘든  링 ") == "엘든링"
+    assert search.squash("- :") == ""
+
+
+def test_search_ignores_spaces_and_symbols_both_ways(env, monkeypatch) -> None:  # noqa: ANN001
+    client, engine, _ = env
+    with seed(engine) as s:
+        s.add_all(
+            [
+                Game(game_id=901, name="Deadlock", updated_at=NOW),
+                Game(game_id=902, name="Hollow Knight", updated_at=NOW),
+                Game(game_id=903, name="Half-Life: Alyx", updated_at=NOW),
+                Game(game_id=904, name="사이버펑크 2077", updated_at=NOW),
+            ]
+        )
+    use(monkeypatch, "db", FakeEs())
+    assert ids(client, "dead lock") == [901]  # 이름은 붙어 있고 검색어에 띄어쓰기
+    assert ids(client, "hollowknight") == [902]  # 이름은 띄어 있고 검색어는 붙임
+    assert ids(client, "half life alyx") == [903]  # 하이픈·콜론
+    assert ids(client, "사이버 펑크") == [904]  # 한글 합성어
+    assert ids(client, "엘든링") == [119133]  # 한글 이름의 띄어쓰기
+    assert ids(client, "- :") == []  # 기호만 입력하면 아무것도 맞추지 않는다
+    assert ids(client, "nothing here") == []
