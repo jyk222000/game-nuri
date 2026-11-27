@@ -28,8 +28,69 @@
 > <- 하루 약 121MB, 7일 보관해도 1GB 안팎이라 `/BACKUP` 75G에 충분합니다.
 > <- 같은 날 이어서 완료: **cron 등록**(매일 03:00), **`/BACKUP` fstab 확인**, **MariaDB 복구 시험 성공**(시험용 DB `gamenuri_restore_test` 에 복구해 `games` 1000건·테이블 29개 확인 후 시험 DB·임시 파일 삭제). 아직 남음: 첫 **자동** 실행 확인(11/26 새벽), MongoDB 복구 시험.
 
-> <- 즉 **11/25 기준 백업은 아직 한 번도 돌지 않았습니다.** 아래 1~7장 순서대로 구성한 뒤 8장 복구 시험까지 하면 완성입니다. 완료한 항목은 10장의 체크를 채웁니다.
+> <- (11/25 당시 기록) 즉 **11/25 기준 백업은 아직 한 번도 돌지 않았습니다.** 아래 1~7장 순서대로 구성한 뒤 8장 복구 시험까지 하면 완성입니다. 완료한 항목은 10장의 체크를 채웁니다.
 > <- 아직 확인하지 못한 것: `/BACKUP` 의 파일시스템 종류와 `/etc/fstab` 등록 여부(재부팅 후에도 마운트되는지).
+
+## 11/27 자동 실행 확인 · 복구 시험 · RPO/RTO 측정 (backup·mariadb-re·mariadb-pr·mongodb-pr·kafka1 에서 확인)
+**RPO(손실 허용)와 RTO(복구 시간)의 근거를 서버에서 직접 잰 기록입니다.** 비밀번호는 모두 입력창으로 받았고 적지 않습니다.
+
+### 자동 백업이 실제로 돈다
+| 항목 | 결과 |
+|---|---|
+| cron | `0 3 * * * /bin/bash /opt/game-nuri/repo/infra/backup/backup.sh >> /var/log/game-nuri-backup.log 2>&1` 등록 확인 |
+| 생성된 백업 | `/BACKUP/2026-11-25`, `2026-11-26`, `2026-11-27` 세 폴더, 파일 시각이 모두 **03:00** (3일 연속) |
+| 크기 | 11/25: 9.1M + 112M, 11/26: 9.7M + 122M, 11/27: 11M + 130M (하루 약 10MB씩 증가) |
+| 로그 | 끝 줄에 `backup ok 2026-11-27` |
+| 파일 권한 | 모두 `root root 600` |
+| 디스크 | `/dev/sda3` 79G 중 392M 사용(1%), 74G 여유 |
+| **백업 소요 시간** | 수동 실행 `time` 결과 **real 29.1초** (MariaDB 11MB + MongoDB 130MB) |
+
+> <- **수동 실행은 같은 날짜 폴더를 덮어씁니다.** 11/27 15:52에 수동 실행했으므로 `2026-11-27` 폴더는 03:00 백업이 아니라 15:52 백업입니다. 같은 날 03:00 사본은 남아 있지 않습니다.
+
+### RPO (손실 허용 시간)
+| 상황 | RPO | 근거 |
+|---|---|---|
+| 서버 1대 장애 | 사실상 0 | MariaDB: `Slave_IO_Running`·`Slave_SQL_Running` Yes, 오류 없음, `Seconds_Behind_Master: 0`(4회, 한가한 시간). MongoDB: `rs.printSecondaryReplicationInfo()` 결과 mongo-se1·se2 모두 `0 secs behind`(복구·삭제 직후 1회) |
+| 데이터 오염·실수 삭제 (복제도 같이 지워짐) | **최대 약 24시간** | 백업이 하루 1회(03:00)라 마지막 백업 시점으로 되돌림 |
+
+- 24시간 사이에 쌓이는 양의 예: 11/27 03:00 → 15:52(13시간) 사이 `raw_steam` 87,999 → 102,998건, `raw_itad` 16,029 → 18,027건, `reviews` 454,283 → 455,159건(순증, TTL 있는 컬렉션 포함).
+- Kafka 보관 기간(`kafka-configs.sh --describe`): `raw.*` 604800000ms = **7일**, `refined.*`·`clickstream` 259200000ms = **3일**, `connect-*`·`__consumer_offsets` 7일. `under-replicated-partitions` 결과 **없음**(복제 정상). 이 기간 안의 데이터는 Connect 재적재로 보충할 **여지**가 있으나, 그 경로는 시험하지 않았습니다(⚠ 미검증).
+- 복제 지연은 한가한 시간에 잰 값입니다. 수집기가 도는 00·06·12·18시대 값은 ⚠ 미측정.
+
+### 복구 시험 (RTO의 근거) — 모두 **시험용 DB** 에 풀고 지움
+| 대상 | 전송 | 복구 시간 | 확인 | 정리 |
+|---|---|---|---|---|
+| **MariaDB** (덤프 11MB) | 2.3초(비밀번호 입력 시간 포함) | **real 10.5초** | 테이블 29개, `games` 1000건. 덤프에 `USE`·`CREATE DATABASE` 구문 없음(운영 DB로 들어갈 위험 없음) | `DROP DATABASE gamenuri_restore_test`, `/tmp` 덤프 삭제 |
+| **MongoDB** (130MB) | backup 서버에서 직접 복구 | **real 48.8초** (로그 기준 47초) | 7개 컬렉션 **600,758건, 실패 0건**. 건수가 15:52 백업 로그의 덤프 건수와 전부 일치(reviews 455,159, raw_steam 102,998, raw_itad 18,027, raw_danawa 10,744, raw_igdb 8,895, unmatched 3,935, games 1,000). 유니크 인덱스(`uq_game_id`, `uq_payload_recommendationid`)와 TTL 14일 인덱스도 함께 복구 | `dropDatabase` 결과 `{ ok: 1, dropped: 'gamenuri_restore_test' }` |
+
+> <- **RTO는 "복구 작업 자체"의 시간입니다.** 장애를 알아채고 판단하는 시간, 백업 파일을 고르고 접속하는 시간, 복구 후 확인 시간은 포함하지 않습니다. 운영 RTO는 이보다 길어지므로, 발표에서는 "복구 작업 자체는 MariaDB 약 10초, MongoDB 약 49초"라고만 말합니다. 근거 없는 목표값을 정하지 않습니다.
+> <- MariaDB는 `games` 건수만 확인했습니다. 운영 DB와 `users`·`wishlists`·`alerts` 행 수를 대조하는 것은 ⚠ 아직 안 했습니다.
+
+### 이번 시험에서 막힌 곳과 해결
+| 문제 | 원인 | 해결 |
+|---|---|---|
+| `scp`·`mongorestore` 가 `Permission denied` | 백업 파일이 `root` 600이라 일반 계정이 못 읽음 | MariaDB: `time (sudo cat /BACKUP/$(date +%F)/mariadb.sql.gz \| ssh admina@mariadb-pr 'umask 077; cat > /tmp/mariadb.sql.gz')` (받은 쪽 파일을 본인만 읽게 `umask 077`, 시험 뒤 삭제). MongoDB: `sudo mongorestore` |
+| `mongorestore` 가 `stat /BACKUP/...: no such file` | 백업 파일이 없는 `mongodb-pr` 에서 실행함 | **backup 서버에서** 실행 |
+| `not authorized on gamenuri_restore_test` (dropDatabase), `not authorized on local` (복제 정보) | 앱 계정 `gamenuri` 는 `gamenuri_raw` readWrite 뿐 | 관리 전용 `admin`(root) 사용, 시험 후 바로 끝냄. **이 거부는 "앱 계정은 원본 DB 읽기·쓰기만 가능"이라는 최소 권한의 직접 증거** |
+| `mongosh: command not found` | backup 서버·mariadb-re 에는 mongosh 없음 | `mongodb-pr` 에서 실행 |
+
+### MongoDB 복구 시험 명령 (실제 실행한 것, 비밀번호는 입력창)
+```
+# backup 서버
+[admina@backup ~]$ time sudo mongorestore --uri "mongodb://mongodb-pr:27017" -u admin --authenticationDatabase admin \
+    --gzip --archive=/BACKUP/$(date +%F)/mongo.archive.gz --nsFrom 'gamenuri_raw.*' --nsTo 'gamenuri_restore_test.*'
+
+# mongodb-pr
+[admina@mongodb-pr ~]$ mongosh "mongodb://mongodb-pr:27017/?authSource=admin" -u admin --eval 'db.getSiblingDB("gamenuri_restore_test").stats().collections'     # 7
+[admina@mongodb-pr ~]$ mongosh "mongodb://mongodb-pr:27017/?authSource=admin" -u admin --eval 'db.getSiblingDB("gamenuri_restore_test").dropDatabase()'      # ⚠ 시험 DB 이름 확인 후
+[admina@mongodb-pr ~]$ mongosh "mongodb://mongodb-pr:27017,mongo-se1:27017,mongo-se2:27017/?replicaSet=rs0&authSource=admin" -u admin --eval 'rs.printSecondaryReplicationInfo()'
+```
+> <- 복구는 약 60만 건을 Primary에 쓰므로 수집기가 도는 00·06·12·18시대는 피합니다.
+
+### 아직 측정하지 못한 것
+- 프런트 1대 장애 → HAProxy가 빼는 시간, MongoDB PRIMARY 전환 시간(리허설에서 측정, 서비스 영향 있음).
+- 수집 시간대 복제 지연, Kafka 재처리로 보충하는 경로.
+- 백업을 PC 밖에 보관하는 방법(PC-1·PC-2 둘 다 잃으면 사본이 없음).
 
 ## 0. 만드는 것
 ```
@@ -175,7 +236,7 @@ backup(10.0.1.108, PC-1) ──mariadb-dump──▶ mariadb-re(Replica)   ← P
 > <- 03:00은 서비스 이용이 적은 시간입니다. 같은 시각에 DB 부하가 큰 작업(수집 타이머)이 겹치지 않는지 확인합니다. 수집기 타이머는 00·06·12·18시대와 매일 03:00(IGDB, proxy)에 도는 것이 있습니다.
 > <- 다음 날 아침에 `tail /var/log/game-nuri-backup.log` 로 `backup ok` 가 찍혔는지 봅니다.
 
-## 8. 복구 시험 (⚠ 이 절차는 아직 실행한 기록이 없음)
+## 8. 복구 시험 (MariaDB·MongoDB 모두 성공, 결과는 위 "11/27" 절)
 백업은 **복구해 봐야** 믿을 수 있습니다. **운영 DB에 덮어쓰지 말고 시험용 DB에** 풀어 봅니다.
 ```
 # (MariaDB) 시험용 빈 DB 만들기 — Primary 에서 (운영 DB 'gamenuri' 는 건드리지 않는다)
@@ -195,9 +256,9 @@ backup(10.0.1.108, PC-1) ──mariadb-dump──▶ mariadb-re(Replica)   ← P
 
 ```
 # (MongoDB) 시험용 DB 이름으로 풀기: 원본 DB 이름을 다른 이름으로 바꿔서 복구
-[admina@backup ~]$ mongorestore --uri "<MONGO_URI의 호스트 부분, 관리자 계정>" --gzip --archive=/BACKUP/<날짜>/mongo.archive.gz --nsFrom 'gamenuri_raw.*' --nsTo 'gamenuri_restore_test.*'
+[admina@backup ~]$ time sudo mongorestore --uri "mongodb://mongodb-pr:27017" -u admin --authenticationDatabase admin --gzip --archive=/BACKUP/<날짜>/mongo.archive.gz --nsFrom 'gamenuri_raw.*' --nsTo 'gamenuri_restore_test.*'
 ```
-> <- `--nsFrom/--nsTo` 로 이름을 바꿔 운영 `gamenuri_raw` 를 건드리지 않게 합니다. 복구에는 `backup`(읽기 전용) 계정이 아니라 **쓰기 권한이 있는 계정**이 필요합니다. 비밀번호는 입력창으로 받습니다.
+> <- `--nsFrom/--nsTo` 로 이름을 바꿔 운영 `gamenuri_raw` 를 건드리지 않게 합니다. 복구에는 `backup`(읽기 전용) 계정이 아니라 **쓰기 권한이 있는 계정**이 필요합니다. 앱 계정 `gamenuri`(`gamenuri_raw` readWrite)는 다른 DB에 복구·삭제할 수 없어 거부됩니다(11/27 확인) → 관리 전용 `admin` 을 시험 때만 씁니다. 비밀번호는 입력창으로 받습니다.
 > <- 시험이 끝나면 `gamenuri_restore_test` DB 를 지웁니다(`db.getSiblingDB("gamenuri_restore_test").dropDatabase()`, `⚠ 되돌릴 수 없음`, 이름 확인 후).
 > <- 실제 사고 때는 **날아간 테이블·컬렉션만** 옮깁니다. 덤프 전체를 운영 DB에 바로 돌리면 멀쩡한 데이터까지 덤프 시점으로 되감깁니다.
 
@@ -214,7 +275,9 @@ backup(10.0.1.108, PC-1) ──mariadb-dump──▶ mariadb-re(Replica)   ← P
 ```
 
 ## 10. 남은 일
-- [ ] backup 서버의 cron 등록과 첫 자동 실행 확인
-- [ ] `backup` DB 계정(MariaDB·MongoDB) 생성 확인
-- [ ] 복구 시험 실행과 결과 기록
+- [x] backup 서버의 cron 등록과 첫 자동 실행 확인 (11/26·11/27 03:00 폴더, 로그 `backup ok`)
+- [x] `backup` DB 계정(MariaDB·MongoDB) 생성 확인 (백업이 성공하므로 존재)
+- [x] 복구 시험 실행과 결과 기록 (MariaDB 11/25·11/27, MongoDB 11/27)
+- [ ] 운영 DB와 행 수 대조(`users`·`wishlists`·`alerts` 등)
+- [ ] 프런트 장애 전환·MongoDB PRIMARY 전환 시간 측정(리허설)
 - [ ] 발표 전날 VM **스냅샷**(VirtualBox)과 백업 파일을 PC 밖에 보관하는 방법 검토
