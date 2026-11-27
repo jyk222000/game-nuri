@@ -1,0 +1,37 @@
+#!/usr/bin/python3
+"""MariaDB gamenuri.users(Replica) -> ES users 인덱스 -> enrich 정책 users-name 재실행.
+표시 이름 = nickname, 없으면 email의 @ 앞부분. 이메일 전체는 ES에 넣지 않는다.
+비밀번호는 /etc/es-users-sync/env (MYSQL_PWD, ES_PASSWORD) 환경 변수로만 받는다."""
+import base64, json, os, subprocess, sys, urllib.request
+from datetime import datetime, timezone
+
+ES = os.environ.get("ES_URL", "http://elk:9200").rstrip("/")
+AUTH = "Basic " + base64.b64encode(f"{os.environ.get('ES_USER','elastic')}:{os.environ['ES_PASSWORD']}".encode()).decode()
+
+def es(method, path, body=None, ctype="application/json"):
+    req = urllib.request.Request(ES + path, data=body, method=method,
+                                 headers={"Authorization": AUTH, "Content-Type": ctype})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.loads(r.read() or b"{}")
+
+rows = subprocess.run(
+    ["mariadb", "-h", os.environ.get("DB_HOST", "mariadb-re"), "-u", os.environ.get("DB_USER", "es_reader"),
+     "--batch", "--skip-column-names", "--raw",
+     "-e", "SELECT user_id, IFNULL(nickname,''), IFNULL(email,'') FROM gamenuri.users"],
+    check=True, capture_output=True, text=True).stdout.splitlines()
+
+now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+lines = []
+for row in rows:
+    uid, nick, email = (row.split("\t") + ["", ""])[:3]
+    name = nick.strip() or email.split("@")[0] or f"user-{uid}"
+    lines.append(json.dumps({"index": {"_index": "users", "_id": uid}}))
+    lines.append(json.dumps({"user_id": int(uid), "display_name": name, "synced_at": now}, ensure_ascii=False))
+
+if lines:
+    res = es("POST", "/_bulk?refresh=true", ("\n".join(lines) + "\n").encode(), "application/x-ndjson")
+    if res.get("errors"):
+        sys.exit("bulk 오류: " + json.dumps(res)[:500])
+if "--no-enrich" not in sys.argv:
+    es("POST", "/_enrich/policy/users-name/_execute?wait_for_completion=true")
+print(f"{now} users {len(lines)//2}건 동기화")

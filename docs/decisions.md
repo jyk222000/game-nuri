@@ -1,6 +1,8 @@
 # 결정 기록
 형식: `YYYY-MM-DD | 결정 | 이유`
 
+- 2026-11-26 | Kibana clickstream에 게임·사용자 이름을 ES enrich + ingest 파이프라인(`clickstream-game-name`)으로 붙임. 사용자 이름은 MariaDB 읽기 전용 `es_reader`(users 세 칸) → ES `users`를 1분마다 복사 | 발표 때 사람별 실시간 표에 이름이 보이도록. 이메일 앞부분이 보일 수 있어 팀 내부용 (`infra/elk/README.md` 8장)
+- 2026-11-26 | Kibana를 강의실 LAN에 `http://192.168.0.222:5601`(proxy HAProxy → elk:5601)로 엶, 계정은 `elastic` | 발표 때 여러 PC에서 대시보드 확인. 팀장 확인. http라 발표 뒤 닫는다 (`infra/elk/README.md` 5장)
 - 2026-11-23 | Elasticsearch·Kibana **8.19.25** (공식 RPM, 노드 1대, 힙 2GB, 데이터 `/DATA/elasticsearch`, 복사본 0) | Confluent ES Sink 16.0.1이 8.x·9.x 지원, Monstache 호환 가능성이 9보다 높음, elk RAM 5.5Gi (`infra/elk/README.md`)
 - 2026-11-23 | ES 보안(로그인)은 켜고 **HTTP TLS는 끔** (`http://elk:9200`) | 내부망, Connect·Monstache·Backend 설정을 단순하게. 노드 간 TLS는 자동 설정 그대로
 - 2026-11-23 | ES 계정은 **`elastic` 하나**로 Connect·Monstache·Backend가 같이 씀 (사람용·프로그램별 계정 없음) | 학습 프로젝트·내부망, 계정마다 권한 요청·설명하는 비용이 큼. `elastic` 비밀번호를 바꾸면 kafka1·elk·backend `.env`를 같이 바꾼다. 나중에 계정을 나눠도 데이터는 그대로
