@@ -1,0 +1,8 @@
+{
+  "settings": { "number_of_replicas": 0 },
+  "mappings": { "properties": {
+    "user_id":      { "type": "long" },
+    "display_name": { "type": "keyword" },
+    "synced_at":    { "type": "date" }
+  } }
+}
