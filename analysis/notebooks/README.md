@@ -4,6 +4,8 @@
 |---|---|---|---|
 | `02_A2_검색관심.ipynb` | A2 할인·출시와 국내 검색 관심 | 김준영 | MariaDB 추출 TSV 2개 + 네이버 검색어 트렌드(NAVER API HUB) |
 | `08_A8_PC콘솔가격.ipynb` | A8 PC vs 콘솔 가격 차이 | 김준영 | MariaDB 추출 TSV 1개 |
+| `03_A3_평론vs유저.ipynb` | A3 평론가 vs 유저 점수 차이, 한글화 수요 | 이고은 | `a3_games.tsv` |
+| `04_A4_긍정불만유형.ipynb` | A4 긍정·불만 유형 (서버·버그·가격 불만과 긍정률) | 이고은 | `a4_keywords.tsv` + `games_1000.csv` |
 | `09_벤치마크_ES_vs_MongoDB.ipynb` | 요구사항 #3 ES vs MongoDB 키워드 추출 비교 (별도 PR, 머지 후 이 폴더에 생김) | 김준영 | MongoDB·ES 직접 조회 (`../benchmark/README.md`) |
 
 노트북은 **가설 → 데이터 처리 → 통계 검정 → 의미 판단 → 인사이트** 순서다.
