@@ -12,7 +12,7 @@
 - 검색은 **MariaDB `ILIKE '%q%'`만으로도 되지만 형태소·오타 검색은 안 된다.** 예전 `search.py` 머리말에도 "ES 인덱스가 확정되면 연결한다"고 적혀 있었다.
 - ES를 쓰는 **핵심 이유는 리뷰 키워드 추출(⑤)**이다(`review.nouns`에 nori 명사 집계). 게임 검색은 그 위에 얹은 보조 기능이다. 클릭스트림·Kibana도 같은 ES를 쓴다.
 - 클릭스트림은 MongoDB로도 처리할 수 있다. "클릭스트림 때문에 ES가 꼭 필요하다"고는 말하지 않는다.
-- ES vs MongoDB 비교 노트북은 별도 브랜치(`analysis/NW2-xx-es-mongo-benchmark`)에 있다(키워드 추출 비교). 검색(부분·오타·정확도) 비교는 아직 하지 않았다.
+- **벤치마크는 2가지로 나눈다**(`docs/decisions.md` 2026-11-28): ① 게임 검색은 **MariaDB vs ES**(MongoDB와는 비교하지 않음, 아직 실행 안 함), ② 리뷰 키워드 추출은 **MongoDB vs ES**(노트북은 별도 브랜치 `analysis/NW2-xx-es-mongo-benchmark`, 계획과 방법은 `analysis/benchmark/README.md`).
 
 ## 3. 구조
 ```
@@ -110,7 +110,7 @@ journalctl -u backend -n 50 --no-pager | grep -i "ES 실패" || echo "대체 경
 | 성능 | 공백·기호 제거 비교가 `REPLACE` 12번 중첩. 게임 1,000개 규모에서는 문제없을 것으로 보이나 실제 응답 시간은 **미측정** | 김준영 |
 | ES 인덱스 개선 | 공백 제거 필드·n-gram은 재색인이 필요해서 하지 않음 | 남현식 |
 | 계약·결정 문서 | `docs/contracts/topics.md`에 `refined.game_aliases` 새 소비자(Mongo Sink) 기록, `api.md` 5번의 "오타 허용은 ES 연동 후" 문구 갱신은 **아직 안 함**(contracts 별도 PR). `docs/decisions.md`에 "AI 별칭 검색 제외(근거: llm 0건)"도 **아직 없음** | 김준영 |
-| 검색 벤치마크 | MariaDB `ILIKE` vs ES의 부분 일치·오타·응답 시간 비교는 **아직 안 함**(키워드 추출 비교만 있음) | 김준영 |
+| 검색 벤치마크 ① | MariaDB vs ES(부분 일치·형태소·오타·띄어쓰기·잡음·응답 시간)는 **아직 안 함**. 계획은 `analysis/benchmark/README.md`. 키워드 추출 ②(MongoDB vs ES)는 노트북이 있고 실행 결과는 아직 없음 | 김준영 |
 | 적용 범위 | backend1에서만 `es` 동작을 확인했다. backend2 적용·#185 배포 후 결과는 **미확인** | 김준영 |
 
 ## 8. 발표 말하기 포인트
@@ -118,5 +118,6 @@ journalctl -u backend -n 50 --no-pager | grep -i "ES 실패" || echo "대체 경
 - "ES가 죽어도 검색은 된다. 스위치 하나로 켜고 끄고, ES 실패 시 MariaDB로 자동 대체한다."
 - 시연 검색어: `엘든링`, `엘든링을`, `elden rnig`(Elden Ring이 1순위). 잡음이 섞일 수 있다는 점도 정직하게 말한다.
 - 질문 대비
-  - "MongoDB로도 되지 않나요?" → 형태소 분석이 없어서 "게임이/게임은"이 따로 세어지고, 같은 작업을 DB 밖으로 꺼내 처리해야 한다(벤치마크 노트북 참고).
+  - "검색은 MariaDB로도 되지 않나요?" → 부분 일치는 되지만 형태소("엘든링을")·오타("elden rnig")는 안 된다. 벤치마크 ①(MariaDB vs ES)로 답할 예정(아직 실행 전).
+  - "키워드 추출은 MongoDB로도 되지 않나요?" → 집계로 할 수 있지만 형태소 분석이 없어서 "게임이/게임은"이 따로 세어지고, 형태소 분석을 하려면 DB 밖으로 꺼내 처리해야 한다. 벤치마크 ②(MongoDB vs ES) 노트북 참고.
   - "한글로 영문 게임이 안 나와요" → 별칭 데이터 문제이고 번역 검색은 향후 과제(Steam 한국어 이름·별칭 수집).
