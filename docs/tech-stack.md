@@ -6,7 +6,7 @@
 |---|---|---|---|
 | 수집 | Kafka | 수집 원본을 받아 두는 대기열 | 정제가 실패해도 원본으로 재처리, 수집과 정제를 따로 개발·확장 |
 | 정제·저장 | Kafka Connect | refined·raw 토픽을 DB로 자동 적재 | DB 저장 코드 없이 설정만으로 3개 저장소 적재 |
-| 검색 | Elasticsearch + Monstache | 게임 검색, MongoDB 데이터 자동 동기화 | 한글 형태소·영문 오타 검색(MariaDB 부분 일치만으로는 0건이던 `엘든링`·`엘든링을`·`elden rnig`가 ES 켠 뒤 Elden Ring으로 검색됨, 11/27 backend1 실측), 리뷰 키워드 집계(nori 명사). ES vs MongoDB 키워드 추출 비교 수치는 벤치마크 노트북 결과 참고 |
+| 검색 | Elasticsearch + Monstache | 게임 검색, MongoDB 데이터 자동 동기화 | 한글 형태소·영문 오타 검색(MariaDB 부분 일치만으로는 0건이던 `엘든링`·`엘든링을`·`elden rnig`가 ES 켠 뒤 Elden Ring으로 검색됨, 11/27 backend1 실측), 리뷰 키워드 집계(nori 명사). 검색 성능은 MariaDB vs ES, 키워드 추출은 MongoDB vs ES로 비교(수치는 벤치마크 실행 뒤 기재, 아직 없음) |
 | 서비스 | Valkey | 캐시, 세션, 실시간 검색어 | 가격 조회 결과·세션을 메모리에 둬 DB 조회 감소 (부하 테스트 전후 수치는 아직 측정하지 않음) |
 | AI | Gemini 등 AI API | 리뷰 키워드 요약, PC 사양 비교 | 리뷰를 한두 줄로, 사양 적합도를 한 줄로 설명 (원문 대신 키워드만 보내 비용·속도 절감) |
 | 운영 | Prometheus + Grafana | 서버·API 모니터링 | 인기 API 순위, 장애 즉시 알림 |

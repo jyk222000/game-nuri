@@ -7,7 +7,7 @@
 |---|---|---|---|---|---|
 | 1 | 기술 스택 설명: "어떤 용도로 넣어서 어떤 이득" (파트별 1개) | `docs/tech-stack.md` 표 | 각 단계 도구를 선택한 이유 | NW2-80 | 공통 |
 | 2 | Monstache로 MongoDB ↔ ES 동기화 | refined.games → Mongo `games` → Monstache → ES `games` | 저장소 간 데이터 동기화 | NW2-69 | DB |
-| 3 | ES vs MongoDB 벤치마크 | 같은 리뷰 데이터로 **키워드 추출**(ES nori 집계 vs MongoDB)의 품질·속도 비교. 게임 검색은 MariaDB 부분 일치 + ES(스위치) 결과로 따로 확인 (`docs/es-search.md`) | "왜 ES인가" 근거 | NW2-76 | 분석 |
+| 3 | ES 벤치마크 2가지 | ① **게임 검색: MariaDB vs ES** — 같은 검색어 세트로 부분 일치·형태소·오타·띄어쓰기·잡음·응답 시간 비교. ② **리뷰 키워드 추출: MongoDB vs ES** — 같은 리뷰로 ES nori 집계 vs MongoDB 집계(+Kiwi)의 품질·속도 비교. 검색은 MongoDB와 비교하지 않는다 | "왜 ES인가" 근거 | NW2-76 | 분석 |
 | 4 | 부하 테스트 (이유 설명 중요) | Locust → Proxy, 캐시 전후 비교 | 병목 지점 확인 | NW2-79 | 운영 |
 | 5 | 3-Tier (FE + BE + DB), FE·BE 개수 맞춤 | FE1→BE1, FE2→BE2 → DB | – | 완료(구조) | 인프라 |
 | 6 | 백엔드는 API 기능, 30개 이상 | `docs/contracts/api.md` (엔드포인트 47개, 기능 단위 38개) | – | NW2-71 | BE |
@@ -24,6 +24,7 @@
 | 17 | 컨테이너 | **이번에는 사용 안 함** (VM + systemd) | – | – | – |
 
 ## 발표에서 꼭 답할 수 있어야 하는 질문
-- MongoDB도 검색이 되는데 왜 무거운 Elasticsearch를 썼나? → #3 벤치마크 결과로 답한다.
+- 검색은 MariaDB로도 되는데 왜 무거운 Elasticsearch를 썼나? → #3-① MariaDB vs ES 결과로 답한다.
+- 키워드 추출은 MongoDB 집계로도 되는데 왜 ES인가? → #3-② MongoDB vs ES 결과로 답한다(MongoDB에는 형태소 분석이 없어 "게임이"·"게임은"이 따로 세어진다).
 - 부하 테스트는 왜 했고 무엇을 알았나? → #4 결과(병목, 캐시 효과)로 답한다.
 - 데이터가 어디서 와서 어디로 가나? → `docs/architecture.md`의 흐름 그대로 설명한다.

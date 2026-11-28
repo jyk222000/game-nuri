@@ -51,7 +51,7 @@ HowLongToBeat가 아니라 **IGDB 자체 클리어 시간 데이터**(`game_time
 1. 3-Tier (Proxy → FE 2 → BE 2 → DB) — 완료
 2. API 30개 이상(47개: 구현 46 + 리뷰 검색 1개 명세만) + 기능·API 명세서
 3. Monstache (MongoDB 게임·리뷰 → ES)
-4. ES vs MongoDB 벤치마크 (리뷰 키워드 추출 비교)
+4. ES 벤치마크: 게임 검색(MariaDB vs ES), 리뷰 키워드 추출(MongoDB vs ES)
 5. 부하 테스트 (Locust)
 6. 기술 스택 설명 (파트별 1개, 용도 → 이득)
 7. 일정 관리 · 회고
@@ -61,5 +61,5 @@ HowLongToBeat가 아니라 **IGDB 자체 클리어 시간 데이터**(`game_time
 | 순위 | 기능 · 과제 |
 |---|---|
 | 1 | Kafka 파이프라인, ①②③⑧, 클릭스트림, API 명세서 |
-| 2 | ⑤⑥⑦⑨⑩, Monstache, ES vs MongoDB 벤치마크, 모니터링 시나리오 |
+| 2 | ⑤⑥⑦⑨⑩, Monstache, ES 벤치마크(검색 MariaDB vs ES · 키워드 MongoDB vs ES), 모니터링 시나리오 |
 | 3 | 예측·추천 고도화, 부하 테스트 결과 정리 |

@@ -1,6 +1,7 @@
 # 결정 기록
 형식: `YYYY-MM-DD | 결정 | 이유`
 
+- 2026-11-28 | 벤치마크는 2가지로 나눈다: 게임 검색은 **MariaDB vs ES**(MongoDB와는 비교하지 않음), 리뷰 키워드 추출은 **MongoDB vs ES** | 게임 검색은 MariaDB `ILIKE`가 현재 방식이고 ES는 그 위에 더한 것이라 비교 대상이 MariaDB다. 키워드 추출은 MongoDB 집계(`$regexFindAll`→`$unwind`→`$group`, 형태소 분석 없음)로 같은 일을 할 수 있어 MongoDB와 비교한다
 - 2026-11-28 | API 개수는 **엔드포인트(메서드+경로) 기준 47개**로 센다. `docs/contracts/api.md`의 번호(#1~#38)는 기능 단위 묶음으로 유지 | 확정(11/19) 때의 38개는 기능 단위였고 API 명세서(엑셀)는 메서드+경로 단위(47행)라 숫자가 달라 보였다. 47개 = 구현 46 + 리뷰 검색 1개(명세 미확정). 요구사항 "30개 이상" 충족
 - 2026-11-28 | Frontend는 **React 18 + Vite 5**, 빌드 결과를 nginx가 서빙 | `frontend/package.json`·`vite.config.js`로 이미 구현됨. CLAUDE.md의 "팀 확정 필요" 문구를 사실에 맞게 정리
 - 2026-11-27 | 게임 검색의 AI(`llm`) 별칭은 검수 여부와 상관없이 검색에서 뺌 (MariaDB·ES 모두) | 팀 결정. `game_aliases`에는 `igdb` 3,712건뿐이고 `llm`은 0건이라 현재 결과는 달라지지 않음
