@@ -15,7 +15,7 @@ frontend1 ──/api──▶ backend1 (FastAPI :8000, systemd 서비스 backend
                       └─ (주기 작업) 목표가 알림 메일 → Gmail SMTP
 ```
 - 두 서버는 **같은 코드·같은 서비스 파일**이고, 환경 파일의 `SERVER_NAME` 만 다릅니다. frontend1→backend1, frontend2→backend2로 짝지어 연결됩니다.
-- **현재는 backend1·frontend1만 운영**합니다. backend2·frontend2는 기능이 갖춰진 뒤 배포합니다(팀 합의).
+- **backend1·backend2, frontend1·frontend2를 모두 운영**합니다(backend2는 2026-11-26 배포, 기록은 `infra/backend/README.md`의 '확인 기록'). 알림 메일 타이머만 backend1에서 켭니다.
 
 Backend가 지키는 규칙 (`backend/CLAUDE.md`):
 | 규칙 | 내용 |
@@ -86,6 +86,8 @@ Backend가 지키는 규칙 (`backend/CLAUDE.md`):
 | `VALKEY_URL` | 세션·캐시 | `redis://:<비밀번호>@valkey:6379/0` |
 | `KAFKA_BOOTSTRAP` | clickstream 발행 | `kafka1:9092,kafka2:9092,kafka3:9092` |
 | `ES_URL` / `ES_USER` / `ES_PASSWORD` | Elasticsearch(검색) | `http://elk:9200`, 계정은 남현식에게 |
+| `SEARCH_BACKEND` | 게임 검색 방식 | `db`(기본, ES 안 씀) 또는 `es`. 바꾸면 재시작. 아래 10장 |
+| `ES_GAMES_INDEX` / `ES_ALIASES_INDEX` | 검색에 쓰는 ES 인덱스 이름 | 기본 `games` / `game_aliases`. 보통 안 바꿈 |
 | `STEAM_KEY` | Steam 보유 게임 조회 | 키는 이 파일에만 |
 | `PROMETHEUS_URL` | API 사용 순위(#37) | 비우면 순위가 `degraded` |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` / `SESSION_SECRET` | 구글 로그인 | 아래 7장 |
@@ -232,7 +234,99 @@ Backend가 지키는 규칙 (`backend/CLAUDE.md`):
 > <- 한계: 가격이 목표가 위로 올랐다가 **같은 가격으로** 다시 내려오면 새 알림으로 보지 않습니다(더 내려가면 보냄).
 > <- 11/25 backend1에서 위 순서로 확인했습니다(첫 실행 발송 1건, 두 번째 대상 0건).
 
-## 10. 코드 구조 (유지보수하는 사람용)
+## 10. 게임 검색을 Elasticsearch로 켜기 (`SEARCH_BACKEND`) — 2026-11-27
+게임 검색(`GET /api/games?q=`)에 Elasticsearch(ES)를 더하는 스위치입니다. 코드는 `backend/app/services/search.py`에 있습니다.
+**기본값은 `db`(ES를 쓰지 않음)라서, 아래 4단계를 하기 전에는 검색이 이전과 똑같이 동작합니다.**
+
+| 값 | 동작 |
+|---|---|
+| `db` (기본) | MariaDB 부분 일치만 씁니다. 띄어쓰기·기호는 무시하고 비교합니다(`dead lock` = `Deadlock`). |
+| `es` | 위 결과에 **ES가 찾은 게임을 더합니다**(한글 형태소 "엘든링을", 영문 오타 "elden rnig"). 결과가 `db`보다 줄지 않습니다. |
+
+> <- ES가 꺼져 있거나 2초 안에 답이 없으면 **경고 로그만 남기고 `db` 방식으로 처리**합니다. 사용자 화면은 깨지지 않습니다.
+> <- 자동완성(`/api/games/autocomplete`)은 호출이 잦아서 항상 MariaDB만 씁니다.
+> <- AI가 만든 별칭(`source=llm`)은 검수 여부와 상관없이 검색에서 뺍니다(팀 결정). 11/27 기준 DB에는 `llm` 별칭이 0건입니다.
+
+### 10-1. 시작 전에 확인할 것 (읽기만 하는 명령)
+```
+# ES 서버에 게임이 들어 있는지. 1000 이 나와야 한다 (elastic 비밀번호는 입력창에 직접 입력)
+[admina@backend1 ~]$ curl -s -u elastic 'http://elk:9200/games/_count?pretty'
+
+# 별칭 인덱스에 들어 있는지. 약 3,827 이 나온다 (없어도 켤 수는 있지만 별칭 검색은 MariaDB가 맡는다)
+[admina@backend1 ~]$ curl -s -u elastic 'http://elk:9200/game_aliases/_count?pretty'
+```
+> <- `"count" : 1000` 처럼 숫자가 보이면 정상입니다. `401`이 나오면 비밀번호가 틀린 것이고, 아무 응답이 없으면 `elk` 서버나 주소를 확인합니다.
+> <- 11/27 확인값: `games` 1000건(MariaDB `games`도 1000건), `game_aliases` 3,827건(MariaDB는 3,712건, 대소문자만 다른 별칭 차이).
+
+### 10-2. 켜기 (backend1, backend2 **둘 다 같게**)
+```
+# (1) 서버 이름 확인. backend1 또는 backend2 여야 한다
+[admina@backend1 ~]$ hostname
+
+# (2) 새 코드 받기 (6장과 같은 방법)
+[admina@backend1 ~]$ sudo -u backend -H git -C /opt/game-nuri/repo pull --rebase origin main
+
+# (3) 환경 파일 열기
+[admina@backend1 ~]$ sudoedit /etc/game-nuri/backend.env
+```
+편집기에서 **이 한 줄만 추가**하고 저장합니다. 값 뒤에 `# 주석`을 붙이지 않습니다.
+```
+SEARCH_BACKEND=es
+```
+```
+# (4) 서비스 다시 시작하고 로그 확인
+[admina@backend1 ~]$ sudo systemctl restart backend && journalctl -u backend -n 30 --no-pager
+
+# (5) 건강 상태: "es":"ok" 여야 한다
+[admina@backend1 ~]$ curl -s http://localhost:8000/api/health
+```
+> <- `ES_USER`·`ES_PASSWORD`가 같은 파일에 이미 있어야 합니다(3장). 없으면 ES가 401로 거절하고, 검색은 `db` 방식으로 조용히 대체됩니다.
+> <- **두 서버를 꼭 같은 값으로** 맞춥니다. HAProxy가 두 서버로 번갈아 보내기 때문에, 한쪽만 `es`면 같은 검색어가 사용자마다 다르게 나옵니다.
+
+### 10-3. 잘 켜졌는지 확인
+```
+# 검색어 5개를 한꺼번에: 번호, 이름 순으로 결과가 나온다
+[admina@backend1 ~]$ for q in cat "dead lock" hollowknight "elden rnig" 엘든링; do
+  echo "== $q"; curl -s -G http://localhost:8000/api/games --data-urlencode "q=$q" --data-urlencode "size=5" \
+   | python3 -c 'import sys,json; [print(i["game_id"], i["name"], "/", i["name_en"]) for i in json.load(sys.stdin)["items"]]'
+done
+
+# ES가 실패해서 MariaDB로 대체된 적이 있는지. 줄이 나오면 문제, 안 나오면 정상
+[admina@backend1 ~]$ journalctl -u backend -n 100 --no-pager | grep "ES 실패" || echo "대체 경로 경고 없음"
+```
+| 검색어 | `db`일 때 | `es`일 때 (기대) | 확인 상태 |
+|---|---|---|---|
+| `엘든링` | 0건 | Elden Ring, Elden Ring Nightreign | ✅ 11/27 backend1 |
+| `엘든링을` | 0건 | Elden Ring | ✅ 11/27 backend1 |
+| `elden rnig` | 0건 | Elden Ring이 1순위 (뒤에 비슷한 이름이 섞일 수 있음) | ✅ 11/27 backend1 |
+| `cat` | 부분 일치(이름에 cat이 든 게임) | `chat` 같은 비슷한 단어의 게임이 **나오지 않음** | ⚠ 미확인 (11/27 수정 `#185` 배포 후) |
+| `dead lock`, `hollowknight` | 띄어쓰기가 달라도 같은 게임 | 같음 | ⚠ 미확인 (실제 DB에 해당 게임이 있는지부터 확인) |
+
+### 10-4. 되돌리기
+```
+[admina@backend1 ~]$ sudoedit /etc/game-nuri/backend.env      # SEARCH_BACKEND=db 로 바꾸거나 그 줄을 지운다
+[admina@backend1 ~]$ sudo systemctl restart backend
+```
+> <- 코드를 되돌릴 필요가 없습니다. 값만 바꾸고 재시작하면 즉시 이전 동작이 됩니다.
+
+### 10-5. 문제가 생기면
+| 증상 | 가능한 원인 | 확인·해결 |
+|---|---|---|
+| 켰는데 결과가 `db`일 때와 똑같다 | 코드가 안 받아졌거나, 환경 파일을 고치고 재시작을 안 함 | `git -C /opt/game-nuri/repo log -1 --oneline`, `sudo grep ^SEARCH_BACKEND /etc/game-nuri/backend.env`, 재시작 |
+| 로그에 `ES 실패, MariaDB로 대체: AuthenticationException` | `ES_USER`·`ES_PASSWORD` 없음 또는 틀림 | `sudo grep -c '^ES_PASSWORD=.' /etc/game-nuri/backend.env` 로 값이 있는지만 확인(값은 출력하지 않음) |
+| 로그에 `ConnectionError`, `/api/health`의 `es`가 `down` | `ES_URL` 오타, `elk` 서버 문제 | `getent hosts elk`, 5장의 건강 상태 |
+| 검색이 느려짐 | ES 응답 지연(2초까지 기다린 뒤 대체) | `SEARCH_BACKEND=db`로 되돌리고 ES 서버 상태 확인(남현식) |
+| `아이작`처럼 한글로 영문 게임을 찾으면 안 나옴 | ES 문제가 아니라 **한글 이름·별칭이 데이터에 없음** | `SELECT game_id, name, name_ko FROM games WHERE name LIKE '%isaac%';` 로 확인, 별칭 보충은 데이터 작업 |
+
+### 10-6. 이번에 겪은 문제 (11/27)
+| 문제 | 원인 | 해결 |
+|---|---|---|
+| `cat`을 찾았더니 VRChat 등 관계없는 게임이 나옴 | 오타 허용 기본값(`AUTO`)이 3글자 단어에도 1글자 오타를 허용해 `cat`→`chat`이 걸림. ES에 같은 쿼리를 직접 보내 `AUTO` 36건, 오타 허용 끔 0건으로 확인 | 4글자 이하는 정확히 일치(`AUTO:5,8`), 첫 글자 고정 (`#185`) |
+| 띄어쓰기가 다르면 안 나옴 | MariaDB는 글자 그대로만 비교, ES 영문은 단어 단위 | 공백·기호를 뺀 비교를 MariaDB 쪽에 추가 (`#185`) |
+
+> <- 자세한 구조·결정·남은 일은 `docs/es-search.md`(별도 PR)에 있습니다. 한계: 짧은 단어(4글자 이하) 오타는 교정되지 않고, 한글↔영문 이름 연결은 별칭 데이터에 달려 있습니다.
+
+## 11. 코드 구조 (유지보수하는 사람용)
 ```
 backend/app/
   main.py         FastAPI 앱, 라우터 등록, /api/health
@@ -251,7 +345,7 @@ backend/tests/    pytest (SQLite 메모리 DB, 외부 서비스는 가짜)
 ```
 > <- API 경로·응답 형식의 기준은 `docs/contracts/api.md` 입니다. 바꿔야 하면 contracts PR을 먼저 올립니다.
 
-## 11. 겪은 문제
+## 12. 겪은 문제
 | 문제 | 원인 | 해결 |
 |---|---|---|
 | `status=203/EXEC` `Permission denied` | 레포를 홈에서 `mv` 로 옮겨 SELinux 라벨이 `user_home_t` | `sudo systemctl stop backend && sudo restorecon -Rv /opt/game-nuri && sudo systemctl start backend`. 예방: `/opt/game-nuri` 에서 직접 clone, SELinux는 끄지 않음 |
@@ -261,8 +355,12 @@ backend/tests/    pytest (SQLite 메모리 DB, 외부 서비스는 가짜)
 | `sudo git pull` 후 권한 오류 | root 로 실행해 소유자가 바뀜 | 항상 `sudo -u backend -H git -C ...` |
 | 알림 메일 `SMTPServerDisconnected` (로그인 단계) | `SMTP_USER` 에 메일 주소가 아니라 **앱 이름**을 넣음 | 전체 메일 주소로 수정 (비밀번호 값은 길이·형식만 확인하고 출력하지 않음) |
 
-## 12. 남은 일
+## 13. 남은 일
 - [ ] 알림 메일 로그인 실패 시 오류 출력 정리(지금은 Traceback)
-- [ ] backend2 배포 (기능이 갖춰진 뒤)
-- [ ] 검색을 ES로 전환(MariaDB 대체 유지), 실시간 검색어 저장소 확정(ES vs Valkey sorted set)
+- [x] backend2 배포 (2026-11-26, 두 서버 같은 커밋·요청 분산 확인)
+- [ ] 두 서버를 오가며 로그인이 유지되는지 확인 (`SESSION_SECRET` 같은 값인지 대조)
+- [x] 검색 ES 스위치와 MariaDB 대체 경로 구현(`#182`, `#185`), backend1에서 켜서 확인(11/27)
+- [ ] backend2에도 `SEARCH_BACKEND=es` 적용, `#185` 배포 뒤 10장 검색어로 다시 확인
+- [ ] 한글↔영문 이름 연결(`아이작` ↔ Isaac)용 별칭 보충, MariaDB vs ES 검색 벤치마크
+- [ ] 실시간 검색어 저장소 확정(ES vs Valkey sorted set)
 - [ ] AI 사양 판정의 서버 실제 호출 확인
