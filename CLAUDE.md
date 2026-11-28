@@ -10,7 +10,7 @@
 > 서비스 기능은 그 과정을 보여 주는 수단이다. 기능을 만들 때도 "데이터가 어디서 와서 어디로 가는지"가
 > 설명 가능하게 만든다. 필수 요구사항 목록은 `docs/requirements.md` (전부 구현 대상).
 >
-> **확정 범위: 서비스 기능 10개 · API 38개 · 기술·발표 과제 8개** → `docs/features.md`가 기준.
+> **확정 범위: 서비스 기능 10개 · API 47개(엔드포인트 기준) · 기술·발표 과제 8개** → `docs/features.md`가 기준.
 게임 가격 비교 · 구매 타이밍 추천 서비스. PC 스토어(ITAD)·콘솔(다나와) 가격과 IGDB 게임 정보,
 Steam 사용자 데이터를 모아 **어디서, 언제 사는 게 가장 싼지** 알려준다. 발표 11/30.
 
@@ -78,7 +78,7 @@ Steam 사용자 데이터를 모아 **어디서, 언제 사는 게 가장 싼지
 | 수집 | requests, BeautifulSoup4 (다나와), confluent-kafka |
 | 정제 | confluent-kafka, pydantic v2 |
 | Backend | FastAPI + SQLAlchemy 2 + PyMySQL, redis-py(Valkey), elasticsearch-py |
-| Frontend | **팀 확정 필요** (권장: React + Vite → 빌드 결과를 nginx가 서빙) |
+| Frontend | React 18 + Vite 5 → 빌드 결과를 nginx가 서빙 |
 | 테스트 | pytest |
 | 로그인 | 구글 OAuth (Authlib) — 도메인(DDNS) + HTTPS 필요 |
 | 동기화 | Monstache (MongoDB → Elasticsearch) |
