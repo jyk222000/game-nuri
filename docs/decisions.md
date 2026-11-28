@@ -4,6 +4,7 @@
 - 2026-11-29 | HAProxy가 80번 요청을 443으로 301 리다이렉트 (`http-request redirect scheme https code 301 unless { ssl_fc }`) | 80이 평문으로 서비스되고 있었음. 헬스체크(`/api/health`)는 HAProxy가 frontend를 직접 부르므로 영향 없고, 인증서 갱신은 DNS-01이라 80번을 쓰지 않음
 - 2026-11-29 | Kibana 5601을 같은 인증서로 HTTPS 종단 (`https://gamenuri.store:5601`) | 11/26에 연 5601이 평문 http라 `elastic` 로그인 비밀번호가 LAN에 암호화 없이 지나갔음. 443 경로(`/kibana`)로 합치는 방법은 Kibana 재시작·설정 변경이 필요해 발표 전에는 하지 않음. `host:5601`만 입력하면 브라우저가 http로 시도하므로 `https://`를 붙여야 접속됨
 - 2026-11-29 | 임시 `/etc/sudoers.d/admin`(`admin ALL=(ALL) NOPASSWD:ALL`) 정리 시작: monitoring에서 백업(`/root/sudoers.d-admin.bak`) 후 삭제 | 비상용 `admin` 계정이 비밀번호 없이 root가 되는 것을 막기 위함. 나머지 서버는 현황 확인 후 한 대씩 정리 (`docs/infra-status.md` 미해결 5번)
+- 2026-11-28 | **A5를 "시리즈 신작과 전작 가격"에서 "할인 유형 진정성 검증"(상시 세일형 vs 희소 빅세일형)으로 바꿈.** 11/22 확정(위 11/22 줄)의 A5 항목만 대체하고 나머지 분석 7개와 분담은 그대로 | 팀장 제안. 신작→전작은 시리즈 매핑·출시일 적재가 먼저 필요해 데이터 처리 과정(수집→저장→활용) 시연에 쓰기 어렵고, 이미 저장된 `price_history`만으로 "'50% 할인'이 진짜 파격 세일인가"를 바로 검증할 수 있어 서비스 기능(구매 타이밍 판단)과도 이어짐. 구현: `analysis/notebooks/05_A5_할인유형진정성.ipynb` (NW2-108)
 - 2026-11-28 | API 개수는 **엔드포인트(메서드+경로) 기준 47개**로 센다. `docs/contracts/api.md`의 번호(#1~#38)는 기능 단위 묶음으로 유지 | 확정(11/19) 때의 38개는 기능 단위였고 API 명세서(엑셀)는 메서드+경로 단위(47행)라 숫자가 달라 보였다. 47개 = 구현 46 + 리뷰 검색 1개(명세 미확정). 요구사항 "30개 이상" 충족
 - 2026-11-28 | Frontend는 **React 18 + Vite 5**, 빌드 결과를 nginx가 서빙 | `frontend/package.json`·`vite.config.js`로 이미 구현됨. CLAUDE.md의 "팀 확정 필요" 문구를 사실에 맞게 정리
 - 2026-11-27 | 게임 검색의 AI(`llm`) 별칭은 검수 여부와 상관없이 검색에서 뺌 (MariaDB·ES 모두) | 팀 결정. `game_aliases`에는 `igdb` 3,712건뿐이고 `llm`은 0건이라 현재 결과는 달라지지 않음
