@@ -1,5 +1,12 @@
 jupyterlab>=4.1
 pandas>=2.2
 matplotlib>=3.8
+numpy>=1.26
+scipy>=1.12
+seaborn>=0.13
+statsmodels>=0.14
+requests>=2.31
+pymongo>=4.6
+elasticsearch>=8.13,<9
 sqlalchemy>=2.0
 pymysql>=1.1
