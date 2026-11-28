@@ -1,7 +1,10 @@
 # 결정 기록
 형식: `YYYY-MM-DD | 결정 | 이유`
 
-infra/NW2-xx-kibana-user-names
+- 2026-11-28 | API 개수는 **엔드포인트(메서드+경로) 기준 47개**로 센다. `docs/contracts/api.md`의 번호(#1~#38)는 기능 단위 묶음으로 유지 | 확정(11/19) 때의 38개는 기능 단위였고 API 명세서(엑셀)는 메서드+경로 단위(47행)라 숫자가 달라 보였다. 47개 = 구현 46 + 리뷰 검색 1개(명세 미확정). 요구사항 "30개 이상" 충족
+- 2026-11-28 | Frontend는 **React 18 + Vite 5**, 빌드 결과를 nginx가 서빙 | `frontend/package.json`·`vite.config.js`로 이미 구현됨. CLAUDE.md의 "팀 확정 필요" 문구를 사실에 맞게 정리
+- 2026-11-27 | 게임 검색의 AI(`llm`) 별칭은 검수 여부와 상관없이 검색에서 뺌 (MariaDB·ES 모두) | 팀 결정. `game_aliases`에는 `igdb` 3,712건뿐이고 `llm`은 0건이라 현재 결과는 달라지지 않음
+- 2026-11-27 | 게임 검색은 `SEARCH_BACKEND=db|es` 스위치(기본 `db`). `es`는 ES 결과를 MariaDB 부분 일치에 **더하고**, ES 실패·2초 초과 시 MariaDB로 대체. 자동완성은 ES를 쓰지 않음 | 결과가 줄지 않고 ES가 죽어도 검색이 되며 값 하나로 되돌릴 수 있음 (PR #182·#185, `docs/es-search.md`)
 - 2026-11-26 | Kibana clickstream에 게임·사용자 이름을 ES enrich + ingest 파이프라인(`clickstream-game-name`)으로 붙임. 사용자 이름은 MariaDB 읽기 전용 `es_reader`(users 세 칸) → ES `users`를 1분마다 복사 | 발표 때 사람별 실시간 표에 이름이 보이도록. 이메일 앞부분이 보일 수 있어 팀 내부용 (`infra/elk/README.md` 8장)
 - 2026-11-26 | Kibana를 강의실 LAN에 `http://192.168.0.222:5601`(proxy HAProxy → elk:5601)로 엶, 계정은 `elastic` | 발표 때 여러 PC에서 대시보드 확인. 팀장 확인. http라 발표 뒤 닫는다 (`infra/elk/README.md` 5장)
 - 2026-11-27 | 별칭 검색용 ES 인덱스 `game_aliases`: `refined.game_aliases` → Mongo Sink `mongo-sink-game-aliases` → MongoDB `game_aliases` → Monstache → ES (MariaDB에서 직접 복사하지 않음) | ES 색인은 Monstache만 한다는 구조 유지 (PR #182). MariaDB와 건수 차이 115는 대소문자·공백 비교 규칙 차이 (`infra/monstache/README.md` 4장)
