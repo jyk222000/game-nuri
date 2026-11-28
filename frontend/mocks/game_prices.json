@@ -1,8 +1,0 @@
-{
-  "game_id": 119133,
-  "items": [
-    { "store": "steam", "edition": "digital", "price_krw": 47900, "regular_krw": 64800, "discount_pct": 26, "url": "#", "collected_at": "2026-11-19T02:30:00Z" },
-    { "store": "danawa", "edition": "physical", "price_krw": 52000, "regular_krw": null, "discount_pct": null, "url": "#", "collected_at": "2026-11-19T02:30:00Z" }
-  ],
-  "lowest": { "store": "steam", "price_krw": 47900 }
-}
