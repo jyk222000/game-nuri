@@ -3,6 +3,7 @@
   "template": {
     "settings": {
       "number_of_replicas": 0,
+      "index.default_pipeline": "clickstream-game-name",
       "analysis": { "analyzer": {
         "korean": { "type": "custom", "tokenizer": "nori_tokenizer", "filter": ["lowercase"] } } }
     },
@@ -12,6 +13,8 @@
       "user_id":     { "type": "keyword" },
       "event":       { "type": "keyword" },
       "game_id":     { "type": "long" },
+      "game_name":   { "type": "keyword" },
+      "user_name":   { "type": "keyword" },
       "query":       { "type": "keyword", "fields": { "text": { "type": "text", "analyzer": "korean" } } },
       "store":       { "type": "keyword" },
       "occurred_at": { "type": "date" },

@@ -1,0 +1,16 @@
+{
+  "description": "clickstream에 game_name(games-name), user_name(users-name) 붙이기",
+  "processors": [
+    { "enrich": { "policy_name": "games-name", "field": "game_id", "target_field": "game",
+                  "ignore_missing": true, "ignore_failure": true } },
+    { "script": { "ignore_failure": true,
+                  "source": "if (ctx.game != null) { def ko = ctx.game.name_ko; ctx.game_name = (ko != null && ko != '') ? ko : ctx.game.name; }" } },
+    { "remove": { "field": "game", "ignore_missing": true } },
+
+    { "enrich": { "policy_name": "users-name", "field": "user_id", "target_field": "user_enrich",
+                  "ignore_missing": true, "ignore_failure": true } },
+    { "script": { "ignore_failure": true,
+                  "source": "if (ctx.user_enrich != null) { ctx.user_name = ctx.user_enrich.display_name; }" } },
+    { "remove": { "field": "user_enrich", "ignore_missing": true } }
+  ]
+}

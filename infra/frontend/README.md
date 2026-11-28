@@ -121,4 +121,13 @@ curl -s "localhost/api/games?size=2"                      # 게임 2건, total 1
 - [ ] Backend에 없는 API(로그인·리뷰·사양 비교·검색어)를 만들고, 그 전까지 해당 화면이 오류가 아닌 빈 상태로 보이게 하기 (frontend, 한예찬)
 - [x] 구글 로그인이 동작하는지 확인하고 개발용 `AUTH_FAKE_USER`를 끈다 (backend1, 2026-11-24)
 - [x] backend2에도 같은 `GOOGLE_*`·`SESSION_SECRET`을 넣고 `AUTH_FAKE_USER=false`인지 확인 (두 서버가 같은 `SESSION_SECRET`이어야 로그인이 서로 통한다, 2026-11-26)
+| 2026-11-26 | frontend2 | frontend1과 **같은 빌드**가 올라가 있음(`index.html`이 가리키는 `assets/index-rI9v3tce.js`·`index-DIr7GOr6.css`가 frontend1과 같음). backend2 배포 뒤 frontend2 경유 `/api/health`가 통과(backend2 로그에 `10.0.1.102`의 요청이 찍힘). 사용자 요청이 frontend1·2로 나뉨(backend1 54건 : backend2 60건, 2분 표본) |
+| 2026-11-26 | frontend1·2 | 분석 탭·할인 메뉴 제거(main `cfd324d`, #169)가 이 빌드에 들어갔는지는 **미확인**. 빌드 파일 시각은 frontend1 00:05, frontend2 00:13이고 #169 머지는 11/25 23:58 |
+
+## 남은 일
+- [x] frontend1에 real 기본 빌드 올리기 (2026-11-24)
+- [x] frontend2에 빌드 올리기 (2026-11-26, frontend1과 같은 빌드. `fe2.conf` → `backend2:8000`, backend2 배포 후)
+- [ ] Backend에 없는 API(로그인·리뷰·사양 비교·검색어)를 만들고, 그 전까지 해당 화면이 오류가 아닌 빈 상태로 보이게 하기 (frontend, 한예찬)
+- [x] 구글 로그인이 동작하는지 확인하고 개발용 `AUTH_FAKE_USER`를 끈다 (backend1, 2026-11-24)
+- [ ] 두 서버를 오가도 로그인이 유지되는지 확인 (backend2에는 backend1의 `.env`를 복사했고 `AUTH_FAKE_USER=false`는 확인했다, 2026-11-26. 두 서버가 같은 `SESSION_SECRET`이어야 로그인이 서로 통한다. 브라우저에서 로그인한 뒤 새로고침을 여러 번 해 보는 확인은 아직 안 했다)
 - [ ] 로그인 실패·취소 때 JSON 오류가 그대로 보이는 문제 (`/login?error=...` 방식은 프론트·백엔드 합의 필요)

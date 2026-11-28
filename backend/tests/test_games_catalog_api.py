@@ -112,7 +112,7 @@ def test_autocomplete_alias_rules(catalog) -> None:
     client, *_ = catalog
     assert _ids(client, "/api/games/autocomplete?q=레데리2") == [12]  # 수동 별칭은 검수 전에도 쓴다
     assert _ids(client, "/api/games/autocomplete?q=레데리3") == []  # AI 별칭은 검수 전이면 안 쓴다
-    assert _ids(client, "/api/games/autocomplete?q=언더") == [14]  # 검수한 AI 별칭은 쓴다
+    assert _ids(client, "/api/games/autocomplete?q=언더") == []  # AI 별칭은 검수해도 안 쓴다
 
 
 def test_autocomplete_wildcards_are_literal_and_limit(catalog) -> None:

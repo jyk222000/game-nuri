@@ -1,0 +1,9 @@
+[Unit]
+Description=MariaDB gamenuri.users -> ES users 동기화 + enrich users-name 재실행
+After=network-online.target elasticsearch.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/es-users-sync/env
+ExecStart=/usr/local/bin/es-users-sync

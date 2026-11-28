@@ -1,0 +1,19 @@
+// Kibana 대시보드 "겜누리 사용자 행동 (clickstream)"의 "사람별 실시간 활동" 표 (ES|QL, Table)
+// 한 줄 = 사람 + 날짜(한국 시간). 시간 범위는 대시보드 시간 선택(?_tstart, ?_tend)을 따른다.
+// 머문 시간 = 그날 첫 행동 ~ 마지막 행동 (창을 닫은 시각은 기록되지 않는다)
+FROM clickstream-*
+| WHERE occurred_at >= ?_tstart AND occurred_at <= ?_tend AND user_name IS NOT NULL
+| EVAL kst = occurred_at + 9 hours,
+       s = CASE(event == "search", 1, 0),
+       v = CASE(event == "view_game", 1, 0),
+       c = CASE(event == "click_store", 1, 0),
+       a = CASE(event == "set_alert", 1, 0)
+| STATS t0 = MIN(kst), t1 = MAX(kst), `총 행동` = COUNT(*),
+        `검색` = SUM(s), `상세 조회` = SUM(v), `스토어 클릭` = SUM(c), `알림 설정` = SUM(a)
+        BY `이름` = user_name, d = DATE_FORMAT("yyyy-MM-dd", kst)
+| EVAL `머문 시간(분)` = ROUND(DATE_DIFF("second", t0, t1) / 60.0, 1),
+       `접속 시간` = DATE_FORMAT("MM-dd HH:mm", t0),
+       `종료 시간` = DATE_FORMAT("MM-dd HH:mm", t1)
+| SORT `총 행동` DESC, t1 DESC
+| KEEP `이름`, `접속 시간`, `종료 시간`, `머문 시간(분)`, `총 행동`, `검색`, `상세 조회`, `스토어 클릭`, `알림 설정`
+| LIMIT 20

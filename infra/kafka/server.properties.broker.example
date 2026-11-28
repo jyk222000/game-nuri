@@ -4,6 +4,9 @@
 process.roles=broker,controller
 node.id=${ID}
 controller.quorum.voters=1@kafka1:9093,2@kafka2:9093,3@kafka3:9093,4@backup:9093,5@monitoring:9093
+# 리더 소식이 이만큼 없으면 후보로 나선다(기본 2000). 3.8은 Pre-Vote가 없어 VM 순간 끊김에도
+# 리더가 바뀌어서 5초로 늘린다(11/26). 5대 모두 같은 값.
+controller.quorum.fetch.timeout.ms=5000
 listeners=PLAINTEXT://:9092,CONTROLLER://:9093
 advertised.listeners=PLAINTEXT://${NAME}:9092
 inter.broker.listener.name=PLAINTEXT

@@ -8,6 +8,7 @@
 규칙
   - 한국어: 사전 단어로 시작하면 그 유형 (nori 어간이 "비싸"·"비쌉" 처럼 갈라져도 잡도록)
   - 영어: 소문자로 바꿔 단어가 정확히 같을 때만
+  - 사전의 ignore 목록(일반어·욕설·장르 이름)은 유형이 아니라서 건수에서 뺀다
   - 어느 유형에도 없으면 unknown 으로 돌려준다 → 사전을 보강할 때 본다
   - 여러 유형에 걸리면 사전에 먼저 적힌 유형 하나만 (중복 집계 안 함)
 """
@@ -39,6 +40,13 @@ def classify(keyword: str, d: dict[str, Any], side: str) -> str | None:
     return None
 
 
+def is_ignored(keyword: str, d: dict[str, Any]) -> bool:
+    """유형이 될 수 없는 말(일반어·욕설·장르 이름)인가. 단어가 정확히 같을 때만."""
+    ign = d.get("ignore", {})
+    word = keyword.strip()
+    return word in ign.get("ko", []) or word.lower() in ign.get("en", [])
+
+
 def aggregate(
     keyword_counts: list[tuple[str, int]], d: dict[str, Any], side: str
 ) -> tuple[dict[str, int], list[tuple[str, int]]]:
@@ -48,7 +56,8 @@ def aggregate(
     for word, n in keyword_counts:
         cat = classify(word, d, side)
         if cat is None:
-            unknown.append((word, n))
+            if not is_ignored(word, d):
+                unknown.append((word, n))
         else:
             counts[cat] = counts.get(cat, 0) + int(n)
     return counts, unknown
