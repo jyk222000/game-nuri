@@ -25,7 +25,7 @@
 | 2 | [02-mariadb.md](02-mariadb.md) | mariadb-pr, mariadb-re | MariaDB 10.11 Primary → Replica 복제, 계정 |
 | 3 | [03-valkey.md](03-valkey.md) | valkey | 캐시·세션·실시간 검색어 저장소 |
 | 4 | [04-mongodb.md](04-mongodb.md) | mongodb-pr, mongo-se1, mongo-se2 | MongoDB 8.0 복제 셋 `rs0`, 컬렉션·인덱스·TTL, 정리 작업 |
-| 5 | [05-backend.md](05-backend.md) | backend1 (backend2) | FastAPI 설치, 환경 파일, systemd, 구글 로그인, AI, 알림 메일, 배포 |
+| 5 | [05-backend.md](05-backend.md) | backend1, backend2 | FastAPI 설치, 환경 파일, systemd, 구글 로그인, AI, 알림 메일, **검색 ES 스위치(10장)**, 배포 |
 | 6 | [06-backup.md](06-backup.md) | backup | MariaDB·MongoDB 매일 백업, 복구 시험 |
 | 7 | [07-작업내역.md](07-작업내역.md) | - | 날짜별 총 작업 내용, 결정, 겪은 문제, 남은 일 |
 
