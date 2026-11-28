@@ -4,7 +4,7 @@
 **배포:** Frontend 1·2 VM — nginx가 빌드 결과를 서빙하고 `/api`를 짝 Backend로 전달 (`nginx/`).
 
 ## 지킬 것
-- 프레임워크: **팀 확정 필요** (권장 React + Vite). 확정되면 이 줄을 고치고 `docs/decisions.md`에 기록.
+- 프레임워크: **React 18 + Vite 5** (빌드 결과를 nginx가 서빙, 2026-11-28 `docs/decisions.md`에 기록).
 - API 주소는 상대경로 `/api/...`만 쓴다. Backend 호스트를 코드에 쓰지 않는다 (nginx가 연결).
 - 응답 형식은 `docs/contracts/api.md` 기준. 목(`src/api/mock/`)도 같은 형식으로 응답한다 (플랫폼은 ERD 코드, 가격 키는 `platform`·`item_condition`, 이력은 `collected_at`).
 - **API 모드** `VITE_API_MODE` (`src/api/client.js`):
