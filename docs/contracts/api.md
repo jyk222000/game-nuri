@@ -1,6 +1,6 @@
 # Backend API 명세 (기능 명세서)
 
-- **38개** (요구사항: 30개 이상). 기능 단위로 센다. 기능 명세는 `docs/features.md`.
+- **기능 단위 38개 = 엔드포인트(메서드+경로) 47개** (요구사항: 30개 이상). 아래 번호(#1~#38)는 기능 단위이고, API 명세서(엑셀)는 메서드+경로 단위로 47행이다. 기능 명세는 `docs/features.md`.
 - 실제 동작 명세는 FastAPI가 만드는 `/docs`(Swagger)와 일치시킨다. 경로는 구현하며 확정.
 - 기본 경로 `/api`, JSON, 키 `snake_case`, 시간 UTC ISO 8601, 금액 `price_krw`(원화 정수)
 - 인증: 구글 로그인 후 세션 쿠키 (세션은 Valkey). ✓ = 로그인 필요
@@ -13,8 +13,8 @@
 | 2 | 인증 | 토큰 갱신·로그아웃 | `POST /api/auth/refresh, /api/auth/logout` | ⑧ | ✓ |
 | 3 | 인증 | 내 프로필 | `GET·PATCH /api/me` | ⑧ | ✓ |
 | 4 | 인증 | Steam ID 연동 | `PUT /api/me/steam` | ④ | ✓ |
-| 5 | 게임 | 검색 (한글 부분 일치, 오타 허용은 ES 연동 후) | `GET /api/games?q=&platform=&genre=` | 공통 |  |
-| 6 | 게임 | 자동완성 | `GET /api/games/autocomplete?q=` | 공통 |  |
+| 5 | 게임 | 검색 (한글·영문 부분 일치, 띄어쓰기·기호 무시, 오타·형태소는 ES: `SEARCH_BACKEND=es`일 때, ES 실패 시 MariaDB로 대체) | `GET /api/games?q=&platform=&genre=` | 공통 |  |
+| 6 | 게임 | 자동완성 (띄어쓰기·기호 무시, ES는 쓰지 않음) | `GET /api/games/autocomplete?q=` | 공통 |  |
 | 7 | 게임 | 상세 | `GET /api/games/{game_id}` | 공통 |  |
 | 8 | 게임 | 장르·태그 필터 | `GET /api/genres, /api/tags` | 공통 |  |
 | 9 | 게임 | 인기 게임 목록 | `GET /api/games/popular` | 공통 |  |
@@ -48,7 +48,9 @@
 | 37 | 운영 | API 사용 순위 | `GET /api/stats/api-ranking` | ⑩ |  |
 | 38 | 운영 | 헬스체크 (HAProxy) | `GET /api/health` | 공통 |  |
 
-분류별: 인증 4 · 게임 5 · 가격 5 · 구매 타이밍 2 · 찜·알림 6 · 추천 3 · 리뷰 3 · 사양 3 · 동접자 2 · 검색 2 · 운영 3 = **38**
+분류별: 인증 4 · 게임 5 · 가격 5 · 구매 타이밍 2 · 찜·알림 6 · 추천 3 · 리뷰 3 · 사양 3 · 동접자 2 · 검색 2 · 운영 3 = **38(기능 단위)**
+
+엔드포인트 수: 38 + 한 줄에 묶인 메서드·경로 9개(#1 +1, #2 +1, #3 +1, #8 +1, #17 +1, #19 +2, #22 +1, #30 +1) = **47**. 이 중 #28 리뷰 검색은 명세가 확정되지 않았고 구현 전이라, 구현된 엔드포인트는 46개다.
 
 ## 공통 규칙 (응답 형식은 프론트 목업 `frontend/src/api/mock/router.js`·`data.js` 기준, 2026-11-23 결정 반영)
 - 시각: UTC ISO 8601 `Z` (`2026-11-19T02:30:00Z`). 날짜만 쓰는 필드는 `YYYY-MM-DD`(UTC).
