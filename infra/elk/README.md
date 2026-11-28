@@ -103,10 +103,10 @@ nori 확인: `POST games/_analyze {"analyzer":"korean","text":"엘든링을 샀�
 
 ## 5. Kibana 접속
 
-**강의실 LAN (11/26~)**: 브라우저 `http://192.168.0.222:5601` → `elastic` 로그인 → 첫 화면이 대시보드 "겜누리 사용자 행동 (clickstream)".
+**강의실 LAN (11/26~, 11/29부터 HTTPS)**: 브라우저 `https://gamenuri.store:5601` → `elastic` 로그인 → 첫 화면이 대시보드 "겜누리 사용자 행동 (clickstream)". **도메인으로 접속한다**(IP `192.168.0.222`로 들어가면 인증서가 도메인용이라 경고가 난다). `https://`를 붙여야 한다(`host:5601`만 치면 브라우저가 http로 시도해 실패).
 proxy의 HAProxy가 5601을 `elk:5601`로 넘긴다 (`infra/haproxy/haproxy.cfg`의 `frontend kibana`, 팀장 확인).
 - proxy SELinux: `sudo semanage port -a -t http_port_t -p tcp 5601` (Enforcing이라 HAProxy가 5601을 쓰려면 필요)
-- http라 로그인 비밀번호가 LAN에 암호화 없이 지나간다. 발표 뒤 닫을 때: proxy에서 `haproxy.cfg`의 kibana 두 블록을 지우고 `haproxy -c -f /etc/haproxy/haproxy.cfg && systemctl reload haproxy`
+- 11/29부터 HAProxy가 5601에서 TLS를 종단한다(`bind *:5601 ssl crt /etc/haproxy/certs/gamenuri.store.pem`, 443과 같은 인증서). 이전에는 http라 로그인 비밀번호가 LAN에 암호화 없이 지나갔다. 발표 뒤 닫을 때: proxy에서 `haproxy.cfg`의 kibana 두 블록을 지우고 `haproxy -c -f /etc/haproxy/haproxy.cfg && systemctl reload haproxy`
 - 첫 화면: Stack Management → Advanced Settings → `defaultRoute` = `/app/dashboards#/view/f8a35db7-9dae-4ce9-b98c-24495bcf6ead?_g=(filters:!(),refreshInterval:(pause:!f,value:10000),time:(from:now-7d,to:now))`
   (`http://…`를 앞에 붙이면 저장되지 않는다. `/app/`부터)
 

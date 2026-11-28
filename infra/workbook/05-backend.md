@@ -184,7 +184,7 @@ Backend가 지키는 규칙 (`backend/CLAUDE.md`):
 
 > <- 둘 중 하나라도 비면 **503** 이 나가고 화면은 사양 표만 보여 줍니다(AI 없이 쓸 수 있는 대체 화면).
 > <- Backend → Google(HTTPS 443)로 나가는 연결이 필요합니다. 사용자 식별 정보(이메일 등)는 AI에 보내지 않습니다.
-> <- ⚠ 미확인: 서버에서의 실제 AI 호출은 프론트 작업 후 확인 예정입니다(400 `SPEC_REQUIRED` 경로까지만 확인).
+> <- 확인(11/29): backend2에서 `GET /api/games/22778/spec-check` → **200 OK**(frontend2 경유). 두 서버 모두 `GEMINI_API_KEY`·`AI_MODEL`이 설정되어 있고 Google AI(443)로 나가는 연결이 열려 있습니다. 응답이 AI 호출 결과인지 저장된 결과(Valkey)인지는 로그만으로 구분하지 못했습니다.
 
 ## 9. 목표가 알림 메일 (NW2-74) — backend1에서만
 가격이 목표가 이하가 된 알림에 메일을 보냅니다. API와 따로 도는 **주기 작업**(`backend-alerts.timer` → `python -m app.jobs.send_alerts`, 매시 50분)입니다.
@@ -299,8 +299,8 @@ done
 | `엘든링` | 0건 | Elden Ring, Elden Ring Nightreign | ✅ 11/27 backend1 |
 | `엘든링을` | 0건 | Elden Ring | ✅ 11/27 backend1 |
 | `elden rnig` | 0건 | Elden Ring이 1순위 (뒤에 비슷한 이름이 섞일 수 있음) | ✅ 11/27 backend1 |
-| `cat` | 부분 일치(이름에 cat이 든 게임) | `chat` 같은 비슷한 단어의 게임이 **나오지 않음** | ⚠ 미확인 (11/27 수정 `#185` 배포 후) |
-| `dead lock`, `hollowknight` | 띄어쓰기가 달라도 같은 게임 | 같음 | ⚠ 미확인 (실제 DB에 해당 게임이 있는지부터 확인) |
+| `cat` | 부분 일치(이름에 cat이 든 게임) | `chat` 같은 비슷한 단어의 게임이 **나오지 않음** | 확인 (11/29 backend1·2: `A Building Full of Cats` 등만 나오고 VRChat 없음) |
+| `dead lock`, `hollowknight` | 띄어쓰기가 달라도 같은 게임 | 같음 | 확인 (11/29 backend1·2). `hollowknight` → `Hollow Knight`·`Hollow Knight: Silksong`. `dead lock`은 DB에 `Deadlock` 게임이 없어 `Dead…` 게임이 나옴(시연은 `hollowknight`으로) |
 
 ### 10-4. 되돌리기
 ```
@@ -358,9 +358,9 @@ backend/tests/    pytest (SQLite 메모리 DB, 외부 서비스는 가짜)
 ## 13. 남은 일
 - [ ] 알림 메일 로그인 실패 시 오류 출력 정리(지금은 Traceback)
 - [x] backend2 배포 (2026-11-26, 두 서버 같은 커밋·요청 분산 확인)
-- [ ] 두 서버를 오가며 로그인이 유지되는지 확인 (`SESSION_SECRET` 같은 값인지 대조)
+- [x] 두 서버의 `SESSION_SECRET`·구글 값이 같은지 해시로 대조해 일치 확인(11/29). 서버를 오가며 로그인이 유지되는지는 화면에서 직접 보지 않음
 - [x] 검색 ES 스위치와 MariaDB 대체 경로 구현(`#182`, `#185`), backend1에서 켜서 확인(11/27)
-- [ ] backend2에도 `SEARCH_BACKEND=es` 적용, `#185` 배포 뒤 10장 검색어로 다시 확인
+- [x] backend2에도 `SEARCH_BACKEND=es` 적용, `#185` 코드로 10장 검색어 확인(11/29, 두 서버)
 - [ ] 한글↔영문 이름 연결(`아이작` ↔ Isaac)용 별칭 보충, MariaDB vs ES 검색 벤치마크
 - [ ] 실시간 검색어 저장소 확정(ES vs Valkey sorted set)
 - [ ] AI 사양 판정의 서버 실제 호출 확인
