@@ -6,6 +6,8 @@ GitHub 웹에서 바로 결과를 볼 수 있게 한다.
 
 | 파일 | 원본 | 실행 기준 |
 |---|---|---|
+| `01_A1_할인패턴예측_실행결과.ipynb` | `../01_A1_할인패턴예측.ipynb` | 2026-11-26까지의 `price_history`(mariadb-re) 추출본, 게임 1,000개 |
+| `05_A5_할인유형진정성_실행결과.ipynb` | `../05_A5_할인유형진정성.ipynb` | 2026-11-26까지의 `price_history`(mariadb-re) 추출본, 분석 대상 908개 |
 | `02_A2_검색관심_실행결과.ipynb` | `../02_A2_검색관심.ipynb` | 2026-11-26, `price_history`·`games`(mariadb-re) 추출본 + 네이버 검색어 트렌드(NAVER API HUB), 게임 150개 후보 |
 | `08_A8_PC콘솔가격_실행결과.ipynb` | `../08_A8_PC콘솔가격.ipynb` | 2026-11-26, `prices_current`(mariadb-re) 추출본 |
 

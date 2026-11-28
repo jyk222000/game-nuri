@@ -2,6 +2,8 @@
 
 | 노트북 | 분석 | 담당 | 데이터 |
 |---|---|---|---|
+| `01_A1_할인패턴예측.ipynb` | A1 할인 패턴과 다음 할인 예측 (규칙성·시즌성·서비스 예측 규칙 정확도) | 한예찬 | MariaDB 추출 TSV 1개 (`a1_price_history.tsv`) |
+| `05_A5_할인유형진정성.ipynb` | A5 "50% 할인"은 진짜 파격 세일인가 (할인 유형별 실질 구매가) | 한예찬 | A1과 같은 TSV + `games_1000.csv` |
 | `02_A2_검색관심.ipynb` | A2 할인·출시와 국내 검색 관심 | 김준영 | MariaDB 추출 TSV 2개 + 네이버 검색어 트렌드(NAVER API HUB) |
 | `08_A8_PC콘솔가격.ipynb` | A8 PC vs 콘솔 가격 차이 | 김준영 | MariaDB 추출 TSV 1개 |
 | `03_A3_평론vs유저.ipynb` | A3 평론가 vs 유저 점수 차이, 한글화 수요 | 이고은 | `a3_games.tsv` |
@@ -36,6 +38,8 @@ scp admina@mariadb-re:~/a2_games.tsv admina@mariadb-re:~/a2_price_history.tsv ad
 ```
 `scp`가 여러 파일을 한 번에 못 받으면 한 줄에 하나씩 받는다.
 
+A1·A5는 `analysis/scripts/a1_extract.sql` 하나를 같은 방식으로 실행해 `analysis/data/a1_price_history.tsv`로 저장한다(A1과 A5가 같은 파일을 쓴다).
+
 ## 2) A2만: 네이버 키
 2026-07-31부터 신규 키는 **NAVER API HUB**(네이버 클라우드)에서만 발급된다. 개발자센터 키와 호출 주소·헤더가 달라 서로 호환되지 않는다.
 Application을 등록할 때 **"검색어 트렌드" API를 함께 선택**해야 한다(없으면 401).
@@ -52,5 +56,5 @@ Application을 등록할 때 **"검색어 트렌드" API를 함께 선택**해�
 cd analysis\notebooks
 python -m jupyter notebook
 ```
-`Kernel → Restart & Run All` 후 저장한다. 결과 PNG와 `summary.json`은 `analysis/results/a2`, `a8`에 생긴다.
+`Kernel → Restart & Run All` 후 저장한다. 결과 PNG와 `summary.json`은 `analysis/results/a1`, `a2`, `a5`, `a8`에 생긴다.
 실행 결과를 `executed/`에 올릴 때는 파일 크기가 1MB 아래인지, 출력에 키·내부 경로가 없는지 확인한다(`executed/README.md`).
