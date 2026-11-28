@@ -7,10 +7,10 @@
 |---|---|---|---|---|---|
 | 1 | 기술 스택 설명: "어떤 용도로 넣어서 어떤 이득" (파트별 1개) | `docs/tech-stack.md` 표 | 각 단계 도구를 선택한 이유 | NW2-80 | 공통 |
 | 2 | Monstache로 MongoDB ↔ ES 동기화 | refined.games → Mongo `games` → Monstache → ES `games` | 저장소 간 데이터 동기화 | NW2-69 | DB |
-| 3 | ES vs MongoDB 검색 벤치마크 | 같은 데이터·같은 쿼리, 한글 부분·오타·정확도·응답 시간 | "왜 ES인가" 근거 | NW2-76 | 분석 |
+| 3 | ES vs MongoDB 벤치마크 | 같은 리뷰 데이터로 **키워드 추출**(ES nori 집계 vs MongoDB)의 품질·속도 비교. 게임 검색은 MariaDB 부분 일치 + ES(스위치) 결과로 따로 확인 (`docs/es-search.md`) | "왜 ES인가" 근거 | NW2-76 | 분석 |
 | 4 | 부하 테스트 (이유 설명 중요) | Locust → Proxy, 캐시 전후 비교 | 병목 지점 확인 | NW2-79 | 운영 |
 | 5 | 3-Tier (FE + BE + DB), FE·BE 개수 맞춤 | FE1→BE1, FE2→BE2 → DB | – | 완료(구조) | 인프라 |
-| 6 | 백엔드는 API 기능, 30개 이상 | `docs/contracts/api.md` (38개) | – | NW2-71 | BE |
+| 6 | 백엔드는 API 기능, 30개 이상 | `docs/contracts/api.md` (엔드포인트 47개, 기능 단위 38개) | – | NW2-71 | BE |
 | 7 | API 명세서 (기능 명세서) | api.md + FastAPI `/docs` | – | NW2-71 | BE |
 | 8 | API 모니터링 (어떤 API가 많이 쓰이나) | Prometheus 계측 → Grafana 순위 | 사용 로그 수집·집계 | NW2-78 | 운영 |
 | 9 | 회원가입은 구글로 | Google OAuth, 도메인+HTTPS | – | NW2-68, NW2-72 | 인프라·BE |
