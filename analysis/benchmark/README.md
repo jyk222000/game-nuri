@@ -1,8 +1,15 @@
-# ES vs MongoDB 벤치마크 (요구사항 #3 "왜 Elasticsearch인가")
+# ES 벤치마크 2가지 (요구사항 #3 "왜 Elasticsearch인가")
 
-## 무엇을 비교하나
-이 프로젝트에서 ES를 쓰는 이유는 **리뷰 키워드 추출(⑤)** 이다. 그래서 같은 일을 MongoDB로 할 때와 비교한다.
-게임 검색은 현재 MariaDB로 하므로(`backend/app/services/search.py`) ES 도입 이유로 쓰지 않는다.
+| # | 비교 | 질문 | 상태 |
+|---|---|---|---|
+| ① | **게임 검색: MariaDB vs ES** | MariaDB `ILIKE`로 되는 검색에 ES를 더하면 무엇이 달라지나 (형태소·오타·띄어쓰기·잡음·응답 시간) | 계획만 있음, 아직 실행하지 않음 (아래 "① 게임 검색") |
+| ② | **리뷰 키워드 추출: MongoDB vs ES** | 리뷰에서 게임별 핵심 키워드를 뽑는 일을 MongoDB 집계로 할 때와 ES(nori)로 할 때 무엇이 다른가 | 노트북 있음 (`09_벤치마크_ES_vs_MongoDB.ipynb`) |
+
+게임 검색은 **MongoDB와 비교하지 않는다.** 현재 검색은 MariaDB(`backend/app/services/search.py`)이고 ES는 그 위에 더한 것(`SEARCH_BACKEND=es`)이기 때문이다.
+키워드 추출은 MongoDB 집계(`$regexFindAll` → `$unwind` → `$group`)로 같은 일을 할 수 있어서 MongoDB와 비교한다.
+
+## ② 리뷰 키워드 추출: MongoDB vs ES
+이 프로젝트에서 ES를 쓰는 핵심 이유는 **리뷰 키워드 추출(⑤)** 이다. 그래서 같은 일을 MongoDB로 할 때와 비교한다.
 
 | 방법 | 하는 일 | 형태소 분석 |
 |---|---|---|
@@ -46,7 +53,32 @@ cd analysis/notebooks && jupyter lab     # 09_벤치마크_ES_vs_MongoDB.ipynb
 실행하면 `analysis/results/benchmark/`에 만들어진다(Git에 올릴지는 팀이 정한다).
 `results.md`(요약 표), `summary.json`, `bench_per_game.csv`, 차트 PNG. 발표 자료와 `docs/tech-stack.md`에 쓸 때는 결과를 옮겨 적는다.
 
+## ① 게임 검색: MariaDB vs ES (계획, 아직 실행하지 않음)
+게임 검색을 ES에 연결했으므로(`SEARCH_BACKEND=es`, PR #182·#185) 이전 README의 부분·오타·정확도 비교를 **MongoDB가 아니라 MariaDB와** 비교하는 것으로 되살린다.
+
+| 방법 | 내용 |
+|---|---|
+| MariaDB | `SEARCH_BACKEND=db`: 이름·한글명·별칭 `ILIKE %q%` + 띄어쓰기·기호 무시 비교 |
+| ES | `SEARCH_BACKEND=es`: 위 결과 + ES(`games`·`game_aliases`) 결과를 합침(nori 형태소, 오타 허용 `AUTO:5,8`) |
+
+**두 층으로 잰다.**
+- **API 전체**: `GET /api/games?q=`를 스위치만 바꿔 호출(사용자가 느끼는 응답 시간·결과). 같은 서버를 `db`/`es`로 바꿔 재시작하거나 서버를 나눠서 잰다.
+- **쿼리만**: MariaDB `SELECT`와 ES `_search`를 직접 호출(순수 검색 시간).
+
+**검색어 세트** (정답 게임을 미리 정하고, 데이터를 보기 전에 확정한다)
+| 종류 | 예 | 보는 것 |
+|---|---|---|
+| 정확·부분 | `엘든 링`, `엘든` | 정답을 찾는가 |
+| 입력 중(접두) | `elden r` | 정답을 찾는가 |
+| 한글 형태소 | `엘든링`, `엘든링을` | MariaDB 0건 → ES가 찾는가 |
+| 영문 오타 | `elden rnig` | 정답 순위 |
+| 띄어쓰기 다름 | `dead lock`↔`Deadlock`, `hollowknight`↔`Hollow Knight` (DB에 있는 게임으로 확정) | 양쪽 다 찾는가 |
+| 잡음 | `cat` | 무관한 결과가 몇 개 나오는가 |
+| 한계 | `아이작`(한글로 영문 게임) | 둘 다 못 찾는 것을 확인 (별칭 데이터 문제) |
+
+**지표**: 정답 발견 여부, 정답 순위, 무관 결과 수(잡음), 응답 시간(같은 질의 100회 이상, 첫 호출 제외, 평균·p95).
+**주의**: 게임이 1,000개 규모라 응답 시간 차이는 작을 수 있다. 그렇게 나와도 그대로 보고하고, 규모가 커질 때의 이야기는 따로 쓴다. 운영 DB·ES에 질의하므로 사용자가 적은 시간에 돌린다.
+
 ## 이전 계획과 달라진 점
-이전 README는 "한글 부분 검색·오타·정확도" 검색 비교였다. 검색은 아직 ES에 연결하지 않았으므로 **키워드 추출 비교로 바꿨다.**
-`docs/requirements.md` #3, `docs/features.md`의 문구는 별도 docs PR로 맞춘다.
-(나중에 게임 검색을 ES에 연결하면 부분·오타·정확도 비교를 같은 방식으로 추가할 수 있다.)
+처음 README는 "한글 부분 검색·오타·정확도"를 **MongoDB와 ES**로 비교하는 계획이었다. 검색은 MariaDB로 하고 있어서 비교 대상을 MariaDB로 바꾸고(① 위), MongoDB와의 비교는 **키워드 추출(②)**로 옮겼다.
+`docs/requirements.md` #3, `docs/features.md`, `docs/decisions.md`(2026-11-28)에도 같은 내용으로 반영했다.
