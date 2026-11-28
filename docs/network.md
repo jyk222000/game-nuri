@@ -34,7 +34,7 @@
 ## 도메인
 - 도메인: **`gamenuri.store`** (가비아에서 구입 완료, 네임서버는 가비아 기본값)
 - 계획: A 레코드 `@ → 192.168.0.222` (proxy). 사설 IP라 강의실 LAN 안에서만 접속된다 (공유기 포트포워딩 없음).
-- HTTPS: Let's Encrypt DNS-01(TXT 레코드 수동 입력)로 발급(2026-11-20, 만료 2027-02-18) → HAProxy 443에 적용 완료. 구글 OAuth redirect URI는 `https://gamenuri.store/...`.
+- HTTPS: Let's Encrypt DNS-01(TXT 레코드 수동 입력)로 발급(2026-11-20, 만료 2027-02-18) → HAProxy 443에 적용 완료. 80으로 오는 요청은 443으로 301 리다이렉트(2026-11-29). 구글 OAuth redirect URI는 `https://gamenuri.store/...`.
 - 인증서 위치(proxy VM): 원본 `/etc/letsencrypt/live/gamenuri.store/`, HAProxy용 `/etc/haproxy/certs/gamenuri.store.pem`(fullchain+privkey, root:haproxy 640). 키 파일은 repo에 넣지 않는다.
 - 갱신: `--manual` 방식이라 자동 갱신 안 됨. 만료 전에 `sudo certbot certonly --manual --preferred-challenges dns -d gamenuri.store`를 다시 실행하고 TXT 값을 가비아에 넣은 뒤, PEM을 다시 만들고 `systemctl reload haproxy`.
 - 확인: 강의실 PC에서 `nslookup gamenuri.store`가 192.168.0.222를 돌려주는지 (학교·공유기 DNS의 rebinding 차단 여부).
@@ -72,6 +72,6 @@
 `infra/ssh/config.example`을 `~/.ssh/config`에 붙여 넣는다. `10.0.1.*`는 proxy, `10.0.2.*`는 monitoring을 점프 서버로 거친다.
 
 ## 공유기 쪽에 여는 포트
-- `192.168.0.222`(proxy): 22, 80, 443 만
+- `192.168.0.222`(proxy): 22, 80(443으로 301 리다이렉트), 443, 5601(Kibana, HTTPS) 만
 - `192.168.0.223`(monitoring): 22, 3000(Grafana, 로그인 필수) 만
-- DB·Kafka·Kibana 포트는 게이트웨이 바깥으로 열지 않는다.
+- DB·Kafka·ES(9200) 포트는 게이트웨이 바깥으로 열지 않는다. Kibana는 발표용으로 proxy 5601에서만 연다(2026-11-26, HTTPS는 11/29, `docs/decisions.md`).
